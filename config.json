@@ -1,6 +1,6 @@
 {
   "name": "HOMEii Network Monitor",
-  "version": "3.5.4",
+  "version": "3.5.5",
   "slug": "homeii-network-monitor",
   "description": "HOMEii Network Monitor",
   "startup": "services",
