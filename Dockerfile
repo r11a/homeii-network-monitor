@@ -1,5 +1,7 @@
-ARG BUILD_FROM
-FROM $BUILD_FROM
+ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19
+FROM ${BUILD_FROM}
+
+ENV LANG C.UTF-8
 
 WORKDIR /app
 
@@ -11,7 +13,7 @@ COPY app /app
 COPY web /web
 COPY rootfs /
 
-RUN pip3 install --no-cache-dir --break-system-packages \
+RUN pip3 install --no-cache-dir \
     fastapi \
     uvicorn \
     python-multipart
