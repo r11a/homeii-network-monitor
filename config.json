@@ -2,26 +2,18 @@
   "name": "HOMEii Network Monitor",
   "version": "3.4.1",
   "slug": "homeii-network-monitor",
-  "description": "HOMEii Network Monitor for Home Assistant",
+  "description": "HOMEii Network Monitor",
+
+  "image": "ghcr.io/home-assistant/{arch}-base:latest",
+
   "startup": "services",
   "boot": "auto",
-  "init": false,
 
   "ingress": true,
   "ingress_port": 8099,
   "ingress_entry": "/",
-  "ingress_stream": true,
 
-  "panel_icon": "mdi:lan",
-  "panel_title": "HOMEii Network",
-  "panel_admin": false,
-
-  "homeassistant_api": true,
   "host_network": true,
-  "image": "ghcr.io/home-assistant/{arch}-base:latest"
-  "ports": {
-    "8099/tcp": 8099
-  },
 
   "arch": [
     "amd64",
