@@ -1,24 +1,14 @@
 {
   "name": "HOMEii Network Monitor",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "slug": "homeii-network-monitor",
   "description": "HOMEii Network Monitor",
-
   "startup": "services",
   "boot": "auto",
-
   "ingress": true,
   "ingress_port": 8099,
-
   "panel_icon": "mdi:lan",
   "panel_title": "HOMEii Network",
-
-  "webui": "http://[HOST]:[PORT:8099]",
-
   "host_network": true,
-
-  "arch": [
-    "amd64",
-    "aarch64"
-  ]
+  "arch": ["amd64","aarch64"]
 }
