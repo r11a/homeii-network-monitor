@@ -1,0 +1,18 @@
+name: HOMEii Network Monitor
+version: "3.4.1"
+slug: homeii-network-monitor
+description: HOMEii Network Monitor
+startup: services
+boot: auto
+host_network: true
+
+arch:
+  - amd64
+  - aarch64
+  - armv7
+
+ports:
+  8099/tcp: 8099
+
+map:
+  - data:rw
