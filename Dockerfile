@@ -11,11 +11,13 @@ RUN apk add --no-cache \
 
 COPY app /app
 COPY web /web
-COPY rootfs /
+COPY run.sh /run.sh
 
 RUN pip3 install --no-cache-dir --break-system-packages \
     fastapi \
     uvicorn \
     python-multipart
 
-RUN chmod +x /etc/services.d/homeii/run
+RUN chmod a+x /run.sh
+
+CMD ["/run.sh"]
