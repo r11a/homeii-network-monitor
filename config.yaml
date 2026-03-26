@@ -1,5 +1,5 @@
 name: "HOMEii Network Monitor"
-version: "3.5.2"
+version: "3.5.4"
 slug: "homeii-network-monitor"
 description: "HOMEii Network Monitor"
 startup: services
