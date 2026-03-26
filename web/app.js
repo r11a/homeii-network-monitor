@@ -1,3 +1,6 @@
+
+
+
 let devices = [];
 let alerts = [];
 let currentFilter = "all";
@@ -6,7 +9,7 @@ let currentTab = "dashboard";
 const byId = (id) => document.getElementById(id);
 
 async function api(url, options = {}) {
-  const res = await fetch(url, {
+  const res = await fetch(`.${url}`, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
