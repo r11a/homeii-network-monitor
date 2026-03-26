@@ -1,17 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>HOMEii Network Monitor</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>HOMEii Network Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
-
 <body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">H</div>
+        <div>
+          <div class="brand-title">HOMEii Network</div>
+          <div class="brand-subtitle">Monitor 3.5.0</div>
+        </div>
+      </div>
 
-<h1>HOMEii Network Monitor 3.4.1</h1>
+      <nav class="nav">
+        <button class="nav-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="devices">Devices</button>
+        <button class="nav-btn" data-tab="alerts">Alerts</button>
+        <button class="nav-btn" data-tab="settings">Settings</button>
+      </nav>
 
-<div id="devices"></div>
+      <div class="sidebar-footer">
+        <div class="health-row">
+          <span class="dot online"></span>
+          <span id="health-text">Connecting...</span>
+        </div>
+      </div>
+    </aside>
 
-<script src="app.js"></script>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="page-title">Dashboard</h1>
+          <p class="muted">Monitor devices, approve new discoveries, and manage networks.</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="scan-btn" class="btn btn-primary">Scan now</button>
+          <button id="approve-all-btn" class="btn">Approve all new</button>
+        </div>
+      </header>
 
+      <section id="dashboard-tab" class="tab active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total</div>
+            <div class="stat-value" id="stat-total">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Online</div>
+            <div class="stat-value online-text" id="stat-online">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Offline</div>
+            <div class="stat-value offline-text" id="stat-offline">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">New</div>
+            <div class="stat-value new-text" id="stat-new">0</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Recent devices</h2>
+            <span class="muted">Latest discovered or changed devices</span>
+          </div>
+          <div id="recent-devices" class="device-grid"></div>
+        </div>
+      </section>
+
+      <section id="devices-tab" class="tab">
+        <div class="toolbar">
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="online">Online</button>
+            <button class="filter-btn" data-filter="offline">Offline</button>
+            <button class="filter-btn" data-filter="new">New</button>
+            <button class="filter-btn" data-filter="critical">Critical</button>
+            <button class="filter-btn" data-filter="pinned">Pinned</button>
+          </div>
+          <input id="search-input" class="search-input" type="text" placeholder="Search by name or IP" />
+        </div>
+
+        <div id="devices-grid" class="device-grid"></div>
+      </section>
+
+      <section id="alerts-tab" class="tab">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Alerts</h2>
+            <span class="muted">Offline transitions and important events</span>
+          </div>
+          <div id="alerts-list" class="alerts-list"></div>
+        </div>
+      </section>
+
+      <section id="settings-tab" class="tab">
+        <div class="settings-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Networks</h2>
+              <span class="muted">One network per line</span>
+            </div>
+            <textarea id="networks-input" class="textarea" rows="8" placeholder="192.168.1.0/24"></textarea>
+            <div class="settings-actions">
+              <button id="save-settings-btn" class="btn btn-primary">Save settings</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Add manual device</h2>
+              <span class="muted">Add devices that should always be tracked</span>
+            </div>
+            <div class="form-grid">
+              <input id="manual-ip" class="input" type="text" placeholder="IP address" />
+              <input id="manual-name" class="input" type="text" placeholder="Device name" />
+            </div>
+            <div class="settings-actions">
+              <button id="add-device-btn" class="btn btn-primary">Add device</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/app.js"></script>
 </body>
 </html>
