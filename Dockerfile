@@ -15,4 +15,4 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     uvicorn \
     python-multipart
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8099", "--app-dir", "/app"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8099", "--app-dir", "/app"]]
