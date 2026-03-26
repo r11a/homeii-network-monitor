@@ -1,15 +1,19 @@
-name: HOMEii Network Monitor
-version: "3.4.2"
-slug: homeii-network-monitor
-description: HOMEii Network Monitor
+name: "HOMEii Network Monitor"
+version: "3.4.3"
+slug: "homeii-network-monitor"
+description: "HOMEii Network Monitor"
 startup: services
 boot: auto
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:lan
+panel_title: HOMEii Network
 host_network: true
 
 arch:
   - amd64
   - aarch64
-  - armv7
 
 ports:
   8099/tcp: 8099
