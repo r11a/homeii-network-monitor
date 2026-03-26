@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bashio
+#!/command/with-contenv bashio
 
 exec uvicorn main:app \
   --host 0.0.0.0 \
