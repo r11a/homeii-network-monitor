@@ -10,15 +10,15 @@
   "ingress": true,
   "ingress_port": 8099,
 
-  "host_network": true,
+  "panel_icon": "mdi:lan",
+  "panel_title": "HOMEii Network",
 
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "webui": "http://[HOST]:[PORT:8099]",
+
+  "host_network": true,
 
   "arch": [
     "amd64",
-    "aarch64",
-    "armv7"
+    "aarch64"
   ]
 }
