@@ -1,3 +1,6 @@
 #!/usr/bin/with-contenv bashio
 
-python /app/main.py
+exec uvicorn main:app \
+  --host 0.0.0.0 \
+  --port 8099 \
+  --app-dir /app
