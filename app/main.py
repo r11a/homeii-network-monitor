@@ -32,6 +32,3 @@ def devices():
     return rows
 
 app.mount("/", StaticFiles(directory="/web", html=True), name="web")
-
-import uvicorn
-uvicorn.run(app, host="0.0.0.0", port=8099)
