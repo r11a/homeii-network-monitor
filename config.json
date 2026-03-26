@@ -4,16 +4,17 @@
   "slug": "homeii-network-monitor",
   "description": "HOMEii Network Monitor",
 
-  "image": "ghcr.io/home-assistant/{arch}-base:latest",
-
   "startup": "services",
   "boot": "auto",
 
   "ingress": true,
   "ingress_port": 8099,
-  "ingress_entry": "/",
 
   "host_network": true,
+
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
 
   "arch": [
     "amd64",
