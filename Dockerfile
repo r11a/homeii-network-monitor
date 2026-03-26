@@ -7,7 +7,8 @@ WORKDIR /app
 
 RUN apk add --no-cache \
     python3 \
-    py3-pip
+    py3-pip \
+    iputils
 
 COPY app /app
 COPY web /web
