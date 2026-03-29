@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.6.5</title>
+<title>HOMEii Network Monitor 3.6.6</title>
 <style>
 :root{
   color-scheme:dark;
@@ -305,7 +305,7 @@ button,input,select,textarea{font:inherit}
 
 .dashboardCards{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
   gap:14px;
 }
 
@@ -313,8 +313,8 @@ button,input,select,textarea{font:inherit}
   border:4px solid var(--red);
   border-radius:28px;
   background:var(--card);
-  padding:22px 20px;
-  min-height:220px;
+  padding:18px 20px;
+  min-height:170px;
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:18px;
@@ -329,6 +329,7 @@ button,input,select,textarea{font:inherit}
   display:flex;
   flex-direction:column;
   justify-content:space-between;
+  align-items:flex-start;
   min-width:0;
   height:100%;
 }
@@ -336,13 +337,12 @@ button,input,select,textarea{font:inherit}
   display:inline-flex;
   align-items:center;
   gap:10px;
-  width:max-content;
-  max-width:100%;
   padding:10px 18px;
   border-radius:999px;
   border:1px solid var(--line);
   background:rgba(255,255,255,.02);
   font-size:18px;
+  white-space:nowrap;
 }
 .ddStatusDot{
   width:18px;height:18px;border-radius:50%;
@@ -355,9 +355,7 @@ button,input,select,textarea{font:inherit}
 .deviceDashboardCard.unstable .ddStatusDot{background:var(--orange)}
 
 .ddMeta{
-  margin-top:20px;
-  display:grid;
-  gap:12px;
+  margin-top:14px;
 }
 .ddMetaRow{
   font-size:18px;
@@ -371,7 +369,7 @@ button,input,select,textarea{font:inherit}
 .ddActions{
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
   margin-top:18px;
 }
 .ddRight{
@@ -529,6 +527,10 @@ td strong{font-size:14px}
 @media (max-width:1200px){
   .deviceDashboardCard{
     grid-template-columns:1fr;
+    min-height:auto;
+  }
+  .ddActions{
+    flex-wrap:wrap;
   }
 }
 @media (max-width:1100px){
@@ -559,7 +561,7 @@ td strong{font-size:14px}
     <div class="brand">
       <div class="brandLeft">
         <div class="brandTitle">HOMEii Network</div>
-        <div class="brandSub">Monitor <span id="versionText">3.6.5</span></div>
+        <div class="brandSub">Monitor <span id="versionText">3.6.6</span></div>
       </div>
       <div class="logoWrap">
         <img src="./logo" alt="HOMEii" onerror="this.style.display='none'; this.parentNode.textContent='H';">
@@ -601,7 +603,7 @@ td strong{font-size:14px}
       <div class="hero">
         <div>
           <h1 class="heroTitle">HOMEii Network Monitor</h1>
-          <div class="heroSub">v<span id="heroVersion">3.6.5</span> • Dashboard Cards Updated • Auto Responsive Layout</div>
+          <div class="heroSub">v<span id="heroVersion">3.6.6</span> • Dashboard Layout Refined</div>
         </div>
         <div class="heroRight">
           <span id="lastRefresh">—</span>
@@ -649,7 +651,7 @@ td strong{font-size:14px}
           <div class="panelHead">
             <div>
               <h2>מכשירים בדשבורד</h2>
-              <p>שם, IP, מצב וכפתורי פעולה באותו layout שביקשת</p>
+              <p>שם מימין, סטטוס משמאל, כפתורים בשורה אחת</p>
             </div>
           </div>
           <div id="dashboardDevices" class="dashboardCards"></div>
@@ -956,14 +958,13 @@ function dashboardCard(d){
   return `
     <div class="deviceDashboardCard ${status}">
       <div class="ddLeft">
-        <div>
-          <div class="ddStatus">
-            <span>${status}</span>
-            <span class="ddStatusDot"></span>
-          </div>
-          <div class="ddMeta">
-            <div class="ddMetaRow"><b>Last seen:</b> ${timeAgo(d.last_seen)}</div>
-          </div>
+        <div class="ddStatus">
+          <span>${status}</span>
+          <span class="ddStatusDot"></span>
+        </div>
+
+        <div class="ddMeta">
+          <div class="ddMetaRow"><b>Last seen:</b> ${timeAgo(d.last_seen)}</div>
         </div>
 
         <div class="ddActions">
@@ -1062,11 +1063,7 @@ function renderDevices(){
   }
 
   if(view === 'grid'){
-    mount.innerHTML = `
-      <div class="dashboardCards">
-        ${rows.map(dashboardCard).join('')}
-      </div>
-    `;
+    mount.innerHTML = `<div class="dashboardCards">${rows.map(dashboardCard).join('')}</div>`;
     return;
   }
 
@@ -1142,21 +1139,6 @@ function renderAlertsPage(){
     `).join('')
     : `<div class="empty">אין התראות</div>`;
 
-  qs('dashboardEvents').innerHTML = state.events.length
-    ? state.events.map(e => `
-      <div class="eventItem">
-        <div class="row">
-          <div>
-            <div class="rowTitle">${escapeHtml(e.message || e.type || 'Event')}</div>
-            <div class="rowSub">${escapeHtml(e.ip || '')}</div>
-            <div class="rowSub">${formatTs(e.ts)}</div>
-          </div>
-          <div class="sev ${escapeHtml(e.level || 'info')}">${escapeHtml(e.level || 'info')}</div>
-        </div>
-      </div>
-    `).join('')
-    : `<div class="empty">אין אירועים</div>`;
-
   qs('eventsMount').innerHTML = state.events.length
     ? state.events.map(e => `
       <div class="eventItem">
@@ -1197,8 +1179,8 @@ function renderSettings(){
 
 function renderAll(){
   const s = state.status || {};
-  qs('versionText').textContent = s.version || '3.6.5';
-  qs('heroVersion').textContent = s.version || '3.6.5';
+  qs('versionText').textContent = s.version || '3.6.6';
+  qs('heroVersion').textContent = s.version || '3.6.6';
   qs('sTotal').textContent = s.total ?? 0;
   qs('sOnline').textContent = s.online ?? 0;
   qs('sOffline').textContent = s.offline ?? 0;
