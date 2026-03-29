@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.6.3</title>
+<title>HOMEii Network Monitor 3.6.4</title>
 <style>
 :root{
   color-scheme:dark;
@@ -12,43 +12,37 @@
   --sidebar:#08111d;
   --card:#121e31;
   --card2:#17253b;
-  --card3:#0f1a2c;
   --muted:#97a8c5;
   --text:#eef4ff;
   --line:rgba(255,255,255,.08);
   --line2:rgba(255,255,255,.12);
   --blue:#78a9ff;
-  --blue2:#9fc0ff;
   --green:#5ad891;
   --red:#ff7a85;
   --orange:#ffbf63;
   --gold:#f2cd67;
-  --shadow:0 18px 48px rgba(0,0,0,.28);
-  --radius:22px;
-  --radius-sm:16px;
+  --shadow:0 16px 42px rgba(0,0,0,.26);
 }
 body.light{
   color-scheme:light;
-  --bg:#eef3fb;
+  --bg:#edf2f9;
   --bg2:#f8fbff;
-  --sidebar:#f4f7fc;
+  --sidebar:#f3f6fb;
   --card:#ffffff;
   --card2:#ffffff;
-  --card3:#f8fbff;
-  --muted:#647693;
-  --text:#1a2942;
+  --muted:#6c7d98;
+  --text:#1b2940;
   --line:rgba(17,34,68,.10);
   --line2:rgba(17,34,68,.16);
   --blue:#4c7fea;
-  --blue2:#6b96f0;
   --green:#16945a;
   --red:#d85e68;
   --orange:#d68822;
   --gold:#b78a10;
-  --shadow:0 14px 36px rgba(17,34,68,.10);
+  --shadow:0 12px 30px rgba(17,34,68,.08);
 }
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%}
+html,body{margin:0;height:100%}
 body{
   font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
   color:var(--text);
@@ -56,20 +50,19 @@ body{
     radial-gradient(900px 420px at 100% -10%, rgba(120,169,255,.12), transparent 60%),
     radial-gradient(700px 280px at -10% 10%, rgba(90,216,145,.08), transparent 60%),
     linear-gradient(180deg,var(--bg),var(--bg2));
+  overflow:hidden;
 }
 button,input,select,textarea{font:inherit}
 .app{
-  min-height:100vh;
+  height:100vh;
   display:grid;
-  grid-template-columns:260px 1fr;
+  grid-template-columns:250px 1fr;
 }
 .sidebar{
-  position:sticky;
-  top:0;
-  min-height:100vh;
-  padding:18px 14px;
+  height:100vh;
   border-left:1px solid var(--line);
-  background:linear-gradient(180deg,var(--sidebar),rgba(0,0,0,.04));
+  background:linear-gradient(180deg,var(--sidebar),rgba(0,0,0,.03));
+  padding:18px 14px;
   display:flex;
   flex-direction:column;
   gap:16px;
@@ -77,8 +70,22 @@ button,input,select,textarea{font:inherit}
 .brand{
   display:flex;
   align-items:center;
+  justify-content:space-between;
   gap:12px;
-  padding:6px 8px 10px;
+  padding:4px 6px 10px;
+}
+.brandLeft{
+  min-width:0;
+}
+.brandTitle{
+  font-size:18px;
+  font-weight:900;
+  letter-spacing:-.02em;
+}
+.brandSub{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:3px;
 }
 .logoWrap{
   width:42px;height:42px;border-radius:14px;
@@ -89,11 +96,13 @@ button,input,select,textarea{font:inherit}
   font-size:22px;
   font-weight:900;
   border:1px solid rgba(255,255,255,.14);
+  flex:0 0 auto;
 }
 .logoWrap img{width:100%;height:100%;object-fit:contain}
-.brandTitle{font-size:18px;font-weight:900;letter-spacing:-.02em}
-.brandSub{font-size:12px;color:var(--muted);margin-top:2px}
-.nav{display:grid;gap:8px}
+.nav{
+  display:grid;
+  gap:8px;
+}
 .navBtn{
   width:100%;
   border:1px solid var(--line);
@@ -111,38 +120,50 @@ button,input,select,textarea{font:inherit}
   border-color:rgba(120,169,255,.26);
   box-shadow:inset 0 0 0 1px rgba(120,169,255,.14);
 }
-.sideCards{
+.sidebarFooter{
+  margin-top:auto;
   display:grid;
   gap:10px;
-  margin-top:6px;
 }
-.sideCard{
+.iconBtn{
+  width:42px;height:42px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  color:var(--text);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  box-shadow:var(--shadow);
+}
+.sideInfo{
+  display:grid;
+  gap:10px;
+}
+.sideInfoCard{
   border:1px solid var(--line);
   background:linear-gradient(180deg,var(--card),var(--card2));
   border-radius:18px;
   padding:12px 14px;
   box-shadow:var(--shadow);
 }
-.sideCard .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.sideCard .v{margin-top:8px;font-size:18px;font-weight:900}
-.sidebarFooter{
-  margin-top:auto;
-  display:grid;
-  gap:10px;
+.sideInfoCard .k{
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
 }
-.themeToggle{
-  width:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
+.sideInfoCard .v{
+  margin-top:8px;
+  font-size:18px;
+  font-weight:900;
 }
-.health{
-  display:flex;align-items:center;gap:8px;
-  color:var(--muted);font-size:13px;padding:0 6px;
+.main{
+  height:100vh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:20px;
 }
-.dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
-.main{padding:20px;overflow-x:hidden}
 .top{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
@@ -150,7 +171,7 @@ button,input,select,textarea{font:inherit}
   align-items:start;
   margin-bottom:14px;
 }
-.hero,.actionbar,.kpi,.panel,.toolbar,.tableWrap,.miniDevice,.empty,.alertItem,.eventItem,.msg{
+.hero,.actionbar,.kpi,.panel,.toolbar,.tableWrap,.deviceMini,.empty,.alertItem,.eventItem,.msg{
   border:1px solid var(--line);
   background:linear-gradient(180deg,var(--card),var(--card2));
   box-shadow:var(--shadow);
@@ -163,15 +184,28 @@ button,input,select,textarea{font:inherit}
   justify-content:space-between;
   gap:14px;
 }
-.heroTitle{margin:0;font-size:22px;font-weight:900;letter-spacing:-.03em}
-.heroSub{margin-top:6px;color:var(--muted);font-size:13px}
-.heroRight{
-  display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px
+.heroTitle{
+  margin:0;
+  font-size:24px;
+  font-weight:900;
+  letter-spacing:-.03em;
 }
-.heroLogo{height:36px;opacity:.95}
+.heroSub{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+.heroRight{
+  color:var(--muted);
+  font-size:13px;
+}
 .actionbar{
   padding:12px;
-  display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
 .btn,input,select,textarea{
   border:1px solid var(--line);
@@ -180,7 +214,9 @@ button,input,select,textarea{font:inherit}
   color:var(--text);
 }
 .btn{
-  padding:10px 13px;cursor:pointer;transition:.15s ease
+  padding:10px 13px;
+  cursor:pointer;
+  transition:.15s ease;
 }
 .btn:hover{transform:translateY(-1px);border-color:var(--line2)}
 .btn.primary{background:linear-gradient(180deg,#7baeff,#5f93f1);border:none;color:#fff}
@@ -189,12 +225,17 @@ button,input,select,textarea{font:inherit}
 .btn.ghost{background:transparent}
 .btn.small{padding:7px 10px;font-size:12px;border-radius:12px}
 .scanState{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:10px 12px;border-radius:14px;border:1px solid var(--line);color:var(--muted)
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  color:var(--muted);
 }
 .kpis{
   display:grid;
-  grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;
   gap:12px;
   margin-bottom:14px;
 }
@@ -206,6 +247,12 @@ button,input,select,textarea{font:inherit}
 }
 .kpi:hover{transform:translateY(-1px);border-color:var(--line2)}
 .kpi.active{outline:2px solid rgba(120,169,255,.26)}
+.kpi.primaryAlert{
+  background:
+    linear-gradient(180deg, rgba(255,122,133,.14), rgba(255,122,133,.06)),
+    linear-gradient(180deg,var(--card),var(--card2));
+  border-color:rgba(255,122,133,.24);
+}
 .kpi .label{
   font-size:11px;
   color:var(--muted);
@@ -214,14 +261,8 @@ button,input,select,textarea{font:inherit}
 }
 .kpi .value{
   margin-top:10px;
-  font-size:24px;
+  font-size:28px;
   font-weight:900;
-}
-.kpi.primaryAlert{
-  background:
-    linear-gradient(180deg, rgba(255,122,133,.12), rgba(255,122,133,.05)),
-    linear-gradient(180deg,var(--card),var(--card2));
-  border-color:rgba(255,122,133,.20);
 }
 .kpi .value.online{color:var(--green)}
 .kpi .value.offline{color:var(--red)}
@@ -238,49 +279,86 @@ button,input,select,textarea{font:inherit}
 .stack{display:grid;gap:14px}
 .panel{padding:18px}
 .panelHead{
-  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:12px;
 }
-.panelHead h2{margin:0;font-size:18px;font-weight:900}
-.panelHead p{margin:6px 0 0;color:var(--muted);font-size:13px}
-.miniDevices{
+.panelHead h2{
+  margin:0;
+  font-size:18px;
+  font-weight:900;
+}
+.panelHead p{
+  margin:6px 0 0;
+  color:var(--muted);
+  font-size:13px;
+}
+.dashboardCards{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:12px;
 }
-.miniDevice{
+.deviceMini{
   border-radius:18px;
-  padding:14px;
-  background:linear-gradient(180deg,var(--card2),var(--card3));
+  padding:16px;
+  background:linear-gradient(180deg,var(--card2),var(--card));
   min-width:0;
 }
-.miniTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.miniName{font-size:16px;font-weight:900;line-height:1.15}
-.miniIp{margin-top:6px;font-size:12px;color:var(--muted)}
-.meta{display:grid;gap:5px;color:var(--muted);font-size:12px;margin:10px 0 12px}
-.meta b{color:var(--text)}
-.badges,.actionsRow{display:flex;gap:7px;flex-wrap:wrap}
-.badge,.pill{
-  display:inline-flex;align-items:center;gap:7px;
-  padding:6px 10px;border:1px solid var(--line);border-radius:999px;
-  font-size:12px;background:rgba(255,255,255,.02)
+.deviceMiniTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.deviceMiniName{
+  font-size:24px;
+  font-weight:900;
+  line-height:1.05;
+  margin:0;
+}
+.deviceMiniIp{
+  margin-top:10px;
+  font-size:20px;
+  font-weight:500;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px;
+  background:rgba(255,255,255,.02);
+  white-space:nowrap;
 }
 .badge::before{
   content:"";
-  width:8px;height:8px;border-radius:50%;
-  background:var(--blue)
+  width:10px;height:10px;border-radius:50%;
+  background:var(--blue);
 }
 .badge.online::before{background:var(--green)}
 .badge.offline::before{background:var(--red)}
 .badge.unstable::before{background:var(--orange)}
 .badge.new::before{background:var(--blue)}
 .alerts,.events{
-  display:grid;gap:10px;max-height:360px;overflow:auto
+  display:grid;
+  gap:10px;
+  max-height:360px;
+  overflow:auto;
 }
 .alertItem,.eventItem{
-  border-radius:18px;padding:13px 14px;background:rgba(255,255,255,.02)
+  border-radius:18px;
+  padding:13px 14px;
+  background:rgba(255,255,255,.02);
 }
 .row{
-  display:flex;align-items:flex-start;justify-content:space-between;gap:12px
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
 }
 .rowTitle{font-size:14px;font-weight:800}
 .rowSub{margin-top:6px;color:var(--muted);font-size:12px}
@@ -300,8 +378,15 @@ button,input,select,textarea{font:inherit}
 input,select,textarea{width:100%;padding:10px 12px;outline:none}
 textarea{min-height:120px;resize:vertical}
 .quickActions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-.tableWrap{overflow:auto;max-width:100%}
-table{width:100%;border-collapse:collapse;min-width:980px}
+.tableWrap{
+  overflow:auto;
+  max-width:100%;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:980px;
+}
 th,td{
   padding:11px 12px;
   border-bottom:1px solid var(--line);
@@ -315,9 +400,26 @@ th{
   color:var(--muted);
   text-transform:uppercase;
   letter-spacing:.08em;
-  position:sticky;top:0;background:var(--card2)
+  position:sticky;
+  top:0;
+  background:var(--card2);
 }
 td strong{font-size:14px}
+.actionsRow{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:6px 10px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  font-size:12px;
+  background:rgba(255,255,255,.02);
+}
 .msg{
   display:none;
   margin-bottom:10px;
@@ -327,31 +429,46 @@ td strong{font-size:14px}
 .msg.show{display:block}
 .msg.ok{background:rgba(90,216,145,.08);border-color:rgba(90,216,145,.25)}
 .msg.err{background:rgba(255,122,133,.08);border-color:rgba(255,122,133,.25)}
-.networkList{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.networkList{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
 .networkChip{
-  padding:7px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)
+  padding:7px 11px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  color:var(--muted);
 }
 .empty{
   border-radius:18px;
   padding:18px;
   text-align:center;
   color:var(--muted);
-  background:rgba(255,255,255,.02)
+  background:rgba(255,255,255,.02);
 }
-.hidden{display:none!important}
-@media (max-width:1440px){
+@media (max-width:1450px){
   .kpis{grid-template-columns:repeat(3,1fr)}
-  .miniDevices{grid-template-columns:repeat(2,1fr)}
+  .dashboardCards{grid-template-columns:repeat(2,1fr)}
   .grid{grid-template-columns:1fr}
 }
 @media (max-width:1100px){
+  body{overflow:auto}
   .app{grid-template-columns:1fr}
-  .sidebar{position:relative;min-height:auto}
+  .sidebar{
+    height:auto;
+    min-height:auto;
+  }
+  .main{
+    height:auto;
+    overflow:visible;
+  }
   .toolbar{grid-template-columns:1fr 1fr}
 }
 @media (max-width:760px){
   .top{grid-template-columns:1fr}
-  .kpis,.toolbar,.miniDevices{grid-template-columns:1fr}
+  .kpis,.toolbar,.dashboardCards{grid-template-columns:1fr}
   .hero{flex-direction:column;align-items:flex-start}
 }
 </style>
@@ -360,12 +477,12 @@ td strong{font-size:14px}
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
+      <div class="brandLeft">
+        <div class="brandTitle">HOMEii Network</div>
+        <div class="brandSub">Monitor <span id="versionText">3.6.4</span></div>
+      </div>
       <div class="logoWrap">
         <img src="./logo" alt="HOMEii" onerror="this.style.display='none'; this.parentNode.textContent='H';">
-      </div>
-      <div>
-        <div class="brandTitle">HOMEii Network</div>
-        <div class="brandSub">Monitor <span id="versionText">3.6.3</span></div>
       </div>
     </div>
 
@@ -377,17 +494,16 @@ td strong{font-size:14px}
     </div>
 
     <div class="sidebarFooter">
-      <button class="btn ghost themeToggle" onclick="toggleTheme()">
+      <button class="iconBtn" onclick="toggleTheme()" title="Theme">
         <span id="themeIcon">☾</span>
-        <span id="themeText">מצב כהה</span>
       </button>
 
-      <div class="sideCards">
-        <div class="sideCard">
+      <div class="sideInfo">
+        <div class="sideInfoCard">
           <div class="k">Status</div>
           <div class="v" id="sideScanState">Idle</div>
         </div>
-        <div class="sideCard">
+        <div class="sideInfoCard">
           <div class="k">Networks</div>
           <div class="v" id="sideNetworksCount">0</div>
         </div>
@@ -405,11 +521,10 @@ td strong{font-size:14px}
       <div class="hero">
         <div>
           <h1 class="heroTitle">HOMEii Network Monitor</h1>
-          <div class="heroSub">v<span id="heroVersion">3.6.3</span> • Clean Dashboard • Large Status Summary • Light/Dark Toggle</div>
+          <div class="heroSub">v<span id="heroVersion">3.6.4</span> • Clean Dashboard • Minimal Device Cards • Fixed Sidebar</div>
         </div>
         <div class="heroRight">
           <span id="lastRefresh">—</span>
-          <img src="./logo" class="heroLogo" alt="HOMEii" onerror="this.style.display='none';">
         </div>
       </div>
 
@@ -453,11 +568,11 @@ td strong{font-size:14px}
         <div class="panel">
           <div class="panelHead">
             <div>
-              <h2>מכשירים בולטים</h2>
-              <p>תצוגה נקייה של ההתקנים החשובים והעדכניים בלבד</p>
+              <h2>מכשירים בדשבורד</h2>
+              <p>רק המידע הרלוונטי: שם, כתובת IP ומצב</p>
             </div>
           </div>
-          <div id="dashboardDevices" class="miniDevices"></div>
+          <div id="dashboardDevices" class="dashboardCards"></div>
         </div>
 
         <div class="stack">
@@ -489,7 +604,7 @@ td strong{font-size:14px}
         <div class="panelHead">
           <div>
             <h2>Devices</h2>
-            <p>מסך הניהול המלא של ההתקנים, חיפוש, סינון ופעולות</p>
+            <p>כל המידע והפעולות המלאות נמצאים כאן</p>
           </div>
         </div>
 
@@ -618,8 +733,8 @@ td strong{font-size:14px}
               <p>מידע מערכת וסטטוס</p>
             </div>
           </div>
-          <div class="miniDevice">
-            <div class="meta">
+          <div class="empty" style="text-align:right">
+            <div style="display:grid;gap:8px">
               <div><b>Version:</b> <span id="sysVersion">—</span></div>
               <div><b>Networks:</b> <span id="sysNetworks">—</span></div>
               <div><b>DB:</b> <span id="sysDb">—</span></div>
@@ -700,7 +815,6 @@ function setTheme(theme){
   document.body.classList.toggle('light', theme === 'light');
   localStorage.setItem('homeii_theme', theme);
   qs('themeIcon').textContent = theme === 'light' ? '☀' : '☾';
-  qs('themeText').textContent = theme === 'light' ? 'מצב בהיר' : 'מצב כהה';
 }
 
 function toggleTheme(){
@@ -716,39 +830,6 @@ function previewTheme(theme){
 function deviceStatusBadge(status){
   const cls = ['online','offline','unstable','new'].includes(status) ? status : 'new';
   return `<span class="badge ${cls}">${escapeHtml(status || 'unknown')}</span>`;
-}
-
-function miniDeviceCard(d){
-  return `
-    <div class="miniDevice">
-      <div class="miniTop">
-        <div>
-          <div class="miniName">${escapeHtml(d.name || d.hostname || d.ip)}</div>
-          <div class="miniIp">${escapeHtml(d.ip)}</div>
-        </div>
-        ${deviceStatusBadge(d.status)}
-      </div>
-
-      <div class="badges" style="margin-bottom:10px">
-        ${d.approved ? `<span class="pill">Known</span>` : `<span class="pill">New</span>`}
-        ${d.pinned ? `<span class="pill">Pinned</span>` : ``}
-        ${d.critical ? `<span class="pill">Critical</span>` : ``}
-      </div>
-
-      <div class="meta">
-        <div><b>Hostname:</b> ${escapeHtml(d.hostname || '—')}</div>
-        <div><b>Category:</b> ${escapeHtml(d.category || '—')}</div>
-        <div><b>Vendor:</b> ${escapeHtml(d.vendor || '—')}</div>
-        <div><b>Last seen:</b> ${timeAgo(d.last_seen)}</div>
-      </div>
-
-      <div class="actionsRow">
-        <button class="btn small" onclick="pingNow('${d.ip}')">Ping</button>
-        <button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned ? 'Unpin' : 'Pin'}</button>
-        ${d.approved ? '' : `<button class="btn small green" onclick="acceptDevice('${d.ip}')">Accept</button>`}
-      </div>
-    </div>
-  `;
 }
 
 function populateCategories(devices){
@@ -779,7 +860,7 @@ function clearFilters(){
   document.querySelectorAll('.kpi').forEach(el => el.classList.remove('active'));
 }
 
-function getImportantDevices(){
+function getDashboardDevices(){
   const rows = [...state.devices];
   rows.sort((a,b) => {
     const score = (d) => {
@@ -792,16 +873,28 @@ function getImportantDevices(){
     };
     return score(b) - score(a);
   });
-  return rows.slice(0, 4);
+  return rows.slice(0, 6);
+}
+
+function dashboardCard(d){
+  return `
+    <div class="deviceMini">
+      <div class="deviceMiniTop">
+        ${deviceStatusBadge(d.status)}
+      </div>
+      <div class="deviceMiniName">${escapeHtml(d.name || d.hostname || d.ip)}</div>
+      <div class="deviceMiniIp">${escapeHtml(d.ip)}</div>
+    </div>
+  `;
 }
 
 function renderDashboard(){
-  const devices = getImportantDevices();
+  const devices = getDashboardDevices();
   const alerts = state.alerts.slice(0, 8);
   const events = state.events.slice(0, 8);
 
   qs('dashboardDevices').innerHTML = devices.length
-    ? devices.map(miniDeviceCard).join('')
+    ? devices.map(dashboardCard).join('')
     : `<div class="empty">אין התקנים להצגה</div>`;
 
   qs('dashboardAlerts').innerHTML = alerts.length
@@ -871,7 +964,17 @@ function renderDevices(){
   }
 
   if(view === 'grid'){
-    mount.innerHTML = `<div class="miniDevices">${rows.map(miniDeviceCard).join('')}</div>`;
+    mount.innerHTML = `
+      <div class="dashboardCards">
+        ${rows.map(d => `
+          <div class="deviceMini">
+            <div class="deviceMiniTop">${deviceStatusBadge(d.status)}</div>
+            <div class="deviceMiniName">${escapeHtml(d.name || d.hostname || d.ip)}</div>
+            <div class="deviceMiniIp">${escapeHtml(d.ip)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
     return;
   }
 
@@ -904,7 +1007,7 @@ function renderDevices(){
               <td>${escapeHtml(d.mac || '—')}</td>
               <td>${timeAgo(d.last_seen)}</td>
               <td>
-                <div class="badges">
+                <div class="actionsRow">
                   ${d.approved ? `<span class="pill">Known</span>` : `<span class="pill">New</span>`}
                   ${d.pinned ? `<span class="pill">Pinned</span>` : ``}
                   ${d.critical ? `<span class="pill">Critical</span>` : ``}
@@ -987,8 +1090,8 @@ function renderSettings(){
 
 function renderAll(){
   const s = state.status || {};
-  qs('versionText').textContent = s.version || '3.6.3';
-  qs('heroVersion').textContent = s.version || '3.6.3';
+  qs('versionText').textContent = s.version || '3.6.4';
+  qs('heroVersion').textContent = s.version || '3.6.4';
   qs('sTotal').textContent = s.total ?? 0;
   qs('sOnline').textContent = s.online ?? 0;
   qs('sOffline').textContent = s.offline ?? 0;
