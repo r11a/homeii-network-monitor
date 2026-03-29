@@ -1,499 +1,1172 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List
-import sqlite3
-import os
 import ipaddress
+import json
+import os
+import shlex
+import shutil
+import re
 import socket
+import sqlite3
 import subprocess
-import platform
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any, Dict, List
+from urllib.parse import unquote
 
-app = FastAPI(title="HOMEii Network Monitor")
+from fastapi import FastAPI, Query
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+APP_VERSION = "3.6.0"
+BASE_DIR = Path("/data/homeii")
+DB_PATH = BASE_DIR / "homeii.db"
+LEGACY_DEVICES = Path("/data/devices.json")
+LEGACY_IGNORED = Path("/data/ignored_devices.json")
+LEGACY_EVENTS = Path("/data/events.json")
 
-DB_PATH = "/data/homeii.db"
-os.makedirs("/data", exist_ok=True)
+THREADS = 40
+PING_INTERVAL = 30
+FAIL_THRESHOLD = 3
+RECOVER_THRESHOLD = 2
+UNSTABLE_WINDOW = 600
+UNSTABLE_THRESHOLD = 4
+MAX_EVENTS = 300
+SCAN_RESCHEDULE_SECONDS = 300
 
 
-def utc_now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
+def load_options() -> Dict[str, Any]:
+    try:
+        with open("/data/options.json", "r", encoding="utf-8") as f:
+            opts = json.load(f)
+            return opts if isinstance(opts, dict) else {}
+    except Exception:
+        return {}
 
 
-def get_conn():
+OPTIONS = load_options()
+HOMEII_NETWORKS = OPTIONS.get("networks", ["192.168.1.0/24"])
+
+app = FastAPI(title="HOMEii Network Monitor", version=APP_VERSION)
+_db_lock = threading.Lock()
+scan_state = {
+    "running": False,
+    "last_started": 0,
+    "last_finished": 0,
+    "last_mode": "idle",
+    "last_error": "",
+}
+_dns_cache: Dict[str, str] = {}
+_vendor_cache: Dict[str, str] = {}
+
+
+def db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
 
-def init_db():
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS devices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        ip TEXT UNIQUE,
-        status TEXT DEFAULT 'new',
-        approved INTEGER DEFAULT 0,
-        pinned INTEGER DEFAULT 0,
-        critical INTEGER DEFAULT 0,
-        category TEXT DEFAULT '',
-        flag TEXT DEFAULT '',
-        notes TEXT DEFAULT '',
-        source TEXT DEFAULT 'scan',
-        last_seen TEXT DEFAULT '',
-        last_change TEXT DEFAULT '',
-        created_at TEXT DEFAULT ''
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-    )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS alerts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        device_id INTEGER,
-        ip TEXT,
-        message TEXT,
-        severity TEXT DEFAULT 'warning',
-        created_at TEXT DEFAULT '',
-        resolved INTEGER DEFAULT 0
-    )
-    """)
-
-    conn.commit()
-
-    default_networks = "192.168.1.0/24"
-    cur.execute("SELECT value FROM settings WHERE key='networks'")
-    row = cur.fetchone()
-    if not row:
-        cur.execute(
-            "INSERT OR REPLACE INTO settings(key, value) VALUES (?, ?)",
-            ("networks", default_networks),
-        )
-
-    conn.commit()
-    conn.close()
+def ensure_dirs() -> None:
+    BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-init_db()
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS devices (
+  ip TEXT PRIMARY KEY,
+  name TEXT DEFAULT '',
+  hostname TEXT DEFAULT '',
+  category TEXT DEFAULT '',
+  vendor TEXT DEFAULT '',
+  mac TEXT DEFAULT '',
+  status TEXT DEFAULT 'unknown',
+  last_seen INTEGER DEFAULT 0,
+  critical INTEGER DEFAULT 0,
+  pinned INTEGER DEFAULT 0,
+  manual INTEGER DEFAULT 0,
+  ignored INTEGER DEFAULT 0,
+  fail_count INTEGER DEFAULT 0,
+  success_count INTEGER DEFAULT 0,
+  state_changes_today INTEGER DEFAULT 0,
+  first_seen INTEGER DEFAULT 0,
+  updated_at INTEGER DEFAULT 0,
+  source TEXT DEFAULT 'ping',
+  notes TEXT DEFAULT '',
+  tags_json TEXT DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS device_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ip TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  old_status TEXT DEFAULT '',
+  new_status TEXT DEFAULT '',
+  kind TEXT DEFAULT 'status'
+);
+
+CREATE TABLE IF NOT EXISTS alerts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ip TEXT DEFAULT '',
+  severity TEXT DEFAULT 'info',
+  title TEXT DEFAULT '',
+  message TEXT DEFAULT '',
+  status TEXT DEFAULT 'open',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts INTEGER NOT NULL,
+  level TEXT DEFAULT 'info',
+  event_type TEXT DEFAULT 'info',
+  ip TEXT DEFAULT '',
+  message TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+"""
+
+DEFAULT_SETTINGS = {
+    "theme": "light",
+    "scan_interval": str(PING_INTERVAL),
+    "auto_refresh": "30",
+    "default_view": "grid",
+    "dashboard_style": "advanced",
+    "networks_json": json.dumps(HOMEII_NETWORKS),
+}
 
 
-class DeviceCreate(BaseModel):
-    ip: str
-    name: Optional[str] = None
+
+def ensure_column(conn: sqlite3.Connection, table: str, name: str, ddl: str) -> None:
+    cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if name not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
 
 
-class DeviceUpdate(BaseModel):
-    name: Optional[str] = None
-    category: Optional[str] = None
-    flag: Optional[str] = None
-    notes: Optional[str] = None
-    pinned: Optional[bool] = None
-    critical: Optional[bool] = None
-    approved: Optional[bool] = None
+def init_db() -> None:
+    ensure_dirs()
+    with _db_lock:
+        conn = db()
+        try:
+            conn.executescript(SCHEMA)
+            ensure_column(conn, "devices", "approved", "approved INTEGER DEFAULT 0")
+            for k, v in DEFAULT_SETTINGS.items():
+                conn.execute(
+                    "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v)
+                )
+            existing_networks = conn.execute("SELECT value FROM settings WHERE key='networks_json'").fetchone()
+            if not existing_networks or not (existing_networks[0] or '').strip():
+                conn.execute(
+                    "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    ("networks_json", json.dumps(HOMEII_NETWORKS)),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    migrate_legacy_files()
 
 
-class SettingsUpdate(BaseModel):
-    networks: str
 
-
-def db_get_setting(key: str, default: str = "") -> str:
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT value FROM settings WHERE key=?", (key,))
-    row = cur.fetchone()
-    conn.close()
-    return row["value"] if row else default
-
-
-def db_set_setting(key: str, value: str) -> None:
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT OR REPLACE INTO settings(key, value) VALUES (?, ?)",
-        (key, value),
-    )
-    conn.commit()
-    conn.close()
-
-
-def ping_host(ip: str) -> bool:
-    system = platform.system().lower()
-    if "windows" in system:
-        cmd = ["ping", "-n", "1", "-w", "800", ip]
-    else:
-        cmd = ["ping", "-c", "1", "-W", "1", ip]
-
+def table_has_rows(table: str) -> bool:
+    conn = db()
     try:
-        result = subprocess.run(
-            cmd,
+        row = conn.execute(f"SELECT COUNT(*) c FROM {table}").fetchone()
+        return bool(row and row[0])
+    finally:
+        conn.close()
+
+
+
+def migrate_legacy_files() -> None:
+    devices_exists = table_has_rows("devices")
+    if not devices_exists and LEGACY_DEVICES.exists():
+        try:
+            legacy_devices = json.loads(LEGACY_DEVICES.read_text(encoding="utf-8"))
+            now = int(time.time())
+            conn = db()
+            try:
+                for ip, item in legacy_devices.items():
+                    tags = item.get("tags", []) if isinstance(item, dict) else []
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO devices(
+                          ip,name,hostname,category,status,last_seen,critical,pinned,manual,approved,
+                          fail_count,success_count,state_changes_today,first_seen,updated_at,source,tags_json
+                        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        """,
+                        (
+                            ip,
+                            item.get("name", ""),
+                            item.get("hostname", ""),
+                            item.get("category", ""),
+                            item.get("status", "unknown"),
+                            int(item.get("last_seen", 0) or 0),
+                            1 if item.get("critical") else 0,
+                            1 if item.get("pinned") else 0,
+                            1 if item.get("manual") else 0,
+                            1,
+                            int(item.get("fail_count", 0) or 0),
+                            int(item.get("success_count", 0) or 0),
+                            int(item.get("state_changes_today", 0) or 0),
+                            int(item.get("last_seen", 0) or now),
+                            now,
+                            "legacy",
+                            json.dumps(tags),
+                        ),
+                    )
+                    for hist in item.get("history", []) or []:
+                        conn.execute(
+                            "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
+                            (
+                                ip,
+                                int(hist.get("ts", now)),
+                                hist.get("from", ""),
+                                hist.get("to", ""),
+                                "status",
+                            ),
+                        )
+                conn.commit()
+            finally:
+                conn.close()
+        except Exception:
+            pass
+    if not table_has_rows("events") and LEGACY_EVENTS.exists():
+        try:
+            legacy_events = json.loads(LEGACY_EVENTS.read_text(encoding="utf-8"))
+            conn = db()
+            try:
+                for e in legacy_events[-MAX_EVENTS:]:
+                    conn.execute(
+                        "INSERT INTO events(ts,level,event_type,ip,message) VALUES(?,?,?,?,?)",
+                        (
+                            int(e.get("ts", time.time())),
+                            e.get("level", "info"),
+                            e.get("type", "info"),
+                            e.get("ip", ""),
+                            e.get("message", ""),
+                        ),
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+        except Exception:
+            pass
+    if LEGACY_IGNORED.exists():
+        try:
+            ignored = json.loads(LEGACY_IGNORED.read_text(encoding="utf-8"))
+            conn = db()
+            try:
+                for ip in ignored:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO devices(ip,ignored,updated_at,first_seen,source) VALUES(?,1,?,?,?)",
+                        (ip, int(time.time()), int(time.time()), "ignored"),
+                    )
+                    conn.execute("UPDATE devices SET ignored=1, updated_at=? WHERE ip=?", (int(time.time()), ip))
+                conn.commit()
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+
+
+def short_hostname(hostname: str) -> str:
+    return hostname.split(".")[0] if hostname else ""
+
+
+
+def reverse_dns(ip: str) -> str:
+    if ip in _dns_cache:
+        return _dns_cache[ip]
+    host = ""
+    try:
+        host, _, _ = socket.gethostbyaddr(ip)
+        host = short_hostname(host)
+    except Exception:
+        try:
+            out = subprocess.check_output(["nslookup", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
+            for line in out.splitlines():
+                if "name =" in line:
+                    host = short_hostname(line.split("name =", 1)[1].strip().rstrip("."))
+                    break
+        except Exception:
+            host = ""
+    _dns_cache[ip] = host
+    return host
+
+
+
+def normalize_mac(mac: str) -> str:
+    mac = (mac or "").strip().lower().replace("-", ":")
+    parts = [p.zfill(2) for p in mac.split(":") if p]
+    return ":".join(parts[:6]) if parts else ""
+
+
+
+def vendor_from_mac(mac: str) -> str:
+    mac = normalize_mac(mac)
+    if not mac:
+        return ""
+    prefix = ":".join(mac.split(":")[:3])
+    if prefix in _vendor_cache:
+        return _vendor_cache[prefix]
+    vendors = {
+        "b8:27:eb": "Raspberry Pi",
+        "dc:a6:32": "Raspberry Pi",
+        "3c:52:82": "Google",
+        "f4:f5:d8": "Google",
+        "fc:a6:67": "Amazon",
+        "44:65:0d": "Amazon",
+        "00:17:88": "Philips",
+        "ec:fa:bc": "Samsung",
+        "70:4f:57": "Samsung",
+        "00:1a:79": "Cisco",
+        "00:1b:63": "Apple",
+        "f0:18:98": "Apple",
+        "ac:bc:32": "Apple",
+        "e4:5f:01": "Xiaomi",
+        "64:09:80": "Ubiquiti",
+        "24:5a:4c": "Ubiquiti",
+        "1c:5f:2b": "Hikvision",
+        "bc:ad:28": "Hikvision",
+        "00:40:8c": "Axis",
+    }
+    vendor = vendors.get(prefix, "")
+    _vendor_cache[prefix] = vendor
+    return vendor
+
+
+
+def auto_category(name: str, vendor: str = "") -> str:
+    n = f"{name or ''} {vendor or ''}".lower()
+    mapping = [
+        ("iphone", "mobile"), ("ipad", "tablet"), ("android", "mobile"),
+        ("galaxy", "mobile"), ("pixel", "mobile"),
+        ("lg", "tv"), ("samsung", "tv"), ("bravia", "tv"), ("tv", "tv"),
+        ("hik", "camera"), ("cam", "camera"), ("reolink", "camera"), ("axis", "camera"),
+        ("esp", "iot"), ("shelly", "iot"), ("sonoff", "iot"),
+        ("router", "network"), ("gateway", "network"), ("switch", "network"), ("ubiquiti", "network"),
+        ("nas", "server"), ("nuc", "server"), ("server", "server"), ("proxmox", "server"),
+        ("printer", "printer"),
+    ]
+    for key, cat in mapping:
+        if key in n:
+            return cat
+    return ""
+
+
+
+def now_ts() -> int:
+    return int(time.time())
+
+
+
+def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
+    tags = []
+    try:
+        tags = json.loads(row["tags_json"] or "[]")
+    except Exception:
+        tags = []
+    return {
+        "ip": row["ip"],
+        "name": row["name"] or "",
+        "hostname": row["hostname"] or "",
+        "category": row["category"] or "",
+        "vendor": row["vendor"] or "",
+        "mac": row["mac"] or "",
+        "status": row["status"] or "unknown",
+        "last_seen": int(row["last_seen"] or 0),
+        "critical": bool(row["critical"]),
+        "pinned": bool(row["pinned"]),
+        "manual": bool(row["manual"]),
+        "ignored": bool(row["ignored"]),
+        "approved": bool(row["approved"]) if "approved" in row.keys() else False,
+        "fail_count": int(row["fail_count"] or 0),
+        "success_count": int(row["success_count"] or 0),
+        "state_changes_today": int(row["state_changes_today"] or 0),
+        "first_seen": int(row["first_seen"] or 0),
+        "updated_at": int(row["updated_at"] or 0),
+        "source": row["source"] or "",
+        "notes": row["notes"] or "",
+        "tags": tags,
+        "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
+    }
+
+
+
+def last_seen_relative(ts: int) -> str:
+    if not ts:
+        return "-"
+    delta = max(0, now_ts() - int(ts))
+    if delta < 60:
+        return f"{delta}s ago"
+    if delta < 3600:
+        return f"{delta // 60}m ago"
+    if delta < 86400:
+        return f"{delta // 3600}h ago"
+    return f"{delta // 86400}d ago"
+
+
+
+def log_event(level: str, message: str, event_type: str, ip: str = "") -> None:
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute(
+                "INSERT INTO events(ts,level,event_type,ip,message) VALUES(?,?,?,?,?)",
+                (now_ts(), level, event_type, ip, message),
+            )
+            conn.execute(
+                "DELETE FROM events WHERE id NOT IN (SELECT id FROM events ORDER BY id DESC LIMIT ?)",
+                (MAX_EVENTS,),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+
+def create_alert(ip: str, severity: str, title: str, message: str) -> None:
+    with _db_lock:
+        conn = db()
+        try:
+            current = conn.execute(
+                "SELECT id, status FROM alerts WHERE ip=? AND title=? AND status='open' ORDER BY id DESC LIMIT 1",
+                (ip, title),
+            ).fetchone()
+            ts = now_ts()
+            if current:
+                conn.execute(
+                    "UPDATE alerts SET message=?, severity=?, updated_at=? WHERE id=?",
+                    (message, severity, ts, current["id"]),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO alerts(ip,severity,title,message,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
+                    (ip, severity, title, message, "open", ts, ts),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+
+def resolve_alerts_for_ip(ip: str, title: str | None = None) -> None:
+    with _db_lock:
+        conn = db()
+        try:
+            if title:
+                conn.execute(
+                    "UPDATE alerts SET status='resolved', updated_at=? WHERE ip=? AND title=? AND status='open'",
+                    (now_ts(), ip, title),
+                )
+            else:
+                conn.execute(
+                    "UPDATE alerts SET status='resolved', updated_at=? WHERE ip=? AND status='open'",
+                    (now_ts(), ip),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+
+def get_setting(key: str, default: str = "") -> str:
+    conn = db()
+    try:
+        row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+        return row[0] if row else default
+    finally:
+        conn.close()
+
+
+
+def set_setting(key: str, value: str) -> None:
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute(
+                "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (key, value),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def normalize_networks(values: list[str] | str | None) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, str):
+        raw = re.split(r"[\n,;]+", values)
+    else:
+        raw = list(values)
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        item = (item or "").strip()
+        if not item:
+            continue
+        try:
+            net = str(ipaddress.ip_network(item, strict=False))
+        except Exception:
+            continue
+        if net not in seen:
+            seen.add(net)
+            out.append(net)
+    return out
+
+
+def get_networks() -> list[str]:
+    try:
+        stored = get_setting("networks_json", "")
+        if stored:
+            data = json.loads(stored)
+            if isinstance(data, list):
+                nets = normalize_networks(data)
+                if nets:
+                    return nets
+    except Exception:
+        pass
+    return normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"]
+
+
+def save_networks(raw: list[str] | str) -> list[str]:
+    nets = normalize_networks(raw)
+    if not nets:
+        nets = normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"]
+    set_setting("networks_json", json.dumps(nets))
+    return nets
+
+
+
+def recent_history_count(conn: sqlite3.Connection, ip: str) -> int:
+    cutoff = now_ts() - UNSTABLE_WINDOW
+    row = conn.execute(
+        "SELECT COUNT(*) c FROM device_history WHERE ip=? AND ts>=? AND kind='status'",
+        (ip, cutoff),
+    ).fetchone()
+    return int(row[0] if row else 0)
+
+
+
+def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
+    conn = db()
+    try:
+        current = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        base = row_to_device(current) if current else {
+            "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
+            "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
+            "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "tags": []
+        }
+        base.update(fields)
+        conn.execute(
+            """
+            INSERT INTO devices(
+              ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(ip) DO UPDATE SET
+              name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
+              mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
+              pinned=excluded.pinned, manual=excluded.manual, ignored=excluded.ignored, approved=excluded.approved,
+              fail_count=excluded.fail_count, success_count=excluded.success_count,
+              state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
+              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, tags_json=excluded.tags_json
+            """,
+            (
+                ip,
+                base["name"], base["hostname"], base["category"], base["vendor"], base["mac"],
+                base["status"], int(base["last_seen"] or 0), 1 if base["critical"] else 0,
+                1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
+                int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
+                int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
+                base["notes"], json.dumps(base["tags"]),
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+
+def ping(ip: str) -> bool:
+    try:
+        return subprocess.run(
+            ["ping", "-c", "1", "-W", "1", ip],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            timeout=2,
-        )
-        return result.returncode == 0
+            timeout=3,
+        ).returncode == 0
     except Exception:
         return False
 
 
-def resolve_name(ip: str) -> str:
-    try:
-        host, _, _ = socket.gethostbyaddr(ip)
-        return host
-    except Exception:
-        return ip
 
-
-def parse_networks(networks_text: str) -> List[str]:
-    valid = []
-    for line in networks_text.splitlines():
-        n = line.strip()
-        if not n:
-            continue
+def arp_scan_networks() -> List[Dict[str, str]]:
+    results: List[Dict[str, str]] = []
+    if shutil.which("ip"):
         try:
-            ipaddress.ip_network(n, strict=False)
-            valid.append(n)
+            out = subprocess.check_output(["ip", "neigh", "show"], timeout=5).decode("utf-8", "ignore")
+            for line in out.splitlines():
+                parts = line.split()
+                if not parts:
+                    continue
+                ip = parts[0]
+                if "lladdr" in parts:
+                    mac = parts[parts.index("lladdr") + 1]
+                else:
+                    mac = ""
+                state = parts[-1] if parts else ""
+                if mac and ip.count(".") == 3 and state.upper() != "FAILED":
+                    results.append({"ip": ip, "mac": normalize_mac(mac), "vendor": vendor_from_mac(mac)})
         except Exception:
             pass
-    return valid
+    return results
 
 
-def iter_ips(network_cidr: str) -> List[str]:
-    net = ipaddress.ip_network(network_cidr, strict=False)
-    if net.num_addresses <= 2:
-        return [str(ip) for ip in net.hosts()]
-    return [str(ip) for ip in net.hosts()]
+
+def scan_candidate_ip(ip: str, source: str = "ping") -> None:
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        if row and row["ignored"]:
+            return
+        ok = ping(ip)
+        if not ok:
+            return
+        host = reverse_dns(ip)
+        vendor = row["vendor"] if row else ""
+        mac = row["mac"] if row else ""
+        name = row["name"] if row and row["name"] else host or ip
+        category = row["category"] if row and row["category"] else auto_category(f"{name} {host}", vendor)
+        is_new = row is None
+        ts = now_ts()
+        conn.execute(
+            """
+            INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,
+                                fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json)
+            VALUES(?,?,?,?,?,?, 'new', ?,0,0,0,0,0,0,0,?,?,?, '', '[]')
+            ON CONFLICT(ip) DO UPDATE SET hostname=?, last_seen=?, updated_at=?, source=?,
+                name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
+                category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
+                status=CASE WHEN devices.manual=1 AND devices.status!='offline' THEN devices.status ELSE 'new' END
+            """,
+            (
+                ip, name, host, category, vendor, mac, ts, ts, ts, source,
+                host, ts, ts, source,
+            ),
+        )
+        if is_new:
+            log_event("info", f"New device detected: {name or ip}", "new_device", ip)
+        conn.commit()
+    finally:
+        conn.close()
 
 
-def upsert_device(ip: str, is_online: bool, source: str = "scan") -> None:
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM devices WHERE ip=?", (ip,))
-    row = cur.fetchone()
 
-    now = utc_now()
-    resolved_name = resolve_name(ip)
-
-    if row is None:
-        status = "new"
-        last_seen = now if is_online else ""
-        cur.execute("""
-            INSERT INTO devices
-            (name, ip, status, approved, pinned, critical, category, flag, notes, source, last_seen, last_change, created_at)
-            VALUES (?, ?, ?, 0, 0, 0, '', '', '', ?, ?, ?, ?)
-        """, (resolved_name, ip, status, source, last_seen, now, now))
-    else:
-        approved = int(row["approved"])
-        prev_status = row["status"]
-        new_status = "online" if is_online else "offline"
-        status = prev_status if approved == 0 else new_status
-        last_seen = now if is_online else row["last_seen"]
-
-        if approved == 0:
-            cur.execute("""
-                UPDATE devices
-                SET name=?,
-                    source=?,
-                    last_seen=?,
-                    last_change=?
-                WHERE ip=?
-            """, (row["name"] or resolved_name, source, last_seen, now, ip))
-        else:
-            cur.execute("""
-                UPDATE devices
-                SET name=?,
-                    status=?,
-                    source=?,
-                    last_seen=?,
-                    last_change=?
-                WHERE ip=?
-            """, (row["name"] or resolved_name, status, source, last_seen, now, ip))
-
-            if prev_status == "online" and new_status == "offline":
-                cur.execute("""
-                    INSERT INTO alerts (device_id, ip, message, severity, created_at, resolved)
-                    VALUES (?, ?, ?, 'warning', ?, 0)
-                """, (row["id"], ip, f"{row['name'] or ip} went offline", now))
-
-    conn.commit()
-    conn.close()
-
-
-def scan_network(network_cidr: str) -> dict:
-    ips = iter_ips(network_cidr)
-    found = 0
-
-    with ThreadPoolExecutor(max_workers=64) as executor:
-        futures = {executor.submit(ping_host, ip): ip for ip in ips}
-        for future in as_completed(futures):
-            ip = futures[future]
+def run_full_scan(mode: str = "manual") -> None:
+    if scan_state["running"]:
+        return
+    scan_state.update({"running": True, "last_started": now_ts(), "last_mode": mode, "last_error": ""})
+    try:
+        with ThreadPoolExecutor(max_workers=THREADS) as ex:
+            for net in get_networks():
+                try:
+                    network = ipaddress.ip_network(net, strict=False)
+                    for ip in network.hosts():
+                        ex.submit(scan_candidate_ip, str(ip), mode)
+                except Exception as e:
+                    scan_state["last_error"] = str(e)
+        networks = [ipaddress.ip_network(n, strict=False) for n in get_networks()]
+        for item in arp_scan_networks():
             try:
-                ok = future.result()
+                ip_obj = ipaddress.ip_address(item["ip"])
             except Exception:
-                ok = False
+                continue
+            if networks and not any(ip_obj in net for net in networks):
+                continue
+            conn = db()
+            try:
+                row = conn.execute("SELECT * FROM devices WHERE ip=?", (item["ip"],)).fetchone()
+                if row and row["ignored"]:
+                    continue
+                ts = now_ts()
+                host = reverse_dns(item["ip"])
+                name = row["name"] if row and row["name"] else host or item["ip"]
+                category = row["category"] if row and row["category"] else auto_category(name, item["vendor"])
+                approved = bool(row["approved"]) if row and "approved" in row.keys() else False
+                status = row["status"] if row and row["status"] not in ("unknown", "") else ("online" if approved else "new")
+                conn.execute(
+                    """
+                    INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
+                                        fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json)
+                    VALUES(?,?,?,?,?,?,?,?,0,0,0,0,0,0,0,0,?,?,?, '', '[]')
+                    ON CONFLICT(ip) DO UPDATE SET mac=excluded.mac, vendor=excluded.vendor,
+                        hostname=CASE WHEN excluded.hostname!='' THEN excluded.hostname ELSE devices.hostname END,
+                        category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
+                        name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
+                        status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN
+                                CASE WHEN devices.status IN ('unknown','new') THEN 'online' ELSE devices.status END
+                              ELSE CASE WHEN devices.status='unknown' THEN excluded.status ELSE devices.status END END,
+                        updated_at=excluded.updated_at, source='arp'
+                    """,
+                    (item["ip"], name, host, category, item["vendor"], item["mac"], status, ts, ts, ts, "arp"),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+    except Exception as e:
+        scan_state["last_error"] = str(e)
+    finally:
+        scan_state["running"] = False
+        scan_state["last_finished"] = now_ts()
 
-            if ok:
-                found += 1
-                upsert_device(ip, True, source=network_cidr)
-
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT ip, approved FROM devices")
-    rows = cur.fetchall()
-    conn.close()
-
-    scanned_set = set(ips)
-    for row in rows:
-        ip = row["ip"]
-        approved = int(row["approved"])
-        if approved == 1 and ip in scanned_set:
-            online = ping_host(ip)
-            upsert_device(ip, online, source=network_cidr)
-
-    return {"network": network_cidr, "scanned": len(ips), "found_online": found}
 
 
-@app.get("/api/health")
-def api_health():
-    return {"ok": True, "db_path": DB_PATH, "time": utc_now()}
+def monitor_one(ip: str) -> None:
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        if not row:
+            return
+        d = row_to_device(row)
+        if d["ignored"]:
+            return
+        ok = ping(ip)
+        prev_state = d["status"] or "unknown"
+        changed = False
+        ts = now_ts()
+
+        if ok:
+            d["fail_count"] = 0
+            d["success_count"] += 1
+            d["last_seen"] = ts
+            host = reverse_dns(ip)
+            if host and d["hostname"] != host:
+                d["hostname"] = host
+                if not d["name"]:
+                    d["name"] = host
+            if not d["category"]:
+                d["category"] = auto_category(f"{d['name']} {d['hostname']}", d["vendor"])
+            if not d.get("approved") and not d.get("manual"):
+                d["status"] = "new"
+            elif prev_state in ("offline", "unstable", "new", "unknown") and d["success_count"] >= RECOVER_THRESHOLD:
+                d["status"] = "online"
+                changed = True
+        else:
+            d["success_count"] = 0
+            d["fail_count"] += 1
+            if not d.get("approved") and not d.get("manual"):
+                d["status"] = "new"
+            elif d["fail_count"] >= FAIL_THRESHOLD and prev_state != "offline":
+                d["status"] = "offline"
+                changed = True
+
+        if changed and d["status"] != prev_state:
+            d["state_changes_today"] += 1
+            conn.execute(
+                "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
+                (ip, ts, prev_state, d["status"], "status"),
+            )
+            if recent_history_count(conn, ip) >= UNSTABLE_THRESHOLD and d["status"] == "online":
+                d["status"] = "unstable"
+            if d["status"] == "offline":
+                log_event("error", f"{d['name'] or ip} went offline", "device_offline", ip)
+                create_alert(ip, "high", "Device offline", f"{d['name'] or ip} is offline")
+            elif d["status"] in ("online", "unstable"):
+                level = "warning" if d["status"] == "unstable" else "success"
+                title = "Device unstable" if d["status"] == "unstable" else "Device online"
+                msg = f"{d['name'] or ip} is {d['status']}"
+                log_event(level, msg, f"device_{d['status']}", ip)
+                if d["status"] == "unstable":
+                    create_alert(ip, "medium", title, msg)
+                else:
+                    resolve_alerts_for_ip(ip)
+
+        d["updated_at"] = ts
+        conn.execute(
+            """
+            UPDATE devices SET hostname=?, category=?, vendor=?, mac=?, status=?, last_seen=?, fail_count=?,
+                success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=? WHERE ip=?
+            """,
+            (
+                d["hostname"], d["category"], d["vendor"], d["mac"], d["status"], int(d["last_seen"] or 0),
+                d["fail_count"], d["success_count"], d["state_changes_today"], d["updated_at"], d["name"], d["source"], 1 if d.get("approved") else 0, ip,
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
-@app.get("/api/settings")
-def api_settings():
+
+def monitor_loop() -> None:
+    while True:
+        conn = db()
+        try:
+            ips = [r[0] for r in conn.execute("SELECT ip FROM devices WHERE ignored=0").fetchall()]
+        finally:
+            conn.close()
+        with ThreadPoolExecutor(max_workers=THREADS) as ex:
+            futures = [ex.submit(monitor_one, ip) for ip in ips]
+            for future in futures:
+                try:
+                    future.result()
+                except Exception:
+                    pass
+        time.sleep(int(get_setting("scan_interval", str(PING_INTERVAL)) or PING_INTERVAL))
+
+
+
+def rescan_loop() -> None:
+    while True:
+        if now_ts() - int(scan_state.get("last_finished") or 0) >= SCAN_RESCHEDULE_SECONDS:
+            run_full_scan("auto")
+        time.sleep(30)
+
+
+
+def get_devices(include_ignored: bool = False) -> List[Dict[str, Any]]:
+    conn = db()
+    try:
+        query = "SELECT * FROM devices"
+        if not include_ignored:
+            query += " WHERE ignored=0"
+        query += " ORDER BY pinned DESC, critical DESC, CASE status WHEN 'offline' THEN 0 WHEN 'unstable' THEN 1 WHEN 'new' THEN 2 WHEN 'online' THEN 3 ELSE 4 END, name COLLATE NOCASE, ip"
+        return [row_to_device(r) for r in conn.execute(query).fetchall()]
+    finally:
+        conn.close()
+
+
+
+def status_payload() -> Dict[str, Any]:
+    devices = get_devices()
+    total = len(devices)
+    counters = {k: 0 for k in ["online", "offline", "unstable", "new", "critical", "pinned", "manual"]}
+    categories = set()
+    tags = set()
+    by_ip: Dict[str, Dict[str, Any]] = {}
+    for d in devices:
+        if d["status"] in counters:
+            counters[d["status"]] += 1
+        if d["critical"]:
+            counters["critical"] += 1
+        if d["pinned"]:
+            counters["pinned"] += 1
+        if d["manual"]:
+            counters["manual"] += 1
+        if d["category"]:
+            categories.add(d["category"])
+        for tag in d["tags"]:
+            if tag:
+                tags.add(tag)
+        by_ip[d["ip"]] = d
+    conn = db()
+    try:
+        events = [dict(r) for r in conn.execute("SELECT ts, level, event_type as type, ip, message FROM events ORDER BY id DESC LIMIT 12").fetchall()]
+        alerts = [dict(r) for r in conn.execute("SELECT id, ip, severity, title, message, status, created_at, updated_at FROM alerts WHERE status='open' ORDER BY id DESC LIMIT 12").fetchall()]
+    finally:
+        conn.close()
     return {
-        "networks": db_get_setting("networks", "192.168.1.0/24")
+        "version": APP_VERSION,
+        "networks": get_networks(),
+        "total": total,
+        **counters,
+        "devices": by_ip,
+        "new_devices": {ip: d for ip, d in by_ip.items() if d["status"] == "new"},
+        "categories": sorted(categories),
+        "tags": sorted(tags),
+        "events": events,
+        "alerts": alerts,
+        "scan": scan_state,
+        "settings": {k: get_setting(k, v) for k, v in DEFAULT_SETTINGS.items()},
     }
 
 
-@app.post("/api/settings")
-def api_save_settings(payload: SettingsUpdate):
-    valid = parse_networks(payload.networks)
-    if not valid:
-        raise HTTPException(status_code=400, detail="No valid networks found")
-    networks_text = "\n".join(valid)
-    db_set_setting("networks", networks_text)
-    return {"ok": True, "networks": networks_text}
+@app.get("/")
+def root():
+    return FileResponse("/app/web/index.html")
+
+
+@app.get("/settings.html")
+def settings_page():
+    return RedirectResponse(url="/#settings")
+
+
+@app.get("/logo")
+def logo():
+    path = "/app/web/logo.gif"
+    if os.path.exists(path):
+        return FileResponse(path, media_type="image/gif")
+    return JSONResponse({"error": "logo not found"}, status_code=404)
+
+
+@app.get("/api/status")
+def api_status():
+    return status_payload()
 
 
 @app.get("/api/devices")
 def api_devices():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT *
-        FROM devices
-        ORDER BY
-            pinned DESC,
-            CASE status
-                WHEN 'offline' THEN 0
-                WHEN 'new' THEN 1
-                WHEN 'online' THEN 2
-                ELSE 3
-            END,
-            ip ASC
-    """)
-    rows = [dict(r) for r in cur.fetchall()]
-    conn.close()
-    return rows
-
-
-@app.post("/api/scan")
-def api_scan():
-    networks_text = db_get_setting("networks", "192.168.1.0/24")
-    networks = parse_networks(networks_text)
-    if not networks:
-        raise HTTPException(status_code=400, detail="No valid networks configured")
-
-    results = []
-    for network in networks:
-        results.append(scan_network(network))
-
-    return {"ok": True, "results": results}
-
-
-@app.post("/api/add_device")
-def api_add_device(payload: DeviceCreate):
-    ip = payload.ip.strip()
-    try:
-        ipaddress.ip_address(ip)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid IP")
-
-    name = (payload.name or ip).strip()
-    now = utc_now()
-
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM devices WHERE ip=?", (ip,))
-    row = cur.fetchone()
-
-    if row:
-        cur.execute("""
-            UPDATE devices
-            SET name=?,
-                approved=1,
-                status='offline',
-                source='manual',
-                last_change=?
-            WHERE ip=?
-        """, (name, now, ip))
-    else:
-        cur.execute("""
-            INSERT INTO devices
-            (name, ip, status, approved, pinned, critical, category, flag, notes, source, last_seen, last_change, created_at)
-            VALUES (?, ?, 'offline', 1, 0, 0, '', '', '', 'manual', '', ?, ?)
-        """, (name, ip, now, now))
-
-    conn.commit()
-    conn.close()
-    return {"ok": True}
-
-
-@app.post("/api/devices/{device_id}/approve")
-def api_approve_device(device_id: int):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM devices WHERE id=?", (device_id,))
-    row = cur.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    online = ping_host(row["ip"])
-    status = "online" if online else "offline"
-    now = utc_now()
-
-    cur.execute("""
-        UPDATE devices
-        SET approved=1,
-            status=?,
-            last_seen=?,
-            last_change=?
-        WHERE id=?
-    """, (status, now if online else row["last_seen"], now, device_id))
-    conn.commit()
-    conn.close()
-    return {"ok": True}
-
-
-@app.post("/api/devices/approve_all")
-def api_approve_all():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT id, ip, last_seen FROM devices WHERE approved=0")
-    rows = cur.fetchall()
-
-    now = utc_now()
-    for row in rows:
-        online = ping_host(row["ip"])
-        status = "online" if online else "offline"
-        cur.execute("""
-            UPDATE devices
-            SET approved=1,
-                status=?,
-                last_seen=?,
-                last_change=?
-            WHERE id=?
-        """, (status, now if online else row["last_seen"], now, row["id"]))
-
-    conn.commit()
-    conn.close()
-    return {"ok": True, "count": len(rows)}
-
-
-@app.patch("/api/devices/{device_id}")
-def api_update_device(device_id: int, payload: DeviceUpdate):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM devices WHERE id=?", (device_id,))
-    row = cur.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    fields = dict(row)
-    if payload.name is not None:
-        fields["name"] = payload.name.strip()
-    if payload.category is not None:
-        fields["category"] = payload.category.strip()
-    if payload.flag is not None:
-        fields["flag"] = payload.flag.strip()
-    if payload.notes is not None:
-        fields["notes"] = payload.notes.strip()
-    if payload.pinned is not None:
-        fields["pinned"] = 1 if payload.pinned else 0
-    if payload.critical is not None:
-        fields["critical"] = 1 if payload.critical else 0
-    if payload.approved is not None:
-        fields["approved"] = 1 if payload.approved else 0
-
-    cur.execute("""
-        UPDATE devices
-        SET name=?,
-            category=?,
-            flag=?,
-            notes=?,
-            pinned=?,
-            critical=?,
-            approved=?
-        WHERE id=?
-    """, (
-        fields["name"],
-        fields["category"],
-        fields["flag"],
-        fields["notes"],
-        fields["pinned"],
-        fields["critical"],
-        fields["approved"],
-        device_id
-    ))
-
-    conn.commit()
-    conn.close()
-    return {"ok": True}
-
-
-@app.delete("/api/devices/{device_id}")
-def api_delete_device(device_id: int):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM devices WHERE id=?", (device_id,))
-    conn.commit()
-    conn.close()
-    return {"ok": True}
+    return {"devices": get_devices()}
 
 
 @app.get("/api/alerts")
-def api_alerts():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT *
-        FROM alerts
-        ORDER BY resolved ASC, created_at DESC
-        LIMIT 200
-    """)
-    rows = [dict(r) for r in cur.fetchall()]
-    conn.close()
-    return rows
+def api_alerts(limit: int = 50):
+    conn = db()
+    try:
+        rows = conn.execute(
+            "SELECT id, ip, severity, title, message, status, created_at, updated_at FROM alerts ORDER BY id DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+        return {"alerts": [dict(r) for r in rows]}
+    finally:
+        conn.close()
 
 
-app.mount("/", StaticFiles(directory="/web", html=True), name="web")
+@app.get("/api/events")
+def api_events(limit: int = 50):
+    conn = db()
+    try:
+        rows = conn.execute(
+            "SELECT id, ts, level, event_type, ip, message FROM events ORDER BY id DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+        return {"events": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+@app.get("/api/settings")
+def api_settings():
+    conn = db()
+    try:
+        rows = conn.execute("SELECT key, value FROM settings ORDER BY key").fetchall()
+        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": HOMEII_NETWORKS, "db_path": str(DB_PATH)}
+    finally:
+        conn.close()
+
+
+@app.get("/api/scan")
+def api_scan(mode: str = Query("manual")):
+    threading.Thread(target=run_full_scan, args=(mode,), daemon=True).start()
+    return {"ok": True, "scan": scan_state}
+
+
+
+@app.get("/api/accept/{ip}")
+def api_accept(ip: str):
+    ok = ping(ip)
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        if not row:
+            scan_candidate_ip(ip, "accept")
+            row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        if row:
+            d = row_to_device(row)
+            d["approved"] = True
+            d["status"] = "online" if ok else "offline"
+            if ok:
+                d["last_seen"] = now_ts()
+                d["success_count"] = max(1, d["success_count"])
+            upsert_device(ip, d)
+            log_event("success", f"Accepted device {d['name'] or ip}", "device_accepted", ip)
+        return {"ok": True, "status": "online" if ok else "offline"}
+    finally:
+        conn.close()
+
+
+@app.get("/api/accept_all")
+def api_accept_all():
+    conn = db()
+    try:
+        rows = conn.execute("SELECT ip FROM devices WHERE ignored=0 AND approved=0").fetchall()
+    finally:
+        conn.close()
+    for row in rows:
+        try:
+            api_accept(row[0])
+        except Exception:
+            pass
+    return {"ok": True, "count": len(rows)}
+
+
+@app.get("/api/add/{ip}")
+def api_add(ip: str):
+    return api_accept(ip)
+
+
+@app.get("/api/add_all")
+def api_add_all():
+    return api_accept_all()
+
+
+@app.get("/api/remove/{ip}")
+def api_remove(ip: str):
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute("DELETE FROM devices WHERE ip=?", (ip,))
+            conn.execute("DELETE FROM device_history WHERE ip=?", (ip,))
+            conn.execute("UPDATE alerts SET status='resolved', updated_at=? WHERE ip=? AND status='open'", (now_ts(), ip))
+            conn.commit()
+        finally:
+            conn.close()
+    log_event("info", f"Removed device {ip}", "device_removed", ip)
+    return {"ok": True}
+
+
+@app.get("/api/delete_device")
+def api_delete_device(ip: str):
+    return api_remove(ip)
+
+
+@app.get("/api/ignore/{ip}")
+def api_ignore(ip: str):
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute(
+                "INSERT INTO devices(ip,ignored,updated_at,first_seen,source) VALUES(?,1,?,?,?) ON CONFLICT(ip) DO UPDATE SET ignored=1, updated_at=excluded.updated_at",
+                (ip, now_ts(), now_ts(), "ignored"),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    log_event("info", f"Ignored device {ip}", "device_ignored", ip)
+    return {"ok": True}
+
+
+@app.get("/api/update")
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = ""):
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        if row:
+            d = row_to_device(row)
+            d["name"] = unquote(name)
+            d["category"] = unquote(category)
+            d["notes"] = unquote(notes)
+            d["tags"] = [x.strip() for x in unquote(tags).split(",") if x.strip()]
+            d["updated_at"] = now_ts()
+            upsert_device(ip, d)
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+@app.get("/api/toggle_critical/{ip}")
+def api_toggle_critical(ip: str):
+    conn = db()
+    try:
+        row = conn.execute("SELECT critical FROM devices WHERE ip=?", (ip,)).fetchone()
+        if not row:
+            return {"ok": False}
+        new_value = 0 if row[0] else 1
+        conn.execute("UPDATE devices SET critical=?, updated_at=? WHERE ip=?", (new_value, now_ts(), ip))
+        conn.commit()
+        return {"ok": True, "critical": bool(new_value)}
+    finally:
+        conn.close()
+
+
+@app.get("/api/toggle_pinned/{ip}")
+def api_toggle_pinned(ip: str):
+    conn = db()
+    try:
+        row = conn.execute("SELECT pinned FROM devices WHERE ip=?", (ip,)).fetchone()
+        if not row:
+            return {"ok": False}
+        new_value = 0 if row[0] else 1
+        conn.execute("UPDATE devices SET pinned=?, updated_at=? WHERE ip=?", (new_value, now_ts(), ip))
+        conn.commit()
+        return {"ok": True, "pinned": bool(new_value)}
+    finally:
+        conn.close()
+
+
+@app.get("/api/ping_now/{ip}")
+def api_ping_now(ip: str):
+    ok = ping(ip)
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        if row:
+            d = row_to_device(row)
+            d["status"] = "online" if ok else "offline"
+            if ok:
+                d["last_seen"] = now_ts()
+            d["updated_at"] = now_ts()
+            upsert_device(ip, d)
+        return {"ok": ok}
+    finally:
+        conn.close()
+
+
+@app.get("/api/add_manual")
+def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = ""):
+    host = reverse_dns(ip)
+    vendor = ""
+    d = {
+        "name": name or host or ip,
+        "hostname": host,
+        "category": category or auto_category(name or host or ip, vendor),
+        "vendor": vendor,
+        "mac": "",
+        "status": "online" if ping(ip) else "offline",
+        "last_seen": now_ts() if ping(ip) else 0,
+        "critical": False,
+        "pinned": False,
+        "manual": True,
+        "ignored": False,
+        "approved": True,
+        "fail_count": 0,
+        "success_count": 1 if ping(ip) else 0,
+        "state_changes_today": 0,
+        "first_seen": now_ts(),
+        "updated_at": now_ts(),
+        "source": "manual",
+        "notes": notes,
+        "tags": [],
+    }
+    upsert_device(ip, d)
+    log_event("info", f"Manual device added: {name or ip}", "device_manual", ip)
+    return {"ok": True}
+
+
+@app.get("/api/resolve_alert/{alert_id}")
+def api_resolve_alert(alert_id: int):
+    conn = db()
+    try:
+        conn.execute("UPDATE alerts SET status='resolved', updated_at=? WHERE id=?", (now_ts(), alert_id))
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+@app.get("/api/save_settings")
+def api_save_settings(auto_refresh: str = "30", default_view: str = "grid", dashboard_style: str = "advanced", theme: str = "light", networks: str = ""):
+    set_setting("auto_refresh", auto_refresh)
+    set_setting("default_view", default_view)
+    set_setting("dashboard_style", dashboard_style)
+    set_setting("theme", theme if theme in ("light", "dark") else "light")
+    if networks.strip():
+        save_networks(networks)
+    return {"ok": True, "networks": get_networks()}
+
+
+@app.get("/api/save_networks")
+def api_save_networks(networks: str = ""):
+    return {"ok": True, "networks": save_networks(networks)}
+
+
+init_db()
+threading.Thread(target=monitor_loop, daemon=True).start()
+threading.Thread(target=rescan_loop, daemon=True).start()
+threading.Thread(target=run_full_scan, args=("startup",), daemon=True).start()
