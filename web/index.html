@@ -3,43 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.6.7</title>
+<title>HOMEii Network Monitor 3.7.0</title>
 <style>
 :root{
-  color-scheme:dark;
-  --bg:#07101d;
-  --bg2:#0d1727;
-  --sidebar:#08111d;
-  --card:#121e31;
-  --card2:#17253b;
-  --muted:#97a8c5;
-  --text:#eef4ff;
-  --line:rgba(255,255,255,.08);
-  --line2:rgba(255,255,255,.12);
-  --blue:#78a9ff;
-  --green:#5ad891;
-  --red:#ff4d62;
-  --orange:#ffbf63;
-  --gold:#f2cd67;
-  --shadow:0 16px 42px rgba(0,0,0,.26);
+  color-scheme: light;
+  --bg:#eef3fb; --bg2:#f8fbff; --sidebar:#f4f7fc; --card:#ffffff; --card2:#ffffff;
+  --text:#172640; --muted:#647693; --line:rgba(17,34,68,.10); --line2:rgba(17,34,68,.16);
+  --blue:#2f72dc; --green:#14945a; --red:#d85e68; --orange:#d68822; --gold:#b78a10;
+  --shadow:0 14px 32px rgba(17,34,68,.10);
 }
-body.light{
-  color-scheme:light;
-  --bg:#edf2f9;
-  --bg2:#f8fbff;
-  --sidebar:#f3f6fb;
-  --card:#ffffff;
-  --card2:#ffffff;
-  --muted:#6c7d98;
-  --text:#1b2940;
-  --line:rgba(17,34,68,.10);
-  --line2:rgba(17,34,68,.16);
-  --blue:#4c7fea;
-  --green:#16945a;
-  --red:#e84c61;
-  --orange:#d68822;
-  --gold:#b78a10;
-  --shadow:0 12px 30px rgba(17,34,68,.08);
+body.dark{
+  color-scheme: dark;
+  --bg:#07101d; --bg2:#0d1727; --sidebar:#08111d; --card:#121e31; --card2:#18263d;
+  --text:#eef4ff; --muted:#97a8c5; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.12);
+  --blue:#6ea7ff; --green:#4ed48a; --red:#ff6b78; --orange:#ffbe5e; --gold:#f2cd67;
+  --shadow:0 18px 48px rgba(0,0,0,.28);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -47,512 +25,105 @@ body{
   font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
   color:var(--text);
   background:
-    radial-gradient(900px 420px at 100% -10%, rgba(120,169,255,.12), transparent 60%),
-    radial-gradient(700px 280px at -10% 10%, rgba(90,216,145,.08), transparent 60%),
+    radial-gradient(800px 360px at 100% -10%,rgba(110,167,255,.12),transparent 60%),
+    radial-gradient(600px 260px at -10% 10%,rgba(78,212,138,.10),transparent 60%),
     linear-gradient(180deg,var(--bg),var(--bg2));
   overflow:hidden;
 }
-button,input,select,textarea{font:inherit}
-.app{
-  height:100vh;
-  display:grid;
-  grid-template-columns:250px 1fr;
-}
+.app{height:100vh;display:grid;grid-template-columns:248px 1fr}
 .sidebar{
-  height:100vh;
-  border-left:1px solid var(--line);
-  background:linear-gradient(180deg,var(--sidebar),rgba(0,0,0,.03));
-  padding:18px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:16px;
+  height:100vh;padding:18px 14px;display:flex;flex-direction:column;gap:16px;
+  border-left:1px solid var(--line);background:linear-gradient(180deg,var(--sidebar),rgba(0,0,0,.03));
 }
-.brand{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:4px 6px 10px;
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 6px 10px}
+.brand-title{font-size:18px;font-weight:900;letter-spacing:-.02em}
+.brand-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(180deg,#85b3ff,#6798f3);color:#fff;font-size:22px;font-weight:900;border:1px solid rgba(255,255,255,.14)}
+.logo img{width:100%;height:100%;object-fit:contain}
+.nav{display:grid;gap:8px}
+.nav-btn{
+  width:100%;padding:12px 14px;border-radius:16px;cursor:pointer;text-align:right;color:var(--text);
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
 }
-.brandLeft{min-width:0}
-.brandTitle{
-  font-size:18px;
-  font-weight:900;
-  letter-spacing:-.02em;
-}
-.brandSub{
-  font-size:12px;
-  color:var(--muted);
-  margin-top:3px;
-}
-.logoWrap{
-  width:42px;height:42px;border-radius:14px;
-  display:grid;place-items:center;
-  overflow:hidden;
-  background:linear-gradient(180deg,#85b3ff,#6798f3);
-  color:#fff;
-  font-size:22px;
-  font-weight:900;
-  border:1px solid rgba(255,255,255,.14);
-  flex:0 0 auto;
-}
-.logoWrap img{width:100%;height:100%;object-fit:contain}
-.nav{
-  display:grid;
-  gap:8px;
-}
-.navBtn{
-  width:100%;
-  border:1px solid var(--line);
-  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-  color:var(--text);
-  border-radius:16px;
-  padding:12px 14px;
-  cursor:pointer;
-  text-align:right;
-  transition:.16s ease;
-}
-.navBtn:hover{transform:translateY(-1px);border-color:var(--line2)}
-.navBtn.active{
-  background:linear-gradient(180deg,rgba(120,169,255,.20),rgba(120,169,255,.10));
-  border-color:rgba(120,169,255,.26);
-  box-shadow:inset 0 0 0 1px rgba(120,169,255,.14);
-}
-.sidebarFooter{
-  margin-top:auto;
-  display:grid;
-  gap:10px;
-}
-.iconBtn{
-  width:42px;height:42px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  background:linear-gradient(180deg,var(--card),var(--card2));
-  color:var(--text);
-  cursor:pointer;
-  display:grid;
-  place-items:center;
-  box-shadow:var(--shadow);
-}
-.sideInfo{
-  display:grid;
-  gap:10px;
-}
-.sideInfoCard{
-  border:1px solid var(--line);
-  background:linear-gradient(180deg,var(--card),var(--card2));
-  border-radius:18px;
-  padding:12px 14px;
-  box-shadow:var(--shadow);
-}
-.sideInfoCard .k{
-  font-size:11px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-.sideInfoCard .v{
-  margin-top:8px;
-  font-size:18px;
-  font-weight:900;
-}
-.health{
-  display:flex;align-items:center;gap:8px;
-  color:var(--muted);font-size:13px;
-}
+.nav-btn.active,.nav-btn:hover{border-color:var(--line2);background:linear-gradient(180deg,rgba(110,167,255,.18),rgba(110,167,255,.08))}
+.sidebar-footer{margin-top:auto;display:grid;gap:10px}
+.info-card{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
+.info-card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.info-card .v{margin-top:8px;font-size:18px;font-weight:900}
+.health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
-
-.main{
-  height:100vh;
-  overflow-y:auto;
-  overflow-x:hidden;
-  padding:20px;
+.main{height:100vh;overflow-y:auto;overflow-x:hidden;padding:20px}
+.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start;margin-bottom:14px}
+.hero,.actionbar,.kpi,.panel,.toolbar,.tablewrap,.empty,.item,.msg{
+  border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));box-shadow:var(--shadow)
 }
-.top{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:14px;
-  align-items:start;
-  margin-bottom:14px;
-}
-.hero,.actionbar,.kpi,.panel,.toolbar,.tableWrap,.empty,.alertItem,.eventItem,.msg{
-  border:1px solid var(--line);
-  background:linear-gradient(180deg,var(--card),var(--card2));
-  box-shadow:var(--shadow);
-}
-.hero,.actionbar,.panel,.toolbar,.tableWrap{border-radius:22px}
-.hero{
-  padding:18px 20px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-}
-.heroTitle{
-  margin:0;
-  font-size:24px;
-  font-weight:900;
-  letter-spacing:-.03em;
-}
-.heroSub{
-  margin-top:6px;
-  color:var(--muted);
-  font-size:13px;
-}
-.heroRight{
-  color:var(--muted);
-  font-size:13px;
-}
-.actionbar{
-  padding:12px;
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
+.hero,.actionbar,.panel,.toolbar,.tablewrap{border-radius:22px}
+.hero{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.hero-title{margin:0;font-size:24px;font-weight:900;letter-spacing:-.03em}
+.hero-sub{margin-top:6px;color:var(--muted);font-size:13px}
+.actionbar{padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .btn,input,select,textarea{
-  border:1px solid var(--line);
-  border-radius:14px;
-  background:rgba(255,255,255,.02);
-  color:var(--text);
+  border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--text);font:inherit
 }
-.btn{
-  padding:10px 13px;
-  cursor:pointer;
-  transition:.15s ease;
-}
-.btn:hover{transform:translateY(-1px);border-color:var(--line2)}
-.btn.primary{background:linear-gradient(180deg,#7baeff,#5f93f1);border:none;color:#fff}
-.btn.green{background:linear-gradient(180deg,#32ba72,#17955c);border:none;color:#fff}
-.btn.red{background:linear-gradient(180deg,#ff8690,#d4626c);border:none;color:#fff}
-.btn.ghost{background:transparent}
-.btn.small{padding:8px 12px;font-size:12px;border-radius:12px}
-.scanState{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  color:var(--muted);
-}
-
-.kpis{
-  display:grid;
-  grid-template-columns:1.5fr 1fr 1fr 1fr 1fr 1fr;
-  gap:12px;
-  margin-bottom:14px;
-}
-.kpi{
-  border-radius:18px;
-  padding:14px 16px;
-  cursor:pointer;
-  transition:.16s ease;
-}
-.kpi:hover{transform:translateY(-1px);border-color:var(--line2)}
-.kpi.active{outline:2px solid rgba(120,169,255,.26)}
-.kpi.primaryAlert{
-  background:
-    linear-gradient(180deg, rgba(255,77,98,.14), rgba(255,77,98,.06)),
-    linear-gradient(180deg,var(--card),var(--card2));
-  border-color:rgba(255,77,98,.24);
-}
-.kpi .label{
-  font-size:11px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-.kpi .value{
-  margin-top:10px;
-  font-size:30px;
-  font-weight:900;
-}
-.kpi .value.online{color:var(--green)}
-.kpi .value.offline{color:var(--red)}
-.kpi .value.new{color:var(--blue)}
-.kpi .value.alerts{color:var(--orange)}
-.kpi .value.pinned{color:var(--gold)}
-
-.section{display:none}
-.section.active{display:block}
-
-.grid{
-  display:grid;
-  grid-template-columns:1fr .9fr;
-  gap:14px;
-}
-.stack{display:grid;gap:14px}
+.btn{padding:10px 13px;cursor:pointer}
+.btn.primary{background:linear-gradient(180deg,#2f7dff,#1f63d7);border:none;color:#fff}
+.btn.green{background:linear-gradient(180deg,#28b86f,#14945a);border:none;color:#fff}
+.btn.red{background:linear-gradient(180deg,#ff7a85,#d85d67);border:none;color:#fff}
+.btn.small{padding:7px 10px;border-radius:12px;font-size:12px}
+.scanState,.mini{padding:8px 11px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.kpis{display:grid;grid-template-columns:1.6fr repeat(5,1fr);gap:12px;margin-bottom:14px}
+.kpi{border-radius:18px;padding:14px 16px;cursor:pointer}
+.kpi.active{outline:2px solid rgba(110,167,255,.28)}
+.kpi.primary-alert{background:linear-gradient(180deg, rgba(216,94,104,.12), rgba(216,94,104,.04)),linear-gradient(180deg,var(--card),var(--card2))}
+.kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.kpi .value{margin-top:10px;font-size:28px;font-weight:900}
+.kpi .value.online{color:var(--green)} .kpi .value.offline{color:var(--red)} .kpi .value.new{color:var(--blue)} .kpi .value.alerts{color:var(--orange)} .kpi .value.pinned{color:var(--gold)}
+.section{display:none}.section.active{display:block}
+.grid{display:grid;gap:14px}.grid.two{grid-template-columns:1.12fr .88fr}
 .panel{padding:18px}
-.panelHead{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:14px;
-  margin-bottom:12px;
+.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.panel-head h2{margin:0;font-size:18px;font-weight:900}
+.panel-head p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.dashboard-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.dashboard-card{
+  border:2px solid var(--red);border-radius:22px;padding:14px 16px;min-height:132px;
+  display:grid;grid-template-columns:1fr 1.15fr;gap:14px;direction:ltr;background:rgba(255,255,255,.02)
 }
-.panelHead h2{
-  margin:0;
-  font-size:18px;
-  font-weight:900;
-}
-.panelHead p{
-  margin:6px 0 0;
-  color:var(--muted);
-  font-size:13px;
-}
-
-.dashboardCards{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-  gap:14px;
-}
-
-.deviceDashboardCard{
-  border:3px solid var(--red);
-  border-radius:26px;
-  background:var(--card);
-  padding:16px 18px;
-  min-height:150px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:18px;
-  align-items:start;
-}
-.deviceDashboardCard.online{border-color:var(--green)}
-.deviceDashboardCard.offline{border-color:var(--red)}
-.deviceDashboardCard.new{border-color:var(--blue)}
-.deviceDashboardCard.unstable{border-color:var(--orange)}
-
-.ddLeft{
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  align-items:flex-start;
-  min-width:0;
-  height:100%;
-}
-.ddStatus{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 14px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  background:rgba(255,255,255,.02);
-  font-size:15px;
-  white-space:nowrap;
-}
-.ddStatusDot{
-  width:14px;height:14px;border-radius:50%;
-  background:var(--blue);
-  flex:0 0 auto;
-}
-.deviceDashboardCard.online .ddStatusDot{background:var(--green)}
-.deviceDashboardCard.offline .ddStatusDot{background:var(--red)}
-.deviceDashboardCard.new .ddStatusDot{background:var(--blue)}
-.deviceDashboardCard.unstable .ddStatusDot{background:var(--orange)}
-
-.ddMeta{
-  margin-top:12px;
-}
-.ddMetaRow{
-  font-size:15px;
-  color:var(--muted);
-}
-.ddMetaRow b{
-  color:var(--text);
-  font-size:16px;
-}
-
-.ddActions{
-  display:flex;
-  gap:8px;
-  flex-wrap:nowrap;
-  margin-top:14px;
-}
-.ddRight{
-  text-align:right;
-  min-width:0;
-}
-.ddName{
-  margin:0;
-  font-size:28px;
-  line-height:1.05;
-  font-weight:900;
-  word-break:break-word;
-}
-.ddIp{
-  margin-top:10px;
-  font-size:18px;
-  line-height:1.15;
-  word-break:break-word;
-}
-
-.alerts,.events{
-  display:grid;
-  gap:10px;
-  max-height:360px;
-  overflow:auto;
-}
-.alertItem,.eventItem{
-  border-radius:18px;
-  padding:13px 14px;
-  background:rgba(255,255,255,.02);
-}
-.row{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-}
-.rowTitle{font-size:14px;font-weight:800}
-.rowSub{margin-top:6px;color:var(--muted);font-size:12px}
-.sev{font-size:12px;text-transform:uppercase;font-weight:800}
-.sev.high{color:var(--red)}
-.sev.medium{color:var(--orange)}
-.sev.info,.sev.success{color:var(--blue)}
-
-.toolbar{
-  padding:12px;
-  display:grid;
-  grid-template-columns:1.4fr .8fr .8fr .8fr;
-  gap:10px;
-  margin-bottom:12px;
-}
-.field{display:grid;gap:6px}
-.field label{font-size:12px;color:var(--muted)}
-input,select,textarea{width:100%;padding:10px 12px;outline:none}
-textarea{min-height:120px;resize:vertical}
-.quickActions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-
-.tableWrap{
-  overflow:auto;
-  max-width:100%;
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-  min-width:980px;
-}
-th,td{
-  padding:11px 12px;
-  border-bottom:1px solid var(--line);
-  text-align:right;
-  vertical-align:top;
-  font-size:13px;
-  white-space:nowrap;
-}
-th{
-  font-size:11px;
-  color:var(--muted);
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  position:sticky;
-  top:0;
-  background:var(--card2);
-}
-td strong{font-size:14px}
-.actionsRow{
-  display:flex;
-  gap:7px;
-  flex-wrap:wrap;
-}
-.pill{
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  padding:6px 10px;
-  border:1px solid var(--line);
-  border-radius:999px;
-  font-size:12px;
-  background:rgba(255,255,255,.02);
-}
-.badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 12px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  font-size:12px;
-  background:rgba(255,255,255,.02);
-  white-space:nowrap;
-}
-.badge::before{
-  content:"";
-  width:10px;height:10px;border-radius:50%;
-  background:var(--blue);
-}
-.badge.online::before{background:var(--green)}
-.badge.offline::before{background:var(--red)}
-.badge.unstable::before{background:var(--orange)}
-.badge.new::before{background:var(--blue)}
-
-.msg{
-  display:none;
-  margin-bottom:10px;
-  padding:12px 14px;
-  border-radius:16px;
-}
-.msg.show{display:block}
-.msg.ok{background:rgba(90,216,145,.08);border-color:rgba(90,216,145,.25)}
-.msg.err{background:rgba(255,122,133,.08);border-color:rgba(255,122,133,.25)}
-
-.networkList{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-top:10px;
-}
-.networkChip{
-  padding:7px 11px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  color:var(--muted);
-}
-.empty{
-  border-radius:18px;
-  padding:18px;
-  text-align:center;
-  color:var(--muted);
-  background:rgba(255,255,255,.02);
-}
-
-@media (max-width:1500px){
-  .kpis{grid-template-columns:repeat(3,1fr)}
-  .grid{grid-template-columns:1fr}
-}
-@media (max-width:1200px){
-  .deviceDashboardCard{
-    grid-template-columns:1fr;
-    min-height:auto;
-  }
-  .ddActions{
-    flex-wrap:wrap;
-  }
-}
-@media (max-width:1100px){
-  body{overflow:auto}
-  .app{grid-template-columns:1fr}
-  .sidebar{
-    height:auto;
-    min-height:auto;
-  }
-  .main{
-    height:auto;
-    overflow:visible;
-  }
-  .toolbar{grid-template-columns:1fr 1fr}
-}
-@media (max-width:760px){
-  .top{grid-template-columns:1fr}
-  .kpis,.toolbar,.dashboardCards{grid-template-columns:1fr}
-  .hero{flex-direction:column;align-items:flex-start}
-  .ddName{font-size:24px}
-  .ddIp{font-size:16px}
-}
+.dashboard-card.online{border-color:var(--green)} .dashboard-card.offline{border-color:var(--red)} .dashboard-card.new{border-color:var(--blue)} .dashboard-card.unstable{border-color:var(--orange)}
+.d-left{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;text-align:left}
+.d-right{direction:rtl;text-align:right;min-width:0}
+.status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px}
+.status-dot{width:12px;height:12px;border-radius:50%;background:var(--red)}
+.dashboard-card.online .status-dot{background:var(--green)} .dashboard-card.offline .status-dot{background:var(--red)} .dashboard-card.new .status-dot{background:var(--blue)} .dashboard-card.unstable .status-dot{background:var(--orange)}
+.d-name{margin:0;font-size:22px;line-height:1.05;font-weight:900;word-break:break-word}
+.d-ip{margin-top:8px;font-size:15px;direction:ltr}
+.d-meta{font-size:13px;color:var(--muted);margin-top:10px}
+.d-actions{display:flex;gap:8px;flex-wrap:nowrap;margin-top:12px}
+.toolbar{padding:12px;display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr;gap:10px;margin-bottom:12px}
+.field{display:grid;gap:6px}.field label{font-size:12px;color:var(--muted)}
+input,select,textarea{padding:10px 12px;outline:none;width:100%} textarea{min-height:120px;resize:vertical}
+.quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tablewrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:1240px}
+th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle;font-size:13px;white-space:nowrap}
+th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;position:sticky;top:0;background:var(--card2)}
+.name-cell{display:flex;align-items:center;gap:8px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px}
+.badge::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.badge.online::before{background:var(--green)} .badge.offline::before{background:var(--red)} .badge.unstable::before{background:var(--orange)} .badge.new::before{background:var(--blue)}
+.status-actions{display:flex;gap:6px;flex-wrap:nowrap}
+.actions{display:flex;gap:6px;flex-wrap:nowrap}
+.item{padding:13px 14px;border-radius:18px;background:rgba(255,255,255,.02)}
+.item-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
+.item small{color:var(--muted)}
+.settings-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+.settings-stack{display:grid;gap:14px}
+.msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px}.msg.show{display:block}.msg.ok{background:rgba(78,212,138,.08);border-color:rgba(78,212,138,.24)}.msg.err{background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.24)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted)}
+@media (max-width:1320px){.kpis{grid-template-columns:repeat(3,1fr)} .grid.two,.settings-layout{grid-template-columns:1fr}}
+@media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto;overflow:visible}.toolbar{grid-template-columns:1fr 1fr} .dashboard-card{grid-template-columns:1fr;direction:rtl}.d-actions{flex-wrap:wrap}}
+@media (max-width:760px){.top{grid-template-columns:1fr}.kpis,.toolbar,.dashboard-cards{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -560,41 +131,21 @@ td strong{font-size:14px}
   <aside class="sidebar">
     <div class="brand">
       <div class="brandLeft">
-        <div class="brandTitle">HOMEii Network</div>
-        <div class="brandSub">Monitor <span id="versionText">3.6.7</span></div>
+        <div class="brand-title" id="brandTitle">HOMEii Network</div>
+        <div class="brand-sub">Monitor <span id="versionText">3.7.0</span></div>
       </div>
-      <div class="logoWrap">
-        <img src="./logo" alt="HOMEii" onerror="this.style.display='none'; this.parentNode.textContent='H';">
-      </div>
+      <div class="logo"><img src="./logo" alt="" onerror="this.style.display='none'; this.parentNode.textContent='H';"></div>
     </div>
-
     <div class="nav">
-      <button class="navBtn active" data-tab="dashboard" onclick="switchTab('dashboard', this)">Dashboard</button>
-      <button class="navBtn" data-tab="devices" onclick="switchTab('devices', this)">Devices</button>
-      <button class="navBtn" data-tab="alerts" onclick="switchTab('alerts', this)">Alerts</button>
-      <button class="navBtn" data-tab="settings" onclick="switchTab('settings', this)">Settings</button>
+      <button class="nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard', this)" id="navDashboard">Dashboard</button>
+      <button class="nav-btn" data-tab="devices" onclick="switchTab('devices', this)" id="navDevices">Devices</button>
+      <button class="nav-btn" data-tab="alerts" onclick="switchTab('alerts', this)" id="navAlerts">Alerts</button>
+      <button class="nav-btn" data-tab="settings" onclick="switchTab('settings', this)" id="navSettings">Settings</button>
     </div>
-
-    <div class="sidebarFooter">
-      <button class="iconBtn" onclick="toggleTheme()" title="Theme">
-        <span id="themeIcon">☾</span>
-      </button>
-
-      <div class="sideInfo">
-        <div class="sideInfoCard">
-          <div class="k">Status</div>
-          <div class="v" id="sideScanState">Idle</div>
-        </div>
-        <div class="sideInfoCard">
-          <div class="k">Networks</div>
-          <div class="v" id="sideNetworksCount">0</div>
-        </div>
-      </div>
-
-      <div class="health">
-        <span class="dot"></span>
-        <span id="dbPath">DB: /data/homeii.db</span>
-      </div>
+    <div class="sidebar-footer">
+      <div class="info-card"><div class="k" id="lblStatus">Status</div><div class="v" id="sideScanState">Idle</div></div>
+      <div class="info-card"><div class="k" id="lblNetworks">Networks</div><div class="v" id="sideNetworksCount">0</div></div>
+      <div class="health"><span class="dot"></span><span id="dbPath">DB: /data/homeii/homeii.db</span></div>
     </div>
   </aside>
 
@@ -602,80 +153,42 @@ td strong{font-size:14px}
     <div class="top">
       <div class="hero">
         <div>
-          <h1 class="heroTitle">HOMEii Network Monitor</h1>
-          <div class="heroSub">v<span id="heroVersion">3.6.7</span> • Dashboard Cards Compact</div>
+          <h1 class="hero-title" id="heroTitle">HOMEii Network Monitor</h1>
+          <div class="hero-sub" id="heroSub">v3.7.0 • Clean Dashboard • Better Table • Settings Redesign</div>
         </div>
-        <div class="heroRight">
-          <span id="lastRefresh">—</span>
-        </div>
+        <div class="heroRight"><span id="lastRefresh">—</span></div>
       </div>
-
       <div class="actionbar">
-        <button class="btn primary" onclick="runScan()">סריקה עכשיו</button>
-        <button class="btn green" onclick="acceptAll()">אשר את כל החדשים</button>
-        <button class="btn ghost" onclick="refreshAll()">רענון</button>
+        <button class="btn primary" onclick="runScan()" id="btnScan">סריקה עכשיו</button>
+        <button class="btn green" onclick="acceptAll()" id="btnAcceptAll">אשר את כל החדשים</button>
+        <button class="btn" onclick="refreshAll()" id="btnRefresh">רענון</button>
         <span class="scanState" id="scanState">סטטוס סריקה: —</span>
       </div>
     </div>
 
     <div class="kpis">
-      <div class="kpi primaryAlert" data-filter="offline" onclick="applyKpiFilter('offline')">
-        <div class="label">Offline Devices</div>
-        <div class="value offline" id="sOffline">—</div>
-      </div>
-      <div class="kpi" data-filter="online" onclick="applyKpiFilter('online')">
-        <div class="label">Online</div>
-        <div class="value online" id="sOnline">—</div>
-      </div>
-      <div class="kpi" data-filter="" onclick="applyKpiFilter('')">
-        <div class="label">Total</div>
-        <div class="value" id="sTotal">—</div>
-      </div>
-      <div class="kpi" data-filter="new" onclick="applyKpiFilter('new')">
-        <div class="label">New</div>
-        <div class="value new" id="sNew">—</div>
-      </div>
-      <div class="kpi" data-filter="critical" onclick="applyKpiFilter('critical')">
-        <div class="label">Critical</div>
-        <div class="value alerts" id="sCritical">—</div>
-      </div>
-      <div class="kpi" data-filter="pinned" onclick="applyKpiFilter('pinned')">
-        <div class="label">Pinned</div>
-        <div class="value pinned" id="sPinned">—</div>
-      </div>
+      <div class="kpi primary-alert" data-filter="offline" onclick="applyKpiFilter('offline')"><div class="label" id="kpiOfflineLabel">Offline Devices</div><div class="value offline" id="sOffline">—</div></div>
+      <div class="kpi" data-filter="online" onclick="applyKpiFilter('online')"><div class="label" id="kpiOnlineLabel">Online</div><div class="value online" id="sOnline">—</div></div>
+      <div class="kpi" data-filter="" onclick="applyKpiFilter('')"><div class="label" id="kpiTotalLabel">Total</div><div class="value" id="sTotal">—</div></div>
+      <div class="kpi" data-filter="new" onclick="applyKpiFilter('new')"><div class="label" id="kpiNewLabel">New</div><div class="value new" id="sNew">—</div></div>
+      <div class="kpi" data-filter="critical" onclick="applyKpiFilter('critical')"><div class="label" id="kpiCriticalLabel">Critical</div><div class="value alerts" id="sCritical">—</div></div>
+      <div class="kpi" data-filter="pinned" onclick="applyKpiFilter('pinned')"><div class="label" id="kpiPinnedLabel">Pinned</div><div class="value pinned" id="sPinned">—</div></div>
     </div>
 
     <section id="tab-dashboard" class="section active">
-      <div class="grid">
+      <div class="grid two">
         <div class="panel">
-          <div class="panelHead">
-            <div>
-              <h2>מכשירים בדשבורד</h2>
-              <p>שם מימין, סטטוס משמאל, פונטים קטנים יותר</p>
-            </div>
-          </div>
-          <div id="dashboardDevices" class="dashboardCards"></div>
+          <div class="panel-head"><div><h2 id="dashboardTitle">מכשירים בדשבורד</h2><p id="dashboardSub">שם, IP, מצב ופעולות מהירות.</p></div></div>
+          <div id="dashboardDevices" class="dashboard-cards"></div>
         </div>
-
-        <div class="stack">
+        <div class="grid">
           <div class="panel">
-            <div class="panelHead">
-              <div>
-                <h2>Open alerts</h2>
-                <p>התראות פתוחות</p>
-              </div>
-            </div>
-            <div id="dashboardAlerts" class="alerts"></div>
+            <div class="panel-head"><div><h2 id="alertsOpenTitle">Open alerts</h2></div></div>
+            <div id="dashboardAlerts" class="grid"></div>
           </div>
-
           <div class="panel">
-            <div class="panelHead">
-              <div>
-                <h2>Recent events</h2>
-                <p>אירועים אחרונים</p>
-              </div>
-            </div>
-            <div id="dashboardEvents" class="events"></div>
+            <div class="panel-head"><div><h2 id="eventsRecentTitle">Recent events</h2></div></div>
+            <div id="dashboardEvents" class="grid"></div>
           </div>
         </div>
       </div>
@@ -683,146 +196,85 @@ td strong{font-size:14px}
 
     <section id="tab-devices" class="section">
       <div class="panel">
-        <div class="panelHead">
-          <div>
-            <h2>Devices</h2>
-            <p>כל המידע והפעולות המלאות נמצאים כאן</p>
-          </div>
-        </div>
-
+        <div class="panel-head"><div><h2 id="devicesTitle">Devices</h2><p id="devicesSub">טבלה קומפקטית עם כל המידע והפעולות בשורה אחת.</p></div></div>
         <div class="toolbar">
-          <div class="field">
-            <label>חיפוש</label>
-            <input id="searchText" placeholder="שם, IP, hostname, vendor, mac..." oninput="renderDevices()">
-          </div>
-          <div class="field">
-            <label>סטטוס</label>
-            <select id="filterStatus" onchange="renderDevices()">
-              <option value="">הכל</option>
-              <option value="online">online</option>
-              <option value="offline">offline</option>
-              <option value="unstable">unstable</option>
-              <option value="new">new</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>קטגוריה</label>
-            <select id="filterCategory" onchange="renderDevices()">
-              <option value="">הכל</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>תצוגה</label>
-            <select id="devicesView" onchange="renderDevices()">
-              <option value="table">table</option>
-              <option value="grid">grid</option>
-            </select>
-          </div>
+          <div class="field"><label id="lblSearch">חיפוש</label><input id="searchText" placeholder="שם, IP, hostname, vendor, mac..." oninput="renderDevices()"></div>
+          <div class="field"><label id="lblStatusFilter">סטטוס</label><select id="filterStatus" onchange="renderDevices()"><option value="" id="optAll">הכל</option><option value="online">online</option><option value="offline">offline</option><option value="unstable">unstable</option><option value="new">new</option></select></div>
+          <div class="field"><label id="lblCategoryFilter">קטגוריה</label><select id="filterCategory" onchange="renderDevices()"><option value="">הכל</option></select></div>
+          <div class="field"><label id="lblView">תצוגה</label><select id="devicesView" onchange="renderDevices()"><option value="table">table</option><option value="grid">grid</option></select></div>
         </div>
-
-        <div class="quickActions">
-          <button class="btn small" onclick="clearFilters()">נקה סינונים</button>
-          <button class="btn small green" onclick="acceptAll()">אשר את כל החדשים</button>
-          <button class="btn small" onclick="runScan()">סריקה מחדש</button>
+        <div class="quick-actions">
+          <button class="btn small" onclick="clearFilters()" id="btnClearFilters">נקה סינונים</button>
+          <button class="btn small green" onclick="acceptAll()" id="btnAcceptAll2">אשר את כל החדשים</button>
+          <button class="btn small" onclick="runScan()" id="btnRescan">סריקה מחדש</button>
         </div>
-
         <div id="deviceMessage" class="msg"></div>
         <div id="devicesMount"></div>
       </div>
     </section>
 
     <section id="tab-alerts" class="section">
-      <div class="grid">
-        <div class="panel">
-          <div class="panelHead">
-            <div>
-              <h2>Alerts</h2>
-              <p>התראות פעילות</p>
-            </div>
-          </div>
-          <div id="alertsMount" class="alerts"></div>
-        </div>
-
-        <div class="panel">
-          <div class="panelHead">
-            <div>
-              <h2>Events</h2>
-              <p>יומן אירועים</p>
-            </div>
-          </div>
-          <div id="eventsMount" class="events"></div>
-        </div>
+      <div class="grid two">
+        <div class="panel"><div class="panel-head"><div><h2 id="alertsTitle">Alerts</h2></div></div><div id="alertsMount" class="grid"></div></div>
+        <div class="panel"><div class="panel-head"><div><h2 id="eventsTitle">Events</h2></div></div><div id="eventsMount" class="grid"></div></div>
       </div>
     </section>
 
     <section id="tab-settings" class="section">
-      <div class="grid">
-        <div class="panel">
-          <div class="panelHead">
-            <div>
-              <h2>Settings</h2>
-              <p>הגדרות מערכת ותצוגה</p>
+      <div class="settings-layout">
+        <div class="settings-stack">
+          <div class="panel">
+            <div class="panel-head"><div><h2 id="settingsGeneralTitle">General</h2><p id="settingsGeneralSub">שפה ותצוגה כללית.</p></div></div>
+            <div class="toolbar">
+              <div class="field"><label id="lblLanguage">Language</label><select id="setLanguage"><option value="he">עברית</option><option value="en">English</option></select></div>
+              <div class="field"><label id="lblTheme">Theme</label><select id="setTheme"><option value="light">light</option><option value="dark">dark</option></select></div>
+              <div class="field"><label id="lblRefresh">Auto refresh (seconds)</label><input id="setRefresh" type="number" min="5" step="5"></div>
+              <div class="field"><label id="lblDefaultView">Default view</label><select id="setView"><option value="table">table</option><option value="grid">grid</option></select></div>
             </div>
           </div>
 
-          <div class="toolbar">
-            <div class="field">
-              <label>Theme</label>
-              <select id="setTheme" onchange="previewTheme(this.value)">
-                <option value="dark">dark</option>
-                <option value="light">light</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Auto refresh (seconds)</label>
-              <input id="setRefresh" type="number" min="5" step="5">
-            </div>
-            <div class="field">
-              <label>Default view</label>
-              <select id="setView">
-                <option value="table">table</option>
-                <option value="grid">grid</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Dashboard style</label>
-              <select id="setStyle">
-                <option value="advanced">advanced</option>
-                <option value="compact">compact</option>
-              </select>
+          <div class="panel">
+            <div class="panel-head"><div><h2 id="settingsNetworksTitle">Networks</h2><p id="settingsNetworksSub">רשת אחת בכל שורה.</p></div></div>
+            <div class="field"><label id="lblNetworksInput">Networks</label><textarea id="setNetworks" placeholder="192.168.1.0/24&#10;192.168.0.0/24"></textarea></div>
+            <div class="chips" id="currentNetworks"></div>
+            <div class="quick-actions" style="margin-top:12px">
+              <button class="btn primary" onclick="saveNetworksOnly()" id="btnSaveNetworks">שמור רשתות בלבד</button>
             </div>
           </div>
 
-          <div class="field">
-            <label>Networks</label>
-            <textarea id="setNetworks" placeholder="192.168.1.0/24&#10;192.168.0.0/24"></textarea>
+          <div class="panel">
+            <div class="panel-head"><div><h2 id="settingsManualTitle">Manual Device</h2><p id="settingsManualSub">הוסף התקן ידנית אם לא זוהה אוטומטית.</p></div></div>
+            <div class="toolbar">
+              <div class="field"><label id="lblManualIp">IP</label><input id="manualIp" placeholder="192.168.1.50"></div>
+              <div class="field"><label id="lblManualName">Name</label><input id="manualName" placeholder="Rack Server"></div>
+              <div class="field"><label id="lblManualCategory">Category</label><input id="manualCategory" placeholder="server / camera / network"></div>
+              <div class="field"><label id="lblManualNotes">Notes</label><input id="manualNotes" placeholder="optional"></div>
+            </div>
+            <div class="quick-actions">
+              <button class="btn green" onclick="addManual()" id="btnAddManual">הוסף התקן</button>
+            </div>
           </div>
 
-          <div class="networkList" id="networkPreview"></div>
-
-          <div class="quickActions" style="margin-top:12px">
-            <button class="btn primary" onclick="saveSettings()">שמור הגדרות</button>
-            <button class="btn ghost" onclick="saveNetworksOnly()">שמור רשתות בלבד</button>
+          <div class="panel">
+            <div class="panel-head"><div><h2 id="settingsAppearanceTitle">Appearance</h2><p id="settingsAppearanceSub">תצוגת מערכת והעדפות.</p></div></div>
+            <div class="field"><label id="lblDashboardStyle">Dashboard style</label><select id="setStyle"><option value="advanced">advanced</option><option value="compact">compact</option></select></div>
+            <div class="quick-actions" style="margin-top:12px">
+              <button class="btn primary" onclick="saveSettings()" id="btnSaveSettings">שמור הגדרות</button>
+            </div>
+            <div id="settingsMessage" class="msg"></div>
           </div>
-
-          <div id="settingsMessage" class="msg"></div>
         </div>
 
-        <div class="panel">
-          <div class="panelHead">
-            <div>
-              <h2>System</h2>
-              <p>מידע מערכת וסטטוס</p>
-            </div>
-          </div>
-          <div class="empty" style="text-align:right">
-            <div style="display:grid;gap:8px">
-              <div><b>Version:</b> <span id="sysVersion">—</span></div>
-              <div><b>Networks:</b> <span id="sysNetworks">—</span></div>
-              <div><b>DB:</b> <span id="sysDb">—</span></div>
-              <div><b>Last scan started:</b> <span id="sysScanStarted">—</span></div>
-              <div><b>Last scan finished:</b> <span id="sysScanFinished">—</span></div>
-              <div><b>Scan mode:</b> <span id="sysScanMode">—</span></div>
+        <div class="settings-stack">
+          <div class="panel">
+            <div class="panel-head"><div><h2 id="settingsSystemTitle">System</h2><p id="settingsSystemSub">מידע מערכת וסטטוס.</p></div></div>
+            <div class="grid">
+              <div class="item"><div class="item-head"><strong>Version</strong></div><small id="sysVersion">—</small></div>
+              <div class="item"><div class="item-head"><strong>DB</strong></div><small id="sysDb">—</small></div>
+              <div class="item"><div class="item-head"><strong>Networks</strong></div><small id="sysNetworks">—</small></div>
+              <div class="item"><div class="item-head"><strong>Scan mode</strong></div><small id="sysScanMode">—</small></div>
+              <div class="item"><div class="item-head"><strong>Last scan started</strong></div><small id="sysScanStarted">—</small></div>
+              <div class="item"><div class="item-head"><strong>Last scan finished</strong></div><small id="sysScanFinished">—</small></div>
             </div>
           </div>
         </div>
@@ -832,455 +284,80 @@ td strong{font-size:14px}
 </div>
 
 <script>
-const qs = (id) => document.getElementById(id);
-
-const state = {
-  status: null,
-  devices: [],
-  alerts: [],
-  events: [],
-  settings: {},
-  activeFilter: '',
+const qs=id=>document.getElementById(id);
+const state={status:null,devices:[],alerts:[],events:[],settings:{},activeFilter:''};
+const I18N={
+  he:{
+    brand:"HOMEii Network",dashboard:"Dashboard",devices:"Devices",alerts:"Alerts",settings:"Settings",
+    scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",critical:"Critical",pinned:"Pinned",
+    dashboardTitle:"מכשירים בדשבורד",dashboardSub:"שם, IP, מצב ופעולות מהירות.",devicesTitle:"Devices",devicesSub:"טבלה קומפקטית עם כל המידע והפעולות בשורה אחת.",
+    search:"חיפוש",status:"סטטוס",category:"קטגוריה",view:"תצוגה",all:"הכל",clearFilters:"נקה סינונים",rescan:"סריקה מחדש",alertsTitle:"Alerts",eventsTitle:"Events",
+    general:"General",generalSub:"שפה ותצוגה כללית.",language:"Language",theme:"Theme",autoRefresh:"Auto refresh (seconds)",defaultView:"Default view",
+    networks:"Networks",networksSub:"רשת אחת בכל שורה.",manualDevice:"Manual Device",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"הוסף התקן",
+    appearance:"Appearance",appearanceSub:"תצוגת מערכת והעדפות.",dashboardStyle:"Dashboard style",saveSettings:"שמור הגדרות",saveNetworks:"שמור רשתות בלבד",system:"System",systemSub:"מידע מערכת וסטטוס.",
+    statusText:"Status",networksText:"Networks",scanStarted:"הסריקה התחילה",deviceAdded:"התקן נוסף",deviceApproved:"ההתקן אושר",allApproved:"כל ההתקנים החדשים אושרו",settingsSaved:"ההגדרות נשמרו",networksSaved:"הרשתות נשמרו",
+    lastSeen:"Last seen",known:"Known",pending:"Pending"
+  },
+  en:{
+    brand:"HOMEii Network",dashboard:"Dashboard",devices:"Devices",alerts:"Alerts",settings:"Settings",
+    scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",critical:"Critical",pinned:"Pinned",
+    dashboardTitle:"Dashboard Devices",dashboardSub:"Name, IP, status and quick actions.",devicesTitle:"Devices",devicesSub:"Compact table with all info and actions in one row.",
+    search:"Search",status:"Status",category:"Category",view:"View",all:"All",clearFilters:"Clear filters",rescan:"Rescan",alertsTitle:"Alerts",eventsTitle:"Events",
+    general:"General",generalSub:"Language and display settings.",language:"Language",theme:"Theme",autoRefresh:"Auto refresh (seconds)",defaultView:"Default view",
+    networks:"Networks",networksSub:"One network per line.",manualDevice:"Manual Device",manualDeviceSub:"Add a device manually if it wasn't detected automatically.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"Add device",
+    appearance:"Appearance",appearanceSub:"System appearance and preferences.",dashboardStyle:"Dashboard style",saveSettings:"Save settings",saveNetworks:"Save networks only",system:"System",systemSub:"System information and status.",
+    statusText:"Status",networksText:"Networks",scanStarted:"Scan started",deviceAdded:"Device added",deviceApproved:"Device accepted",allApproved:"All new devices accepted",settingsSaved:"Settings saved",networksSaved:"Networks saved",
+    lastSeen:"Last seen",known:"Known",pending:"Pending"
+  }
 };
-
-function escapeHtml(v){
-  return String(v ?? '')
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#039;');
+function tr(key){const lang=(state.settings.language||'he');return (I18N[lang]&&I18N[lang][key])||I18N.he[key]||key}
+function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function fmtTs(ts){if(!ts)return '—'; try{return new Date(Number(ts)*1000).toLocaleString((state.settings.language||'he')==='he'?'he-IL':'en-US')}catch{return String(ts)}}
+function timeAgo(ts){if(!ts)return '—'; const now=Math.floor(Date.now()/1000); const d=Math.max(0,now-Number(ts)); if(d<60)return `${d}s`; if(d<3600)return `${Math.floor(d/60)}m`; if(d<86400)return `${Math.floor(d/3600)}h`; return `${Math.floor(d/86400)}d`}
+async function api(url){const res=await fetch(url,{cache:'no-store'}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
+function switchTab(tab,btn){document.querySelectorAll('.section').forEach(el=>el.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active')); qs(`tab-${tab}`).classList.add('active'); if(btn) btn.classList.add('active'); const hash=`#${tab}`; if(location.hash!==hash) history.replaceState(null,'',hash)}
+function setTheme(theme){document.body.classList.toggle('dark',theme==='dark')}
+function showMsg(id,text,ok=true){const el=qs(id); if(!el)return; el.textContent=text; el.className=`msg show ${ok?'ok':'err'}`; clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',2500)}
+function applyTranslations(){
+  qs('brandTitle').textContent=tr('brand'); qs('navDashboard').textContent=tr('dashboard'); qs('navDevices').textContent=tr('devices'); qs('navAlerts').textContent=tr('alerts'); qs('navSettings').textContent=tr('settings');
+  qs('btnScan').textContent=tr('scan'); qs('btnAcceptAll').textContent=tr('acceptAll'); qs('btnRefresh').textContent=tr('refresh');
+  qs('kpiOfflineLabel').textContent=tr('offlineDevices'); qs('kpiOnlineLabel').textContent=tr('online'); qs('kpiTotalLabel').textContent=tr('total'); qs('kpiNewLabel').textContent=tr('new'); qs('kpiCriticalLabel').textContent=tr('critical'); qs('kpiPinnedLabel').textContent=tr('pinned');
+  qs('dashboardTitle').textContent=tr('dashboardTitle'); qs('dashboardSub').textContent=tr('dashboardSub'); qs('devicesTitle').textContent=tr('devicesTitle'); qs('devicesSub').textContent=tr('devicesSub');
+  qs('lblSearch').textContent=tr('search'); qs('lblStatusFilter').textContent=tr('status'); qs('lblCategoryFilter').textContent=tr('category'); qs('lblView').textContent=tr('view'); qs('optAll').textContent=tr('all');
+  qs('btnClearFilters').textContent=tr('clearFilters'); qs('btnAcceptAll2').textContent=tr('acceptAll'); qs('btnRescan').textContent=tr('rescan');
+  qs('alertsTitle').textContent=tr('alertsTitle'); qs('eventsTitle').textContent=tr('eventsTitle');
+  qs('settingsGeneralTitle').textContent=tr('general'); qs('settingsGeneralSub').textContent=tr('generalSub'); qs('lblLanguage').textContent=tr('language'); qs('lblTheme').textContent=tr('theme'); qs('lblRefresh').textContent=tr('autoRefresh'); qs('lblDefaultView').textContent=tr('defaultView');
+  qs('settingsNetworksTitle').textContent=tr('networks'); qs('settingsNetworksSub').textContent=tr('networksSub'); qs('lblNetworksInput').textContent=tr('networks'); qs('btnSaveNetworks').textContent=tr('saveNetworks');
+  qs('settingsManualTitle').textContent=tr('manualDevice'); qs('settingsManualSub').textContent=tr('manualDeviceSub'); qs('lblManualIp').textContent='IP'; qs('lblManualName').textContent=tr('manualName'); qs('lblManualCategory').textContent=tr('manualCategory'); qs('lblManualNotes').textContent=tr('manualNotes'); qs('btnAddManual').textContent=tr('addDevice');
+  qs('settingsAppearanceTitle').textContent=tr('appearance'); qs('settingsAppearanceSub').textContent=tr('appearanceSub'); qs('lblDashboardStyle').textContent=tr('dashboardStyle'); qs('btnSaveSettings').textContent=tr('saveSettings');
+  qs('settingsSystemTitle').textContent=tr('system'); qs('settingsSystemSub').textContent=tr('systemSub');
 }
-
-function timeAgo(ts){
-  if(!ts) return '—';
-  const now = Math.floor(Date.now()/1000);
-  const d = Math.max(0, now - Number(ts));
-  if(d < 60) return `${d}s ago`;
-  if(d < 3600) return `${Math.floor(d/60)}m ago`;
-  if(d < 86400) return `${Math.floor(d/3600)}h ago`;
-  return `${Math.floor(d/86400)}d ago`;
-}
-
-function formatTs(ts){
-  if(!ts) return '—';
-  try { return new Date(Number(ts)*1000).toLocaleString('he-IL'); }
-  catch { return String(ts); }
-}
-
-async function api(url){
-  const res = await fetch(url, {cache:'no-store'});
-  const data = await res.json().catch(()=>({ok:false,error:'Invalid JSON'}));
-  if(!res.ok) throw new Error(data.error || data.detail || `HTTP ${res.status}`);
-  return data;
-}
-
-function showMsg(id, text, type='ok'){
-  const el = qs(id);
-  if(!el) return;
-  el.textContent = text;
-  el.className = `msg show ${type === 'err' ? 'err' : 'ok'}`;
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.className = 'msg'; }, 2800);
-}
-
-function switchTab(tab, btn){
-  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.navBtn').forEach(el => el.classList.remove('active'));
-  qs(`tab-${tab}`).classList.add('active');
-  if(btn) btn.classList.add('active');
-  const hash = `#${tab}`;
-  if(location.hash !== hash) history.replaceState(null, '', hash);
-}
-
-function setTheme(theme){
-  document.body.classList.toggle('light', theme === 'light');
-  localStorage.setItem('homeii_theme', theme);
-  qs('themeIcon').textContent = theme === 'light' ? '☀' : '☾';
-}
-
-function toggleTheme(){
-  const next = document.body.classList.contains('light') ? 'dark' : 'light';
-  setTheme(next);
-  if(qs('setTheme')) qs('setTheme').value = next;
-}
-
-function previewTheme(theme){
-  setTheme(theme);
-}
-
-function populateCategories(devices){
-  const sel = qs('filterCategory');
-  const current = sel.value;
-  const cats = Array.from(new Set(devices.map(d => (d.category || '').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'he'));
-  sel.innerHTML = `<option value="">הכל</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  sel.value = current;
-}
-
-function applyKpiFilter(filter){
-  state.activeFilter = filter || '';
-  qs('filterStatus').value = ['online','offline','unstable','new'].includes(filter) ? filter : '';
-  renderDevices();
-  document.querySelectorAll('.kpi').forEach(el => {
-    el.classList.toggle('active', (el.dataset.filter || '') === state.activeFilter);
-  });
-  const btn = document.querySelector('.navBtn[data-tab="devices"]');
-  switchTab('devices', btn);
-}
-
-function clearFilters(){
-  state.activeFilter = '';
-  qs('searchText').value = '';
-  qs('filterStatus').value = '';
-  qs('filterCategory').value = '';
-  renderDevices();
-  document.querySelectorAll('.kpi').forEach(el => el.classList.remove('active'));
-}
-
-function getDashboardDevices(){
-  const rows = [...state.devices];
-  rows.sort((a,b) => {
-    const score = (d) => {
-      let s = 0;
-      if((d.status || '') === 'offline') s += 100;
-      if((d.status || '') === 'new') s += 60;
-      if(d.critical) s += 40;
-      if(d.pinned) s += 20;
-      return s;
-    };
-    return score(b) - score(a);
-  });
-  return rows.slice(0, 8);
-}
-
-function dashboardCard(d){
-  const status = escapeHtml(d.status || 'unknown');
-  return `
-    <div class="deviceDashboardCard ${status}">
-      <div class="ddLeft">
-        <div class="ddStatus">
-          <span>${status}</span>
-          <span class="ddStatusDot"></span>
-        </div>
-
-        <div class="ddMeta">
-          <div class="ddMetaRow"><b>Last seen:</b> ${timeAgo(d.last_seen)}</div>
-        </div>
-
-        <div class="ddActions">
-          <button class="btn small" onclick="pingNow('${d.ip}')">PING</button>
-          <button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned ? 'UNPIN' : 'PIN'}</button>
-          <button class="btn small" onclick="editDevice('${d.ip}','${encodeURIComponent(d.name||'')}','${encodeURIComponent(d.category||'')}','${encodeURIComponent((d.tags||[]).join(','))}','${encodeURIComponent(d.notes||'')}')">EDIT</button>
-        </div>
-      </div>
-
-      <div class="ddRight">
-        <h3 class="ddName">${escapeHtml(d.name || d.hostname || d.ip)}</h3>
-        <div class="ddIp">${escapeHtml(d.ip)}</div>
-      </div>
-    </div>
-  `;
-}
-
-function deviceStatusBadge(status){
-  const cls = ['online','offline','unstable','new'].includes(status) ? status : 'new';
-  return `<span class="badge ${cls}">${escapeHtml(status || 'unknown')}</span>`;
-}
-
-function renderDashboard(){
-  const devices = getDashboardDevices();
-  const alerts = state.alerts.slice(0, 8);
-  const events = state.events.slice(0, 8);
-
-  qs('dashboardDevices').innerHTML = devices.length
-    ? devices.map(dashboardCard).join('')
-    : `<div class="empty">אין התקנים להצגה</div>`;
-
-  qs('dashboardAlerts').innerHTML = alerts.length
-    ? alerts.map(a => `
-      <div class="alertItem">
-        <div class="row">
-          <div>
-            <div class="rowTitle">${escapeHtml(a.title || a.ip || 'Alert')}</div>
-            <div class="rowSub">${escapeHtml(a.message || '')}</div>
-            <div class="rowSub">${formatTs(a.created_at)}</div>
-          </div>
-          <div class="sev ${escapeHtml(a.severity || 'info')}">${escapeHtml(a.severity || 'info')}</div>
-        </div>
-      </div>
-    `).join('')
-    : `<div class="empty">אין התרעות פתוחות</div>`;
-
-  qs('dashboardEvents').innerHTML = events.length
-    ? events.map(e => `
-      <div class="eventItem">
-        <div class="row">
-          <div>
-            <div class="rowTitle">${escapeHtml(e.message || e.type || 'Event')}</div>
-            <div class="rowSub">${escapeHtml(e.ip || '')}</div>
-            <div class="rowSub">${formatTs(e.ts)}</div>
-          </div>
-          <div class="sev ${escapeHtml(e.level || 'info')}">${escapeHtml(e.level || 'info')}</div>
-        </div>
-      </div>
-    `).join('')
-    : `<div class="empty">אין אירועים</div>`;
-}
-
-function filteredDevices(){
-  const q = (qs('searchText').value || '').trim().toLowerCase();
-  const status = qs('filterStatus').value;
-  const category = qs('filterCategory').value;
-
-  let rows = [...state.devices];
-
-  if(q){
-    rows = rows.filter(d => {
-      const tags = Array.isArray(d.tags) ? d.tags.join(' ') : '';
-      return [d.ip,d.name,d.hostname,d.category,d.vendor,d.mac,tags,d.notes]
-        .some(v => String(v || '').toLowerCase().includes(q));
-    });
-  }
-
-  const effective = status || state.activeFilter;
-  if(effective === 'critical') rows = rows.filter(d => !!d.critical);
-  else if(effective === 'pinned') rows = rows.filter(d => !!d.pinned);
-  else if(effective) rows = rows.filter(d => (d.status || '') === effective);
-
-  if(category) rows = rows.filter(d => (d.category || '') === category);
-
-  return rows;
-}
-
-function renderDevices(){
-  const rows = filteredDevices();
-  const mount = qs('devicesMount');
-  const view = qs('devicesView').value;
-
-  if(!rows.length){
-    mount.innerHTML = `<div class="empty">לא נמצאו התקנים בתוצאות הסינון</div>`;
-    return;
-  }
-
-  if(view === 'grid'){
-    mount.innerHTML = `<div class="dashboardCards">${rows.map(dashboardCard).join('')}</div>`;
-    return;
-  }
-
-  mount.innerHTML = `
-    <div class="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>name</th>
-            <th>ip</th>
-            <th>status</th>
-            <th>hostname</th>
-            <th>category</th>
-            <th>vendor</th>
-            <th>mac</th>
-            <th>last seen</th>
-            <th>flags</th>
-            <th>actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(d => `
-            <tr>
-              <td><strong>${escapeHtml(d.name || '—')}</strong></td>
-              <td>${escapeHtml(d.ip)}</td>
-              <td>${deviceStatusBadge(d.status)}</td>
-              <td>${escapeHtml(d.hostname || '—')}</td>
-              <td>${escapeHtml(d.category || '—')}</td>
-              <td>${escapeHtml(d.vendor || '—')}</td>
-              <td>${escapeHtml(d.mac || '—')}</td>
-              <td>${timeAgo(d.last_seen)}</td>
-              <td>
-                <div class="actionsRow">
-                  ${d.approved ? `<span class="pill">Known</span>` : `<span class="pill">New</span>`}
-                  ${d.pinned ? `<span class="pill">Pinned</span>` : ``}
-                  ${d.critical ? `<span class="pill">Critical</span>` : ``}
-                </div>
-              </td>
-              <td>
-                <div class="actionsRow">
-                  <button class="btn small" onclick="pingNow('${d.ip}')">Ping</button>
-                  <button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned ? 'Unpin' : 'Pin'}</button>
-                  ${d.approved ? '' : `<button class="btn small green" onclick="acceptDevice('${d.ip}')">Accept</button>`}
-                  <button class="btn small" onclick="editDevice('${d.ip}','${encodeURIComponent(d.name||'')}','${encodeURIComponent(d.category||'')}','${encodeURIComponent((d.tags||[]).join(','))}','${encodeURIComponent(d.notes||'')}')">Edit</button>
-                  <button class="btn small" onclick="toggleCritical('${d.ip}')">${d.critical ? 'Unmark' : 'Critical'}</button>
-                  <button class="btn small red" onclick="removeDevice('${d.ip}')">Remove</button>
-                </div>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderAlertsPage(){
-  qs('alertsMount').innerHTML = state.alerts.length
-    ? state.alerts.map(a => `
-      <div class="alertItem">
-        <div class="row">
-          <div>
-            <div class="rowTitle">${escapeHtml(a.title || a.ip || 'Alert')}</div>
-            <div class="rowSub">${escapeHtml(a.message || '')}</div>
-            <div class="rowSub">${formatTs(a.created_at)}</div>
-          </div>
-          <div style="display:grid;gap:8px;justify-items:end">
-            <div class="sev ${escapeHtml(a.severity || 'info')}">${escapeHtml(a.severity || 'info')}</div>
-            ${a.status === 'open' ? `<button class="btn small" onclick="resolveAlert(${a.id})">Resolve</button>` : ''}
-          </div>
-        </div>
-      </div>
-    `).join('')
-    : `<div class="empty">אין התראות</div>`;
-
-  qs('eventsMount').innerHTML = state.events.length
-    ? state.events.map(e => `
-      <div class="eventItem">
-        <div class="row">
-          <div>
-            <div class="rowTitle">${escapeHtml(e.message || e.type || 'Event')}</div>
-            <div class="rowSub">${escapeHtml(e.ip || '')}</div>
-            <div class="rowSub">${formatTs(e.ts)}</div>
-          </div>
-          <div class="sev ${escapeHtml(e.level || 'info')}">${escapeHtml(e.level || 'info')}</div>
-        </div>
-      </div>
-    `).join('')
-    : `<div class="empty">אין אירועים</div>`;
-}
-
-function renderSettings(){
-  const settings = state.status?.settings || state.settings || {};
-  const status = state.status || {};
-  const networks = status.networks || [];
-
-  qs('setTheme').value = settings.theme || localStorage.getItem('homeii_theme') || 'dark';
-  qs('setRefresh').value = settings.auto_refresh || '30';
-  qs('setView').value = settings.default_view || 'table';
-  qs('setStyle').value = settings.dashboard_style || 'advanced';
-  qs('setNetworks').value = networks.join('\n');
-  qs('networkPreview').innerHTML = networks.length
-    ? networks.map(n => `<span class="networkChip">${escapeHtml(n)}</span>`).join('')
-    : `<span class="networkChip">אין רשתות</span>`;
-
-  qs('sysVersion').textContent = status.version || '—';
-  qs('sysNetworks').textContent = networks.join(', ') || '—';
-  qs('sysDb').textContent = state.dbPath || '—';
-  qs('sysScanStarted').textContent = formatTs(status.scan?.last_started);
-  qs('sysScanFinished').textContent = formatTs(status.scan?.last_finished);
-  qs('sysScanMode').textContent = status.scan?.last_mode || '—';
-}
-
-function renderAll(){
-  const s = state.status || {};
-  qs('versionText').textContent = s.version || '3.6.7';
-  qs('heroVersion').textContent = s.version || '3.6.7';
-  qs('sTotal').textContent = s.total ?? 0;
-  qs('sOnline').textContent = s.online ?? 0;
-  qs('sOffline').textContent = s.offline ?? 0;
-  qs('sNew').textContent = s.new ?? 0;
-  qs('sCritical').textContent = s.critical ?? 0;
-  qs('sPinned').textContent = s.pinned ?? 0;
-
-  qs('scanState').textContent = s.scan?.running ? 'סטטוס סריקה: running' : `סטטוס סריקה: ${s.scan?.last_mode || 'idle'}`;
-  qs('sideScanState').textContent = s.scan?.running ? 'Running' : (s.scan?.last_mode || 'Idle');
-  qs('sideNetworksCount').textContent = (s.networks || []).length;
-  qs('lastRefresh').textContent = `עודכן: ${new Date().toLocaleTimeString('he-IL')}`;
-  qs('dbPath').textContent = `DB: ${state.dbPath || '/data/homeii.db'}`;
-
-  populateCategories(state.devices);
-  renderDashboard();
-  renderDevices();
-  renderAlertsPage();
-  renderSettings();
-
-  const savedTheme = state.status?.settings?.theme || localStorage.getItem('homeii_theme') || 'dark';
-  setTheme(savedTheme);
-}
-
-async function refreshAll(){
-  const [status, devices, alerts, events, settings] = await Promise.all([
-    api('./api/status'),
-    api('./api/devices'),
-    api('./api/alerts'),
-    api('./api/events'),
-    api('./api/settings')
-  ]);
-
-  state.status = status;
-  state.devices = devices.devices || [];
-  state.alerts = alerts.alerts || [];
-  state.events = events.events || [];
-  state.settings = settings.settings || {};
-  state.dbPath = settings.db_path || '';
-  renderAll();
-}
-
-async function runScan(){
-  try{
-    await api('./api/scan?mode=manual');
-    showMsg('deviceMessage','הסריקה התחילה');
-    setTimeout(refreshAll, 1200);
-  }catch(e){
-    showMsg('deviceMessage', e.message || 'Scan failed', 'err');
-  }
-}
-
-async function removeDevice(ip){ await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll(); }
-async function togglePin(ip){ await api(`./api/toggle_pinned/${encodeURIComponent(ip)}`); await refreshAll(); }
-async function toggleCritical(ip){ await api(`./api/toggle_critical/${encodeURIComponent(ip)}`); await refreshAll(); }
-async function pingNow(ip){ await api(`./api/ping_now/${encodeURIComponent(ip)}`); await refreshAll(); }
-async function acceptDevice(ip){ await api(`./api/accept/${encodeURIComponent(ip)}`); showMsg('deviceMessage','ההתקן אושר'); await refreshAll(); }
-async function acceptAll(){ await api('./api/accept_all'); showMsg('deviceMessage','כל ההתקנים החדשים אושרו'); await refreshAll(); }
-async function resolveAlert(id){ await api(`./api/resolve_alert/${id}`); await refreshAll(); }
-
-async function saveNetworksOnly(){
-  const networks = encodeURIComponent(qs('setNetworks').value.trim());
-  await api(`./api/save_networks?networks=${networks}`);
-  showMsg('settingsMessage','הרשתות נשמרו');
-  await refreshAll();
-}
-
-async function saveSettings(){
-  const theme = qs('setTheme').value;
-  const networks = encodeURIComponent(qs('setNetworks').value.trim());
-  await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&networks=${networks}`);
-  setTheme(theme);
-  showMsg('settingsMessage','ההגדרות נשמרו');
-  await refreshAll();
-}
-
-async function editDevice(ip, name, category, tags, notes){
-  const newName = prompt('שם התקן', decodeURIComponent(name || '')) ?? '';
-  const newCategory = prompt('קטגוריה', decodeURIComponent(category || '')) ?? '';
-  const newTags = prompt('תגיות (מופרדות בפסיקים)', decodeURIComponent(tags || '')) ?? '';
-  const newNotes = prompt('הערות', decodeURIComponent(notes || '')) ?? '';
-  await api(`./api/update?ip=${encodeURIComponent(ip)}&name=${encodeURIComponent(newName)}&category=${encodeURIComponent(newCategory)}&tags=${encodeURIComponent(newTags)}&notes=${encodeURIComponent(newNotes)}`);
-  showMsg('deviceMessage','ההתקן עודכן');
-  await refreshAll();
-}
-
-window.addEventListener('load', async () => {
-  const savedTheme = localStorage.getItem('homeii_theme') || 'dark';
-  setTheme(savedTheme);
-
-  const hash = (location.hash || '#dashboard').replace('#','');
-  const btn = document.querySelector(`.navBtn[data-tab="${hash}"]`);
-  if(btn) switchTab(hash, btn);
-
-  try{
-    await refreshAll();
-  }catch(e){
-    console.error(e);
-    alert('Failed to load HOMEii Network Monitor');
-  }
-});
+function deviceStatusBadge(status){const cls=['online','offline','unstable','new'].includes(status)?status:'new'; return `<span class="badge ${cls}">${escapeHtml(status||'unknown')}</span>`}
+function populateCategories(devices){const sel=qs('filterCategory'); const current=sel.value; const cats=Array.from(new Set(devices.map(d=>(d.category||'').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'he')); sel.innerHTML=`<option value="">${escapeHtml(tr('all'))}</option>`+cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join(''); sel.value=current}
+function applyKpiFilter(filter){state.activeFilter=filter||''; qs('filterStatus').value=['online','offline','unstable','new'].includes(filter)?filter:''; renderDevices(); document.querySelectorAll('.kpi').forEach(el=>el.classList.toggle('active',(el.dataset.filter||'')===state.activeFilter)); const btn=document.querySelector('.nav-btn[data-tab="devices"]'); switchTab('devices',btn)}
+function clearFilters(){state.activeFilter=''; qs('searchText').value=''; qs('filterStatus').value=''; qs('filterCategory').value=''; renderDevices(); document.querySelectorAll('.kpi').forEach(el=>el.classList.remove('active'))}
+function getDashboardDevices(){const rows=[...state.devices]; rows.sort((a,b)=>{const score=d=>((d.status==='offline')?100:0)+((d.status==='new')?60:0)+(d.critical?40:0)+(d.pinned?20:0); return score(b)-score(a)}); return rows.slice(0,8)}
+function dashboardCard(d){const status=escapeHtml(d.status||'unknown'); return `<div class="dashboard-card ${status}"><div class="d-left"><div class="status-pill"><span class="status-dot"></span><span>${status}</span></div><div class="d-meta"><b>${escapeHtml(tr('lastSeen'))}:</b> ${timeAgo(d.last_seen)}</div><div class="d-actions"><button class="btn small" onclick="pingNow('${d.ip}')">PING</button><button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned?'UNPIN':'PIN'}</button><button class="btn small" onclick="editDevice('${d.ip}','${encodeURIComponent(d.name||'')}','${encodeURIComponent(d.category||'')}','${encodeURIComponent((d.tags||[]).join(','))}','${encodeURIComponent(d.notes||'')}')">EDIT</button></div></div><div class="d-right"><h3 class="d-name">${escapeHtml(d.name||d.hostname||d.ip)}</h3><div class="d-ip">${escapeHtml(d.ip)}</div></div></div>`}
+function filteredDevices(){const text=(qs('searchText').value||'').trim().toLowerCase(); const status=qs('filterStatus').value; const cat=qs('filterCategory').value; return [...state.devices].filter(d=>{const hay=`${d.name} ${d.ip} ${d.hostname} ${d.vendor} ${d.category} ${d.mac}`.toLowerCase(); if(text&&!hay.includes(text)) return false; const eff=status||state.activeFilter; if(eff==='critical' && !d.critical) return false; if(eff==='pinned' && !d.pinned) return false; if(['online','offline','unstable','new'].includes(eff) && d.status!==eff) return false; if(cat&&d.category!==cat) return false; return true;}).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||Number(b.critical)-Number(a.critical)||String(a.name||a.ip).localeCompare(String(b.name||b.ip),(state.settings.language||'he')==='he'?'he':'en'))}
+function rowActions(d){let buttons=''; if(d.status==='new' && !d.approved){buttons += `<button class="btn small green" onclick="acceptDevice('${d.ip}')">Accept</button>`;} buttons += `<button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned?'Unpin':'Pin'}</button><button class="btn small" onclick="pingNow('${d.ip}')">Ping</button><button class="btn small" onclick="editDevice('${d.ip}','${encodeURIComponent(d.name||'')}','${encodeURIComponent(d.category||'')}','${encodeURIComponent((d.tags||[]).join(','))}','${encodeURIComponent(d.notes||'')}')">Edit</button><button class="btn small" onclick="toggleCritical('${d.ip}')">${d.critical?'Critical ✓':'Critical'}</button><button class="btn small red" onclick="removeDevice('${d.ip}')">Remove</button>`; return buttons}
+function renderDevices(){const devices=filteredDevices(); const view=(qs('devicesView').value||state.settings.default_view||'table'); const mount=qs('devicesMount'); if(!devices.length){mount.innerHTML=`<div class="empty">${(state.settings.language||'he')==='he'?'לא נמצאו התקנים בתוצאות הסינון':'No devices found'}</div>`; return;} if(view==='grid'){mount.innerHTML=`<div class="dashboard-cards" style="margin-top:14px">${devices.map(dashboardCard).join('')}</div>`; return;} mount.innerHTML=`<div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>Name</th><th>IP</th><th>Status</th><th>Known</th><th>Category</th><th>Vendor</th><th>MAC</th><th>Last Seen</th><th>Actions</th></tr></thead><tbody>${devices.map(d=>`<tr><td><div class="name-cell"><strong>${escapeHtml(d.name||d.hostname||d.ip)}</strong>${d.pinned?'<span class="mini">PIN</span>':''}${d.critical?'<span class="mini">CRITICAL</span>':''}</div></td><td>${escapeHtml(d.ip)}</td><td><div class="status-actions">${deviceStatusBadge(d.status)}${d.approved?`<span class="mini">${escapeHtml(tr('known'))}</span>`:`<span class="mini">${escapeHtml(tr('pending'))}</span>`}</div></td><td>${d.approved?'yes':'pending'}</td><td>${escapeHtml(d.category||'—')}</td><td>${escapeHtml(d.vendor||'—')}</td><td>${escapeHtml(d.mac||'—')}</td><td>${timeAgo(d.last_seen)}</td><td><div class="actions">${rowActions(d)}</div></td></tr>`).join('')}</tbody></table></div>`}
+function renderAlerts(){const alerts=state.alerts||[]; const alertHtml=alerts.length?alerts.map(a=>`<div class="item"><div class="item-head"><strong>${escapeHtml(a.title||'Alert')}</strong><span>${escapeHtml(a.severity)}</span></div><div>${escapeHtml(a.message||'')}</div><small>${escapeHtml(a.ip||'')} • ${fmtTs(a.created_at)}</small><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">Resolve</button></div></div>`).join(''):`<div class="empty">No alerts</div>`; const eventHtml=(state.events||[]).length?(state.events||[]).map(e=>`<div class="item"><div class="item-head"><strong>${escapeHtml(e.message||e.event_type||'Event')}</strong><span>${escapeHtml(e.level)}</span></div><small>${escapeHtml(e.ip||'')} • ${fmtTs(e.ts)}</small></div>`).join(''):`<div class="empty">No events</div>`; qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml; qs('dashboardAlerts').innerHTML=alertHtml; qs('dashboardEvents').innerHTML=eventHtml}
+function renderDashboard(){const items=getDashboardDevices(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">No devices</div>`}
+function renderSettings(st){qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setLanguage').value=st.settings?.language||'he'; qs('setNetworks').value=(st.networks||[]).join('\n'); qs('currentNetworks').innerHTML=(st.networks||[]).map(n=>`<span class="chip">${escapeHtml(n)}</span>`).join(''); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(escapeHtml).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(st.scan?.last_mode||'idle')}
+async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); populateCategories(state.devices); renderDashboard(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'3.7.0'; qs('heroSub').textContent=`v${status.version||'3.7.0'} • ${tr('dashboardTitle')} • ${tr('devicesTitle')} • ${tr('settings')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${status.scan?.running?'running':(status.scan?.last_mode||'idle')}`; qs('sideScanState').textContent=status.scan?.running?'Running':(status.scan?.last_mode||'Idle'); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('lastRefresh').textContent=`${new Date().toLocaleTimeString((state.settings.language||'he')==='he'?'he-IL':'en-US')}`; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
+async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
+async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage','IP required',false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('settingsMessage',tr('deviceAdded')); await refreshAll()}
+async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
+async function togglePin(ip){await api(`./api/toggle_pinned/${encodeURIComponent(ip)}`); await refreshAll()}
+async function toggleCritical(ip){await api(`./api/toggle_critical/${encodeURIComponent(ip)}`); await refreshAll()}
+async function pingNow(ip){await api(`./api/ping_now/${encodeURIComponent(ip)}`); await refreshAll()}
+async function acceptDevice(ip){await api(`./api/accept/${encodeURIComponent(ip)}`); showMsg('deviceMessage',tr('deviceApproved')); await refreshAll()}
+async function acceptAll(){await api('./api/accept_all'); showMsg('deviceMessage',tr('allApproved')); await refreshAll()}
+async function resolveAlert(id){await api(`./api/resolve_alert/${id}`); await refreshAll()}
+async function saveNetworksOnly(){const networks=encodeURIComponent(qs('setNetworks').value.trim()); await api(`./api/save_networks?networks=${networks}`); showMsg('settingsMessage',tr('networksSaved')); await refreshAll()}
+async function saveSettings(){const theme=qs('setTheme').value; const language=qs('setLanguage').value; const networks=encodeURIComponent(qs('setNetworks').value.trim()); await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&language=${language}&networks=${networks}`); showMsg('settingsMessage',tr('settingsSaved')); await refreshAll()}
+async function editDevice(ip,name,category,tags,notes){const newName=prompt('Name',decodeURIComponent(name||''))??''; const newCategory=prompt('Category',decodeURIComponent(category||''))??''; const newTags=prompt('Tags',decodeURIComponent(tags||''))??''; const newNotes=prompt('Notes',decodeURIComponent(notes||''))??''; await api(`./api/update?ip=${encodeURIComponent(ip)}&name=${encodeURIComponent(newName)}&category=${encodeURIComponent(newCategory)}&tags=${encodeURIComponent(newTags)}&notes=${encodeURIComponent(newNotes)}`); await refreshAll()}
+window.addEventListener('load', async()=>{const hash=(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${hash}"]`); if(btn) switchTab(hash,btn); try{await refreshAll()}catch(e){console.error(e); alert('Failed to load HOMEii Network Monitor')}})
 </script>
 </body>
 </html>
