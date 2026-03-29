@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "3.6.0"
+APP_VERSION = "3.7.0"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -130,9 +130,10 @@ CREATE TABLE IF NOT EXISTS settings (
 
 DEFAULT_SETTINGS = {
     "theme": "light",
+    "language": "he",
     "scan_interval": str(PING_INTERVAL),
     "auto_refresh": "30",
-    "default_view": "grid",
+    "default_view": "table",
     "dashboard_style": "advanced",
     "networks_json": json.dumps(HOMEII_NETWORKS),
 }
@@ -629,6 +630,70 @@ def arp_scan_networks() -> List[Dict[str, str]]:
 
 
 
+def get_local_ips() -> List[str]:
+    ips: List[str] = []
+    if shutil.which("hostname"):
+        try:
+            out = subprocess.check_output(["hostname", "-I"], timeout=3).decode("utf-8", "ignore")
+            for item in out.split():
+                item = item.strip()
+                if item and item.count(".") == 3 and not item.startswith("127."):
+                    ips.append(item)
+        except Exception:
+            pass
+    if shutil.which("ip"):
+        try:
+            out = subprocess.check_output(["ip", "-4", "addr", "show"], timeout=3).decode("utf-8", "ignore")
+            for m in re.finditer(r"inet\s+(\d+\.\d+\.\d+\.\d+)/", out):
+                ip = m.group(1)
+                if not ip.startswith("127."):
+                    ips.append(ip)
+        except Exception:
+            pass
+    return sorted(set(ips))
+
+
+def get_default_gateway() -> str:
+    if shutil.which("ip"):
+        try:
+            out = subprocess.check_output(["ip", "route", "show", "default"], timeout=3).decode("utf-8", "ignore")
+            m = re.search(r"default via\s+(\d+\.\d+\.\d+\.\d+)", out)
+            if m:
+                return m.group(1)
+        except Exception:
+            pass
+    return ""
+
+
+def discover_special_hosts() -> None:
+    candidates = set(get_local_ips())
+    gw = get_default_gateway()
+    if gw:
+        candidates.add(gw)
+    for ip in sorted(candidates):
+        try:
+            scan_candidate_ip(ip, "special")
+            conn = db()
+            try:
+                row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+                if row:
+                    d = row_to_device(row)
+                    if ip == gw:
+                        d["name"] = d["name"] or "Gateway"
+                        d["category"] = d["category"] or "network"
+                    else:
+                        d["name"] = d["name"] or "Home Assistant Host"
+                        d["category"] = d["category"] or "server"
+                        d["manual"] = True
+                        d["approved"] = True
+                    d["updated_at"] = now_ts()
+                    upsert_device(ip, d)
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+
 def scan_candidate_ip(ip: str, source: str = "ping") -> None:
     conn = db()
     try:
@@ -653,7 +718,7 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
             ON CONFLICT(ip) DO UPDATE SET hostname=?, last_seen=?, updated_at=?, source=?,
                 name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
                 category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
-                status=CASE WHEN devices.manual=1 AND devices.status!='offline' THEN devices.status ELSE 'new' END
+                status=CASE WHEN devices.approved=1 THEN devices.status WHEN devices.manual=1 AND devices.status!='offline' THEN devices.status ELSE 'new' END
             """,
             (
                 ip, name, host, category, vendor, mac, ts, ts, ts, source,
@@ -673,6 +738,7 @@ def run_full_scan(mode: str = "manual") -> None:
         return
     scan_state.update({"running": True, "last_started": now_ts(), "last_mode": mode, "last_error": ""})
     try:
+        discover_special_hosts()
         with ThreadPoolExecutor(max_workers=THREADS) as ex:
             for net in get_networks():
                 try:
@@ -1151,11 +1217,12 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "grid", dashboard_style: str = "advanced", theme: str = "light", networks: str = ""):
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = ""):
     set_setting("auto_refresh", auto_refresh)
     set_setting("default_view", default_view)
     set_setting("dashboard_style", dashboard_style)
     set_setting("theme", theme if theme in ("light", "dark") else "light")
+    set_setting("language", language if language in ("he", "en") else "he")
     if networks.strip():
         save_networks(networks)
     return {"ok": True, "networks": get_networks()}
@@ -1169,4 +1236,5 @@ def api_save_networks(networks: str = ""):
 init_db()
 threading.Thread(target=monitor_loop, daemon=True).start()
 threading.Thread(target=rescan_loop, daemon=True).start()
+threading.Thread(target=discover_special_hosts, daemon=True).start()
 threading.Thread(target=run_full_scan, args=("startup",), daemon=True).start()
