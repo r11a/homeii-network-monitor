@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.6.2</title>
+<title>HOMEii Network Monitor 3.6.3</title>
 <style>
 :root{
   color-scheme:dark;
@@ -61,7 +61,7 @@ button,input,select,textarea{font:inherit}
 .app{
   min-height:100vh;
   display:grid;
-  grid-template-columns:280px 1fr;
+  grid-template-columns:260px 1fr;
 }
 .sidebar{
   position:sticky;
@@ -81,7 +81,7 @@ button,input,select,textarea{font:inherit}
   padding:6px 8px 10px;
 }
 .logoWrap{
-  width:44px;height:44px;border-radius:15px;
+  width:42px;height:42px;border-radius:14px;
   display:grid;place-items:center;
   overflow:hidden;
   background:linear-gradient(180deg,#85b3ff,#6798f3);
@@ -99,8 +99,8 @@ button,input,select,textarea{font:inherit}
   border:1px solid var(--line);
   background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
   color:var(--text);
-  border-radius:18px;
-  padding:13px 14px;
+  border-radius:16px;
+  padding:12px 14px;
   cursor:pointer;
   text-align:right;
   transition:.16s ease;
@@ -125,13 +125,24 @@ button,input,select,textarea{font:inherit}
 }
 .sideCard .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .sideCard .v{margin-top:8px;font-size:18px;font-weight:900}
-.sidebarFooter{margin-top:auto}
+.sidebarFooter{
+  margin-top:auto;
+  display:grid;
+  gap:10px;
+}
+.themeToggle{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
 .health{
   display:flex;align-items:center;gap:8px;
   color:var(--muted);font-size:13px;padding:0 6px;
 }
 .dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
-.main{padding:20px}
+.main{padding:20px;overflow-x:hidden}
 .top{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
@@ -144,7 +155,7 @@ button,input,select,textarea{font:inherit}
   background:linear-gradient(180deg,var(--card),var(--card2));
   box-shadow:var(--shadow);
 }
-.hero,.actionbar,.panel,.toolbar,.tableWrap{border-radius:24px}
+.hero,.actionbar,.panel,.toolbar,.tableWrap{border-radius:22px}
 .hero{
   padding:18px 20px;
   display:flex;
@@ -183,12 +194,12 @@ button,input,select,textarea{font:inherit}
 }
 .kpis{
   display:grid;
-  grid-template-columns:repeat(6,minmax(0,1fr));
+  grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr;
   gap:12px;
   margin-bottom:14px;
 }
 .kpi{
-  border-radius:20px;
+  border-radius:18px;
   padding:14px 16px;
   cursor:pointer;
   transition:.16s ease;
@@ -203,8 +214,14 @@ button,input,select,textarea{font:inherit}
 }
 .kpi .value{
   margin-top:10px;
-  font-size:22px;
+  font-size:24px;
   font-weight:900;
+}
+.kpi.primaryAlert{
+  background:
+    linear-gradient(180deg, rgba(255,122,133,.12), rgba(255,122,133,.05)),
+    linear-gradient(180deg,var(--card),var(--card2));
+  border-color:rgba(255,122,133,.20);
 }
 .kpi .value.online{color:var(--green)}
 .kpi .value.offline{color:var(--red)}
@@ -215,7 +232,7 @@ button,input,select,textarea{font:inherit}
 .section.active{display:block}
 .grid{
   display:grid;
-  grid-template-columns:1.1fr .9fr;
+  grid-template-columns:1fr .9fr;
   gap:14px;
 }
 .stack{display:grid;gap:14px}
@@ -223,20 +240,21 @@ button,input,select,textarea{font:inherit}
 .panelHead{
   display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px
 }
-.panelHead h2{margin:0;font-size:20px;font-weight:900}
+.panelHead h2{margin:0;font-size:18px;font-weight:900}
 .panelHead p{margin:6px 0 0;color:var(--muted);font-size:13px}
 .miniDevices{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:12px;
 }
 .miniDevice{
   border-radius:18px;
   padding:14px;
   background:linear-gradient(180deg,var(--card2),var(--card3));
+  min-width:0;
 }
 .miniTop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.miniName{font-size:16px;font-weight:900;line-height:1.1}
+.miniName{font-size:16px;font-weight:900;line-height:1.15}
 .miniIp{margin-top:6px;font-size:12px;color:var(--muted)}
 .meta{display:grid;gap:5px;color:var(--muted);font-size:12px;margin:10px 0 12px}
 .meta b{color:var(--text)}
@@ -273,7 +291,7 @@ button,input,select,textarea{font:inherit}
 .toolbar{
   padding:12px;
   display:grid;
-  grid-template-columns:1.2fr .7fr .7fr .7fr;
+  grid-template-columns:1.4fr .8fr .8fr .8fr;
   gap:10px;
   margin-bottom:12px;
 }
@@ -282,14 +300,15 @@ button,input,select,textarea{font:inherit}
 input,select,textarea{width:100%;padding:10px 12px;outline:none}
 textarea{min-height:120px;resize:vertical}
 .quickActions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-.tableWrap{overflow:auto}
-table{width:100%;border-collapse:collapse;min-width:1120px}
+.tableWrap{overflow:auto;max-width:100%}
+table{width:100%;border-collapse:collapse;min-width:980px}
 th,td{
   padding:11px 12px;
   border-bottom:1px solid var(--line);
   text-align:right;
   vertical-align:top;
   font-size:13px;
+  white-space:nowrap;
 }
 th{
   font-size:11px;
@@ -346,7 +365,7 @@ td strong{font-size:14px}
       </div>
       <div>
         <div class="brandTitle">HOMEii Network</div>
-        <div class="brandSub">Monitor <span id="versionText">3.6.2</span></div>
+        <div class="brandSub">Monitor <span id="versionText">3.6.3</span></div>
       </div>
     </div>
 
@@ -357,18 +376,23 @@ td strong{font-size:14px}
       <button class="navBtn" data-tab="settings" onclick="switchTab('settings', this)">Settings</button>
     </div>
 
-    <div class="sideCards">
-      <div class="sideCard">
-        <div class="k">Status</div>
-        <div class="v" id="sideScanState">Idle</div>
-      </div>
-      <div class="sideCard">
-        <div class="k">Networks</div>
-        <div class="v" id="sideNetworksCount">0</div>
-      </div>
-    </div>
-
     <div class="sidebarFooter">
+      <button class="btn ghost themeToggle" onclick="toggleTheme()">
+        <span id="themeIcon">☾</span>
+        <span id="themeText">מצב כהה</span>
+      </button>
+
+      <div class="sideCards">
+        <div class="sideCard">
+          <div class="k">Status</div>
+          <div class="v" id="sideScanState">Idle</div>
+        </div>
+        <div class="sideCard">
+          <div class="k">Networks</div>
+          <div class="v" id="sideNetworksCount">0</div>
+        </div>
+      </div>
+
       <div class="health">
         <span class="dot"></span>
         <span id="dbPath">DB: /data/homeii.db</span>
@@ -381,7 +405,7 @@ td strong{font-size:14px}
       <div class="hero">
         <div>
           <h1 class="heroTitle">HOMEii Network Monitor</h1>
-          <div class="heroSub">v<span id="heroVersion">3.6.2</span> • Premium Sidebar UI • Compact Table-First Devices • Instant KPI Filters</div>
+          <div class="heroSub">v<span id="heroVersion">3.6.3</span> • Clean Dashboard • Large Status Summary • Light/Dark Toggle</div>
         </div>
         <div class="heroRight">
           <span id="lastRefresh">—</span>
@@ -398,17 +422,17 @@ td strong{font-size:14px}
     </div>
 
     <div class="kpis">
-      <div class="kpi" data-filter="" onclick="applyKpiFilter('')">
-        <div class="label">Total Devices</div>
-        <div class="value" id="sTotal">—</div>
+      <div class="kpi primaryAlert" data-filter="offline" onclick="applyKpiFilter('offline')">
+        <div class="label">Offline Devices</div>
+        <div class="value offline" id="sOffline">—</div>
       </div>
       <div class="kpi" data-filter="online" onclick="applyKpiFilter('online')">
         <div class="label">Online</div>
         <div class="value online" id="sOnline">—</div>
       </div>
-      <div class="kpi" data-filter="offline" onclick="applyKpiFilter('offline')">
-        <div class="label">Offline</div>
-        <div class="value offline" id="sOffline">—</div>
+      <div class="kpi" data-filter="" onclick="applyKpiFilter('')">
+        <div class="label">Total</div>
+        <div class="value" id="sTotal">—</div>
       </div>
       <div class="kpi" data-filter="new" onclick="applyKpiFilter('new')">
         <div class="label">New</div>
@@ -426,26 +450,14 @@ td strong{font-size:14px}
 
     <section id="tab-dashboard" class="section active">
       <div class="grid">
-        <div class="stack">
-          <div class="panel">
-            <div class="panelHead">
-              <div>
-                <h2>מכשירים אחרונים</h2>
-                <p>תצוגה מהירה של ההתקנים החדשים או המעודכנים לאחרונה</p>
-              </div>
+        <div class="panel">
+          <div class="panelHead">
+            <div>
+              <h2>מכשירים בולטים</h2>
+              <p>תצוגה נקייה של ההתקנים החשובים והעדכניים בלבד</p>
             </div>
-            <div id="dashboardDevices" class="miniDevices"></div>
           </div>
-
-          <div class="panel">
-            <div class="panelHead">
-              <div>
-                <h2>Recent events</h2>
-                <p>אירועים אחרונים מהמערכת</p>
-              </div>
-            </div>
-            <div id="dashboardEvents" class="events"></div>
-          </div>
+          <div id="dashboardDevices" class="miniDevices"></div>
         </div>
 
         <div class="stack">
@@ -453,10 +465,20 @@ td strong{font-size:14px}
             <div class="panelHead">
               <div>
                 <h2>Open alerts</h2>
-                <p>התראות פתוחות שדורשות תשומת לב</p>
+                <p>התראות פתוחות</p>
               </div>
             </div>
             <div id="dashboardAlerts" class="alerts"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panelHead">
+              <div>
+                <h2>Recent events</h2>
+                <p>אירועים אחרונים</p>
+              </div>
+            </div>
+            <div id="dashboardEvents" class="events"></div>
           </div>
         </div>
       </div>
@@ -467,7 +489,7 @@ td strong{font-size:14px}
         <div class="panelHead">
           <div>
             <h2>Devices</h2>
-            <p>חיפוש מיידי, סינון מהיר, table view מקצועי ופעולות מהירות על כל התקן</p>
+            <p>מסך הניהול המלא של ההתקנים, חיפוש, סינון ופעולות</p>
           </div>
         </div>
 
@@ -518,7 +540,7 @@ td strong{font-size:14px}
           <div class="panelHead">
             <div>
               <h2>Alerts</h2>
-              <p>התראות פעילות והיסטוריית מצב</p>
+              <p>התראות פעילות</p>
             </div>
           </div>
           <div id="alertsMount" class="alerts"></div>
@@ -528,7 +550,7 @@ td strong{font-size:14px}
           <div class="panelHead">
             <div>
               <h2>Events</h2>
-              <p>יומן אירועים קומפקטי</p>
+              <p>יומן אירועים</p>
             </div>
           </div>
           <div id="eventsMount" class="events"></div>
@@ -542,14 +564,14 @@ td strong{font-size:14px}
           <div class="panelHead">
             <div>
               <h2>Settings</h2>
-              <p>הגדרות תצוגה, ריענון ורשתות</p>
+              <p>הגדרות מערכת ותצוגה</p>
             </div>
           </div>
 
           <div class="toolbar">
             <div class="field">
               <label>Theme</label>
-              <select id="setTheme">
+              <select id="setTheme" onchange="previewTheme(this.value)">
                 <option value="dark">dark</option>
                 <option value="light">light</option>
               </select>
@@ -593,7 +615,7 @@ td strong{font-size:14px}
           <div class="panelHead">
             <div>
               <h2>System</h2>
-              <p>מידע מערכת, סטטוס סריקה ונתיב בסיס הנתונים</p>
+              <p>מידע מערכת וסטטוס</p>
             </div>
           </div>
           <div class="miniDevice">
@@ -676,6 +698,19 @@ function switchTab(tab, btn){
 
 function setTheme(theme){
   document.body.classList.toggle('light', theme === 'light');
+  localStorage.setItem('homeii_theme', theme);
+  qs('themeIcon').textContent = theme === 'light' ? '☀' : '☾';
+  qs('themeText').textContent = theme === 'light' ? 'מצב בהיר' : 'מצב כהה';
+}
+
+function toggleTheme(){
+  const next = document.body.classList.contains('light') ? 'dark' : 'light';
+  setTheme(next);
+  if(qs('setTheme')) qs('setTheme').value = next;
+}
+
+function previewTheme(theme){
+  setTheme(theme);
 }
 
 function deviceStatusBadge(status){
@@ -744,8 +779,24 @@ function clearFilters(){
   document.querySelectorAll('.kpi').forEach(el => el.classList.remove('active'));
 }
 
+function getImportantDevices(){
+  const rows = [...state.devices];
+  rows.sort((a,b) => {
+    const score = (d) => {
+      let s = 0;
+      if((d.status || '') === 'offline') s += 100;
+      if((d.status || '') === 'new') s += 60;
+      if(d.critical) s += 40;
+      if(d.pinned) s += 20;
+      return s;
+    };
+    return score(b) - score(a);
+  });
+  return rows.slice(0, 4);
+}
+
 function renderDashboard(){
-  const devices = [...state.devices].slice(0, 6);
+  const devices = getImportantDevices();
   const alerts = state.alerts.slice(0, 8);
   const events = state.events.slice(0, 8);
 
@@ -917,7 +968,7 @@ function renderSettings(){
   const status = state.status || {};
   const networks = status.networks || [];
 
-  qs('setTheme').value = settings.theme || 'dark';
+  qs('setTheme').value = settings.theme || localStorage.getItem('homeii_theme') || 'dark';
   qs('setRefresh').value = settings.auto_refresh || '30';
   qs('setView').value = settings.default_view || 'table';
   qs('setStyle').value = settings.dashboard_style || 'advanced';
@@ -936,8 +987,8 @@ function renderSettings(){
 
 function renderAll(){
   const s = state.status || {};
-  qs('versionText').textContent = s.version || '3.6.2';
-  qs('heroVersion').textContent = s.version || '3.6.2';
+  qs('versionText').textContent = s.version || '3.6.3';
+  qs('heroVersion').textContent = s.version || '3.6.3';
   qs('sTotal').textContent = s.total ?? 0;
   qs('sOnline').textContent = s.online ?? 0;
   qs('sOffline').textContent = s.offline ?? 0;
@@ -956,7 +1007,9 @@ function renderAll(){
   renderDevices();
   renderAlertsPage();
   renderSettings();
-  setTheme((s.settings && s.settings.theme) || 'dark');
+
+  const savedTheme = state.status?.settings?.theme || localStorage.getItem('homeii_theme') || 'dark';
+  setTheme(savedTheme);
 }
 
 async function refreshAll(){
@@ -1006,6 +1059,7 @@ async function saveSettings(){
   const theme = qs('setTheme').value;
   const networks = encodeURIComponent(qs('setNetworks').value.trim());
   await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&networks=${networks}`);
+  setTheme(theme);
   showMsg('settingsMessage','ההגדרות נשמרו');
   await refreshAll();
 }
@@ -1021,9 +1075,13 @@ async function editDevice(ip, name, category, tags, notes){
 }
 
 window.addEventListener('load', async () => {
+  const savedTheme = localStorage.getItem('homeii_theme') || 'dark';
+  setTheme(savedTheme);
+
   const hash = (location.hash || '#dashboard').replace('#','');
   const btn = document.querySelector(`.navBtn[data-tab="${hash}"]`);
   if(btn) switchTab(hash, btn);
+
   try{
     await refreshAll();
   }catch(e){
