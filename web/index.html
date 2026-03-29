@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.6.6</title>
+<title>HOMEii Network Monitor 3.6.7</title>
 <style>
 :root{
   color-scheme:dark;
@@ -305,16 +305,16 @@ button,input,select,textarea{font:inherit}
 
 .dashboardCards{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
   gap:14px;
 }
 
 .deviceDashboardCard{
-  border:4px solid var(--red);
-  border-radius:28px;
+  border:3px solid var(--red);
+  border-radius:26px;
   background:var(--card);
-  padding:18px 20px;
-  min-height:170px;
+  padding:16px 18px;
+  min-height:150px;
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:18px;
@@ -336,16 +336,16 @@ button,input,select,textarea{font:inherit}
 .ddStatus{
   display:inline-flex;
   align-items:center;
-  gap:10px;
-  padding:10px 18px;
+  gap:8px;
+  padding:8px 14px;
   border-radius:999px;
   border:1px solid var(--line);
   background:rgba(255,255,255,.02);
-  font-size:18px;
+  font-size:15px;
   white-space:nowrap;
 }
 .ddStatusDot{
-  width:18px;height:18px;border-radius:50%;
+  width:14px;height:14px;border-radius:50%;
   background:var(--blue);
   flex:0 0 auto;
 }
@@ -355,22 +355,22 @@ button,input,select,textarea{font:inherit}
 .deviceDashboardCard.unstable .ddStatusDot{background:var(--orange)}
 
 .ddMeta{
-  margin-top:14px;
+  margin-top:12px;
 }
 .ddMetaRow{
-  font-size:18px;
+  font-size:15px;
   color:var(--muted);
 }
 .ddMetaRow b{
   color:var(--text);
-  font-size:20px;
+  font-size:16px;
 }
 
 .ddActions{
   display:flex;
-  gap:10px;
+  gap:8px;
   flex-wrap:nowrap;
-  margin-top:18px;
+  margin-top:14px;
 }
 .ddRight{
   text-align:right;
@@ -378,15 +378,15 @@ button,input,select,textarea{font:inherit}
 }
 .ddName{
   margin:0;
-  font-size:34px;
+  font-size:28px;
   line-height:1.05;
   font-weight:900;
   word-break:break-word;
 }
 .ddIp{
-  margin-top:14px;
-  font-size:26px;
-  line-height:1.1;
+  margin-top:10px;
+  font-size:18px;
+  line-height:1.15;
   word-break:break-word;
 }
 
@@ -550,8 +550,8 @@ td strong{font-size:14px}
   .top{grid-template-columns:1fr}
   .kpis,.toolbar,.dashboardCards{grid-template-columns:1fr}
   .hero{flex-direction:column;align-items:flex-start}
-  .ddName{font-size:28px}
-  .ddIp{font-size:22px}
+  .ddName{font-size:24px}
+  .ddIp{font-size:16px}
 }
 </style>
 </head>
@@ -561,7 +561,7 @@ td strong{font-size:14px}
     <div class="brand">
       <div class="brandLeft">
         <div class="brandTitle">HOMEii Network</div>
-        <div class="brandSub">Monitor <span id="versionText">3.6.6</span></div>
+        <div class="brandSub">Monitor <span id="versionText">3.6.7</span></div>
       </div>
       <div class="logoWrap">
         <img src="./logo" alt="HOMEii" onerror="this.style.display='none'; this.parentNode.textContent='H';">
@@ -603,7 +603,7 @@ td strong{font-size:14px}
       <div class="hero">
         <div>
           <h1 class="heroTitle">HOMEii Network Monitor</h1>
-          <div class="heroSub">v<span id="heroVersion">3.6.6</span> • Dashboard Layout Refined</div>
+          <div class="heroSub">v<span id="heroVersion">3.6.7</span> • Dashboard Cards Compact</div>
         </div>
         <div class="heroRight">
           <span id="lastRefresh">—</span>
@@ -651,7 +651,7 @@ td strong{font-size:14px}
           <div class="panelHead">
             <div>
               <h2>מכשירים בדשבורד</h2>
-              <p>שם מימין, סטטוס משמאל, כפתורים בשורה אחת</p>
+              <p>שם מימין, סטטוס משמאל, פונטים קטנים יותר</p>
             </div>
           </div>
           <div id="dashboardDevices" class="dashboardCards"></div>
@@ -1179,8 +1179,8 @@ function renderSettings(){
 
 function renderAll(){
   const s = state.status || {};
-  qs('versionText').textContent = s.version || '3.6.6';
-  qs('heroVersion').textContent = s.version || '3.6.6';
+  qs('versionText').textContent = s.version || '3.6.7';
+  qs('heroVersion').textContent = s.version || '3.6.7';
   qs('sTotal').textContent = s.total ?? 0;
   qs('sOnline').textContent = s.online ?? 0;
   qs('sOffline').textContent = s.offline ?? 0;
