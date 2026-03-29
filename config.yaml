@@ -1,29 +1,24 @@
 name: "HOMEii Network Monitor"
-slug: "homeii-network-monitor"
-description: "SQLite-based network monitor with multi-network scan, accept workflow and premium sidebar UI"
-version: "3.6.8"
+slug: "homeii_network_monitor"
+description: "SQLite-based network monitor with multi-network scan, accept workflow and improved theme handling"
+version: "3.7.0"
 build: .
 startup: services
 boot: auto
 init: false
 host_network: true
-
 arch:
   - amd64
   - aarch64
-
 ports:
   8108/tcp: 8108
-
 webui: "http://[HOST]:[PORT:8108]"
 ingress: true
 ingress_port: 8108
 panel_icon: mdi:lan
-
 options:
   networks:
     - 192.168.1.0/24
-
 schema:
   networks:
     - str
