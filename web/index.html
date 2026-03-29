@@ -3,165 +3,1146 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.6.0</title>
+<title>HOMEii Network Monitor 3.6.1</title>
 <style>
-:root{color-scheme:light;--bg:#edf3fb;--bg2:#f7faff;--card:#ffffff;--card2:#ffffff;--muted:#647693;--text:#172640;--line:rgba(17,34,68,.1);--blue:#2f72dc;--green:#14945a;--red:#d85e68;--orange:#d68822;--gold:#b78a10;--shadow:0 14px 32px rgba(17,34,68,.10);--radius:24px}
-body.dark{color-scheme:dark;--bg:#07101d;--bg2:#0d1727;--card:#121e31;--card2:#18263d;--muted:#97a8c5;--text:#eef4ff;--line:rgba(255,255,255,.08);--blue:#6ea7ff;--green:#4ed48a;--red:#ff6b78;--orange:#ffbe5e;--gold:#f2cd67;--shadow:0 18px 48px rgba(0,0,0,.28)}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%}
-body{font-family:Inter,system-ui,sans-serif;color:var(--text);background:radial-gradient(800px 360px at 100% -10%,rgba(110,167,255,.12),transparent 60%),radial-gradient(600px 260px at -10% 10%,rgba(78,212,138,.10),transparent 60%),linear-gradient(180deg,var(--bg),var(--bg2))}
-.wrap{max-width:1720px;margin:0 auto;padding:24px}.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;margin-bottom:18px}.brandbox,.actionbar,.panel,.stat,.tablewrap,.alert,.event,.device{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));box-shadow:var(--shadow)}.brandbox,.actionbar,.panel,.tablewrap{border-radius:28px}.brandbox{padding:18px 22px;display:flex;align-items:center;gap:14px}.logo{width:52px;height:52px;object-fit:contain}.title{font-size:34px;font-weight:900;letter-spacing:-.03em}.sub{margin-top:6px;color:var(--muted);font-size:13px}.actionbar{padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}.btn,input,select,textarea{border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--text);font:inherit}.btn{padding:12px 14px;cursor:pointer}.btn.primary{background:linear-gradient(180deg,#2f7dff,#1f63d7);border:none;color:#fff}.btn.ghost{background:transparent}.btn.red{background:linear-gradient(180deg,#ff7a85,#d85d67);border:none;color:#fff}.btn.green{background:linear-gradient(180deg,#28b86f,#14945a);border:none;color:#fff}.nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}.nav button{padding:12px 16px;border-radius:999px}.nav .active{outline:2px solid rgba(110,167,255,.35)}.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px}.stat{border-radius:24px;padding:18px}.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.value{font-size:30px;font-weight:900;margin-top:8px}.value.online{color:var(--green)}.value.offline{color:var(--red)}.value.new{color:var(--blue)}.value.alerts{color:var(--orange)}.value.pinned{color:var(--gold)}.panel{padding:20px;border-radius:28px}.panel h2{margin:0 0 8px;font-size:24px}.panel p{margin:0 0 16px;color:var(--muted)}.grid{display:grid;gap:16px}.grid.two{grid-template-columns:1.15fr .85fr}.section{display:none}.section.active{display:block}.filters,.formgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}.field{display:grid;gap:8px}.field label{font-size:13px;color:var(--muted)}input,select,textarea{padding:12px 14px;outline:none;width:100%}textarea{min-height:120px;resize:vertical}.tablewrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1080px}.table th,.table td{padding:13px 14px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}.table th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px}.badge::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}.badge.online::before{background:var(--green)}.badge.offline::before{background:var(--red)}.badge.unstable::before{background:var(--orange)}.badge.new::before{background:var(--blue)}.devicegrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.device{padding:16px;border-radius:24px}.device h3{margin:0 0 8px;font-size:22px}.meta{display:grid;gap:6px;color:var(--muted);font-size:13px}.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}.mini{padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px}.actions{display:flex;flex-wrap:wrap;gap:8px}.alerts,.events{display:grid;gap:12px;max-height:620px;overflow:auto}.alert,.event{padding:14px 16px;border-radius:22px}.alerthead,.eventhead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}.sev{font-size:12px;text-transform:uppercase;color:var(--muted)}.sev.high{color:var(--red)}.sev.medium{color:var(--orange)}.sev.info,.sev.success{color:var(--blue)}.msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px;border:1px solid var(--line)}.msg.show{display:block}.msg.ok{background:rgba(78,212,138,.08);border-color:rgba(78,212,138,.24)}.msg.err{background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.24)}small.muted{color:var(--muted)}.networklist{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.networkchip{padding:8px 12px;border-radius:999px;border:1px solid var(--line)}
-@media (max-width:1300px){.stats{grid-template-columns:repeat(3,1fr)}.devicegrid{grid-template-columns:repeat(2,1fr)}.grid.two,.filters,.formgrid{grid-template-columns:1fr 1fr}}
-@media (max-width:800px){.top{grid-template-columns:1fr}.stats,.devicegrid,.grid.two,.filters,.formgrid{grid-template-columns:1fr}.table{min-width:760px}}
+:root{
+  color-scheme:dark;
+  --bg:#07111f;
+  --bg2:#0c1628;
+  --sidebar:#08101d;
+  --card:#111d31;
+  --card2:#16243a;
+  --line:rgba(255,255,255,.08);
+  --line2:rgba(255,255,255,.12);
+  --text:#eef4ff;
+  --muted:#9aacc9;
+  --blue:#6ea7ff;
+  --blue2:#8cb8ff;
+  --green:#52d58d;
+  --red:#ff747f;
+  --orange:#ffbf63;
+  --gold:#f1c85b;
+  --shadow:0 16px 42px rgba(0,0,0,.28);
+  --radius:24px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(900px 420px at 100% -10%, rgba(110,167,255,.10), transparent 60%),
+    radial-gradient(700px 280px at -10% 10%, rgba(82,213,141,.08), transparent 60%),
+    linear-gradient(180deg,var(--bg),var(--bg2));
+}
+.app{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:280px 1fr;
+}
+.sidebar{
+  background:linear-gradient(180deg,#06101b,#08111f);
+  border-left:1px solid var(--line);
+  padding:22px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  position:sticky;
+  top:0;
+  min-height:100vh;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:6px 6px 14px;
+}
+.logoWrap{
+  width:46px;height:46px;border-radius:16px;
+  display:grid;place-items:center;
+  background:linear-gradient(180deg,#7fb0ff,#5d91f1);
+  color:white;font-weight:900;font-size:24px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.14);
+}
+.logoWrap img{width:100%;height:100%;object-fit:contain}
+.brandText{min-width:0}
+.brandTitle{
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:-.02em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.brandSub{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:3px;
+}
+.nav{
+  display:grid;
+  gap:10px;
+}
+.navBtn{
+  width:100%;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+  color:var(--text);
+  padding:14px 16px;
+  border-radius:18px;
+  cursor:pointer;
+  font:inherit;
+  text-align:right;
+  transition:.18s ease;
+}
+.navBtn:hover{border-color:var(--line2); transform:translateY(-1px)}
+.navBtn.active{
+  background:linear-gradient(180deg,rgba(110,167,255,.18),rgba(110,167,255,.10));
+  border-color:rgba(110,167,255,.24);
+  box-shadow:inset 0 0 0 1px rgba(110,167,255,.16);
+}
+.sideStats{
+  display:grid;
+  gap:10px;
+  margin-top:8px;
+}
+.sideMini{
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border-radius:18px;
+  padding:12px 14px;
+  box-shadow:var(--shadow);
+}
+.sideMini .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.sideMini .v{font-size:22px;font-weight:900;margin-top:6px}
+.sidebarFooter{
+  margin-top:auto;
+  display:grid;
+  gap:10px;
+}
+.health{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--muted);
+  font-size:13px;
+  padding:0 6px;
+}
+.health .dot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 0 6px rgba(82,213,141,.08);
+}
+.main{
+  padding:22px;
+}
+.topbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:16px;
+  align-items:start;
+  margin-bottom:18px;
+}
+.hero{
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border-radius:28px;
+  padding:20px 22px;
+  box-shadow:var(--shadow);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.hero h1{
+  margin:0;
+  font-size:26px;
+  font-weight:900;
+  letter-spacing:-.03em;
+}
+.hero p{
+  margin:8px 0 0;
+  color:var(--muted);
+  font-size:14px;
+}
+.heroRight{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  color:var(--muted);
+  font-size:13px;
+}
+.heroLogo{
+  height:40px;
+  opacity:.95;
+}
+.actions{
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border-radius:28px;
+  padding:14px;
+  box-shadow:var(--shadow);
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.btn,input,select,textarea{
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+  color:var(--text);
+  font:inherit;
+}
+.btn{
+  padding:12px 15px;
+  cursor:pointer;
+  transition:.16s ease;
+}
+.btn:hover{transform:translateY(-1px); border-color:var(--line2)}
+.btn.primary{
+  background:linear-gradient(180deg,#78a9ff,#5d92f1);
+  color:#fff;
+  border:none;
+}
+.btn.green{
+  background:linear-gradient(180deg,#32b971,#16945a);
+  color:#fff;
+  border:none;
+}
+.btn.red{
+  background:linear-gradient(180deg,#ff838d,#d65f69);
+  color:#fff;
+  border:none;
+}
+.btn.ghost{
+  background:transparent;
+}
+.btn.small{
+  padding:9px 12px;
+  border-radius:14px;
+  font-size:13px;
+}
+.scanState{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:11px 13px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  color:var(--muted);
+}
+.gridStats{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:14px;
+  margin-bottom:18px;
+}
+.stat{
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border-radius:24px;
+  padding:18px;
+  box-shadow:var(--shadow);
+}
+.stat .label{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+}
+.stat .value{
+  font-size:34px;
+  font-weight:900;
+  margin-top:10px;
+}
+.stat .value.online{color:var(--green)}
+.stat .value.offline{color:var(--red)}
+.stat .value.new{color:var(--blue)}
+.stat .value.alerts{color:var(--orange)}
+.stat .value.pinned{color:var(--gold)}
+.section{display:none}
+.section.active{display:block}
+.grid2{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:16px;
+}
+.stack{display:grid;gap:16px}
+.panel{
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border-radius:28px;
+  padding:20px;
+  box-shadow:var(--shadow);
+}
+.panelHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+.panelHead h2{
+  margin:0;
+  font-size:20px;
+  font-weight:900;
+}
+.panelHead p{
+  margin:6px 0 0;
+  color:var(--muted);
+  font-size:13px;
+}
+.deviceGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.deviceCard{
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+  border-radius:22px;
+  padding:16px;
+}
+.deviceTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+.deviceName{
+  font-size:22px;
+  font-weight:900;
+  line-height:1;
+  margin:0 0 8px;
+}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill,.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 11px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px;
+  color:var(--text);
+  background:rgba(255,255,255,.02);
+}
+.badge::before{
+  content:"";
+  width:8px;height:8px;border-radius:50%;
+  background:var(--blue);
+}
+.badge.online::before{background:var(--green)}
+.badge.offline::before{background:var(--red)}
+.badge.unstable::before{background:var(--orange)}
+.badge.new::before{background:var(--blue)}
+.meta{
+  display:grid;
+  gap:7px;
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:14px;
+}
+.meta b{color:#b7c7e3}
+.cardActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.alerts,.events{
+  display:grid;
+  gap:12px;
+  max-height:520px;
+  overflow:auto;
+}
+.alertItem,.eventItem{
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+  border-radius:20px;
+  padding:14px 16px;
+}
+.row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.rowTitle{
+  font-weight:800;
+  font-size:15px;
+}
+.rowSub{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:6px;
+}
+.sev{
+  font-size:12px;
+  text-transform:uppercase;
+  font-weight:800;
+}
+.sev.high{color:var(--red)}
+.sev.medium{color:var(--orange)}
+.sev.info,.sev.success{color:var(--blue)}
+.filters,.formGrid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:14px;
+}
+.field{
+  display:grid;
+  gap:8px;
+}
+.field label{
+  font-size:13px;
+  color:var(--muted);
+}
+input,select,textarea{
+  width:100%;
+  padding:12px 14px;
+  outline:none;
+}
+textarea{min-height:120px;resize:vertical}
+.tableWrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:24px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:1100px;
+}
+th,td{
+  padding:13px 14px;
+  border-bottom:1px solid var(--line);
+  text-align:right;
+  vertical-align:top;
+}
+th{
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.msg{
+  display:none;
+  margin-top:10px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid var(--line);
+}
+.msg.show{display:block}
+.msg.ok{background:rgba(82,213,141,.08); border-color:rgba(82,213,141,.25)}
+.msg.err{background:rgba(255,116,127,.08); border-color:rgba(255,116,127,.25)}
+.networkList{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.networkChip{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  color:var(--muted);
+}
+.empty{
+  border:1px dashed var(--line2);
+  border-radius:20px;
+  padding:18px;
+  color:var(--muted);
+  text-align:center;
+}
+small.muted{color:var(--muted)}
+@media (max-width:1400px){
+  .gridStats{grid-template-columns:repeat(3,1fr)}
+  .deviceGrid{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:1fr}
+}
+@media (max-width:1100px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:relative; min-height:auto}
+  .filters,.formGrid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  .topbar{grid-template-columns:1fr}
+  .gridStats,.deviceGrid,.filters,.formGrid{grid-template-columns:1fr}
+  .hero{flex-direction:column; align-items:flex-start}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <div class="brandbox">
-      <img src="./logo" class="logo" alt="HOMEii">
-      <div>
-        <div class="title">HOMEii Network Monitor</div>
-        <div class="sub">v3.6.0 • Multi Network • Accept Workflow • SQLite</div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logoWrap">
+        <img src="./logo" alt="HOMEii" onerror="this.style.display='none'; this.parentNode.textContent='H';">
+      </div>
+      <div class="brandText">
+        <div class="brandTitle">HOMEii Network</div>
+        <div class="brandSub">Monitor <span id="versionText">3.6.1</span></div>
       </div>
     </div>
-    <div class="actionbar">
-      <button class="btn primary" onclick="runScan()">סריקה עכשיו</button>
-      <button class="btn green" onclick="acceptAll()">אשר את כל החדשים</button>
-      <button class="btn ghost" onclick="refreshAll()">רענון</button>
-      <span id="scanState" class="mini">סטטוס סריקה: —</span>
+
+    <div class="nav">
+      <button class="navBtn active" data-tab="dashboard" onclick="switchTab('dashboard', this)">Dashboard</button>
+      <button class="navBtn" data-tab="devices" onclick="switchTab('devices', this)">Devices</button>
+      <button class="navBtn" data-tab="alerts" onclick="switchTab('alerts', this)">Alerts</button>
+      <button class="navBtn" data-tab="settings" onclick="switchTab('settings', this)">Settings</button>
     </div>
-  </div>
 
-  <div class="nav">
-    <button class="btn active" data-tab="dashboard" onclick="switchTab('dashboard', this)">Dashboard</button>
-    <button class="btn" data-tab="devices" onclick="switchTab('devices', this)">Devices</button>
-    <button class="btn" data-tab="alerts" onclick="switchTab('alerts', this)">Alerts</button>
-    <button class="btn" data-tab="settings" onclick="switchTab('settings', this)">Settings</button>
-  </div>
-
-  <div class="stats">
-    <div class="stat"><div class="label">Total Devices</div><div class="value" id="sTotal">—</div></div>
-    <div class="stat"><div class="label">Online</div><div class="value online" id="sOnline">—</div></div>
-    <div class="stat"><div class="label">Offline</div><div class="value offline" id="sOffline">—</div></div>
-    <div class="stat"><div class="label">New</div><div class="value new" id="sNew">—</div></div>
-    <div class="stat"><div class="label">Open Alerts</div><div class="value alerts" id="sAlerts">—</div></div>
-    <div class="stat"><div class="label">Pinned</div><div class="value pinned" id="sPinned">—</div></div>
-  </div>
-
-  <section id="tab-dashboard" class="section active">
-    <div class="grid two">
-      <div class="panel">
-        <h2>מכשירים אחרונים</h2>
-        <p>חדשים נשארים במצב new עד שמאשרים אותם. אחרי אישור הם יעברו ל-online/offline.</p>
-        <div id="dashboardDevices" class="devicegrid"></div>
+    <div class="sideStats">
+      <div class="sideMini">
+        <div class="k">Status</div>
+        <div class="v" id="sideScanState">Idle</div>
       </div>
-      <div class="grid">
+      <div class="sideMini">
+        <div class="k">Networks</div>
+        <div class="v" id="sideNetworksCount">0</div>
+      </div>
+    </div>
+
+    <div class="sidebarFooter">
+      <div class="health">
+        <span class="dot"></span>
+        <span id="dbPath">DB: /data/homeii/homeii.db</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="hero">
+        <div>
+          <h1>HOMEii Network Monitor</h1>
+          <p>v<span id="heroVersion">3.6.1</span> • Sidebar UI • Multi Network • Accept Workflow • SQLite</p>
+        </div>
+        <div class="heroRight">
+          <span id="lastRefresh">—</span>
+          <img src="./logo" class="heroLogo" alt="HOMEii" onerror="this.style.display='none';">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" onclick="runScan()">סריקה עכשיו</button>
+        <button class="btn green" onclick="acceptAll()">אשר את כל החדשים</button>
+        <button class="btn ghost" onclick="refreshAll()">רענון</button>
+        <span class="scanState" id="scanState">סטטוס סריקה: —</span>
+      </div>
+    </div>
+
+    <div class="gridStats">
+      <div class="stat"><div class="label">Total Devices</div><div class="value" id="sTotal">—</div></div>
+      <div class="stat"><div class="label">Online</div><div class="value online" id="sOnline">—</div></div>
+      <div class="stat"><div class="label">Offline</div><div class="value offline" id="sOffline">—</div></div>
+      <div class="stat"><div class="label">New</div><div class="value new" id="sNew">—</div></div>
+      <div class="stat"><div class="label">Open Alerts</div><div class="value alerts" id="sAlerts">—</div></div>
+      <div class="stat"><div class="label">Pinned</div><div class="value pinned" id="sPinned">—</div></div>
+    </div>
+
+    <section id="tab-dashboard" class="section active">
+      <div class="grid2">
         <div class="panel">
-          <h2>Open alerts</h2>
-          <div id="dashboardAlerts" class="alerts"></div>
+          <div class="panelHead">
+            <div>
+              <h2>מכשירים אחרונים</h2>
+              <p>חדשים נשארים במצב new עד שמאשרים אותם. אחרי אישור הם יעברו ל־online/offline.</p>
+            </div>
+          </div>
+          <div id="dashboardDevices" class="deviceGrid"></div>
         </div>
+
+        <div class="stack">
+          <div class="panel">
+            <div class="panelHead">
+              <div>
+                <h2>Open alerts</h2>
+                <p>התראות פתוחות הדורשות תשומת לב</p>
+              </div>
+            </div>
+            <div id="dashboardAlerts" class="alerts"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panelHead">
+              <div>
+                <h2>Recent events</h2>
+                <p>אירועים אחרונים מהמערכת</p>
+              </div>
+            </div>
+            <div id="dashboardEvents" class="events"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-devices" class="section">
+      <div class="panel">
+        <div class="panelHead">
+          <div>
+            <h2>Devices</h2>
+            <p>חיפוש, סינון, הוספה ידנית, אישור התקנים, Pin ופעולות מהירות</p>
+          </div>
+        </div>
+
+        <div class="filters">
+          <div class="field">
+            <label>חיפוש</label>
+            <input id="searchText" placeholder="שם, IP, hostname, vendor..." oninput="renderDevices()">
+          </div>
+          <div class="field">
+            <label>סטטוס</label>
+            <select id="filterStatus" onchange="renderDevices()">
+              <option value="">הכל</option>
+              <option value="online">online</option>
+              <option value="offline">offline</option>
+              <option value="unstable">unstable</option>
+              <option value="new">new</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>קטגוריה</label>
+            <select id="filterCategory" onchange="renderDevices()">
+              <option value="">הכל</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>תצוגה</label>
+            <select id="devicesView" onchange="renderDevices()">
+              <option value="grid">Grid</option>
+              <option value="table">Table</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="formGrid">
+          <div class="field">
+            <label>IP ידני</label>
+            <input id="manualIp" placeholder="192.168.1.50">
+          </div>
+          <div class="field">
+            <label>שם</label>
+            <input id="manualName" placeholder="Rack Server">
+          </div>
+          <div class="field">
+            <label>קטגוריה</label>
+            <input id="manualCategory" placeholder="server / camera / network">
+          </div>
+          <div class="field" style="align-self:end">
+            <button class="btn primary" onclick="addManual()">הוסף התקן</button>
+          </div>
+        </div>
+
+        <div class="cardActions" style="margin-bottom:10px">
+          <button class="btn green" onclick="acceptAll()">אשר את כל החדשים</button>
+          <button class="btn" onclick="runScan()">סריקה מחדש</button>
+        </div>
+
+        <div id="deviceMessage" class="msg"></div>
+        <div id="devicesMount"></div>
+      </div>
+    </section>
+
+    <section id="tab-alerts" class="section">
+      <div class="grid2">
         <div class="panel">
-          <h2>Recent events</h2>
-          <div id="dashboardEvents" class="events"></div>
+          <div class="panelHead">
+            <div>
+              <h2>Alerts</h2>
+              <p>התראות פעילות והיסטוריית התראות</p>
+            </div>
+          </div>
+          <div id="alertsMount" class="alerts"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panelHead">
+            <div>
+              <h2>Events</h2>
+              <p>לוג אירועים אחרון</p>
+            </div>
+          </div>
+          <div id="eventsMount" class="events"></div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="tab-devices" class="section">
-    <div class="panel">
-      <h2>Devices</h2>
-      <p>חיפוש, סינון, הוספה ידנית, אישור התקנים, Pin ופעולות מהירות.</p>
-      <div class="filters">
-        <div class="field"><label>חיפוש</label><input id="searchText" placeholder="שם, IP, hostname, vendor..." oninput="renderDevices()"></div>
-        <div class="field"><label>סטטוס</label><select id="filterStatus" onchange="renderDevices()"><option value="">הכל</option><option value="online">online</option><option value="offline">offline</option><option value="unstable">unstable</option><option value="new">new</option></select></div>
-        <div class="field"><label>קטגוריה</label><select id="filterCategory" onchange="renderDevices()"><option value="">הכל</option></select></div>
-        <div class="field"><label>תצוגה</label><select id="devicesView" onchange="renderDevices()"><option value="grid">Grid</option><option value="table">Table</option></select></div>
-      </div>
-      <div class="formgrid">
-        <div class="field"><label>IP ידני</label><input id="manualIp" placeholder="192.168.1.50"></div>
-        <div class="field"><label>שם</label><input id="manualName" placeholder="Rack Server"></div>
-        <div class="field"><label>קטגוריה</label><input id="manualCategory" placeholder="server / camera / network"></div>
-        <div class="field" style="align-self:end"><button class="btn primary" onclick="addManual()">הוסף התקן</button></div>
-      </div>
-      <div class="actions" style="margin-bottom:10px"><button class="btn green" onclick="acceptAll()">אשר את כל החדשים</button><button class="btn" onclick="runScan()">סריקה מחדש</button></div>
-      <div id="deviceMessage" class="msg"></div>
-      <div id="devicesMount"></div>
-    </div>
-  </section>
+    <section id="tab-settings" class="section">
+      <div class="grid2">
+        <div class="panel">
+          <div class="panelHead">
+            <div>
+              <h2>Settings</h2>
+              <p>הגדרות כלליות של הממשק והריענון</p>
+            </div>
+          </div>
 
-  <section id="tab-alerts" class="section">
-    <div class="grid two">
-      <div class="panel">
-        <h2>Alerts</h2>
-        <p>התראות פעילות והיסטוריה מתוך מנוע ה-SQLite.</p>
-        <div id="alertsList" class="alerts"></div>
-      </div>
-      <div class="panel">
-        <h2>Events</h2>
-        <p>יומן פעולות אחרון לזיהוי שינויים ברשת.</p>
-        <div id="eventsList" class="events"></div>
-      </div>
-    </div>
-  </section>
+          <div class="filters">
+            <div class="field">
+              <label>Theme</label>
+              <select id="setTheme">
+                <option value="dark">dark</option>
+                <option value="light">light</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Auto refresh (seconds)</label>
+              <input id="setRefresh" type="number" min="5" step="5">
+            </div>
+            <div class="field">
+              <label>Default view</label>
+              <select id="setView">
+                <option value="grid">grid</option>
+                <option value="table">table</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Dashboard style</label>
+              <select id="setStyle">
+                <option value="advanced">advanced</option>
+                <option value="compact">compact</option>
+              </select>
+            </div>
+          </div>
 
-  <section id="tab-settings" class="section">
-    <div class="grid two">
-      <div class="panel">
-        <h2>Settings</h2>
-        <p>שליטה ברענון, תצוגה, ערכת נושא ורשימת רשתות לסריקה.</p>
-        <div class="formgrid">
-          <div class="field"><label>Auto refresh</label><select id="setRefresh"><option value="10">10s</option><option value="20">20s</option><option value="30">30s</option><option value="60">60s</option><option value="0">Disabled</option></select></div>
-          <div class="field"><label>Default view</label><select id="setView"><option value="grid">Grid</option><option value="table">Table</option></select></div>
-          <div class="field"><label>Dashboard style</label><select id="setStyle"><option value="advanced">Advanced</option><option value="minimal">Minimal</option></select></div>
-          <div class="field"><label>Theme</label><select id="setTheme"><option value="light">Light</option><option value="dark">Dark</option></select></div>
+          <div class="field">
+            <label>Networks</label>
+            <textarea id="setNetworks" placeholder="192.168.1.0/24&#10;192.168.0.0/24"></textarea>
+          </div>
+
+          <div class="networkList" id="networkPreview"></div>
+
+          <div class="cardActions" style="margin-top:14px">
+            <button class="btn primary" onclick="saveSettings()">שמור הגדרות</button>
+            <button class="btn ghost" onclick="saveNetworksOnly()">שמור רשתות בלבד</button>
+          </div>
+
+          <div id="settingsMessage" class="msg"></div>
         </div>
-        <div class="field"><label>Networks (שורה לכל רשת או מופרד בפסיקים)</label><textarea id="setNetworks" placeholder="192.168.1.0/24
-10.0.0.0/24"></textarea></div>
-        <div class="actions"><button class="btn primary" onclick="saveSettings()">שמור הגדרות</button><button class="btn" onclick="saveNetworksOnly()">שמור רשתות</button></div>
-        <div id="currentNetworks" class="networklist"></div>
-        <div id="settingsMessage" class="msg"></div>
+
+        <div class="panel">
+          <div class="panelHead">
+            <div>
+              <h2>System</h2>
+              <p>מידע מערכת, סטטוס סריקה ונתיב מסד הנתונים</p>
+            </div>
+          </div>
+          <div class="deviceCard">
+            <div class="meta">
+              <div><b>Version:</b> <span id="sysVersion">—</span></div>
+              <div><b>Networks:</b> <span id="sysNetworks">—</span></div>
+              <div><b>DB:</b> <span id="sysDb">—</span></div>
+              <div><b>Last scan started:</b> <span id="sysScanStarted">—</span></div>
+              <div><b>Last scan finished:</b> <span id="sysScanFinished">—</span></div>
+              <div><b>Scan mode:</b> <span id="sysScanMode">—</span></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="panel">
-        <h2>System</h2>
-        <p>מידע מערכת, טווחי סריקה ונתיב מסד הנתונים.</p>
-        <div id="systemInfo" class="meta"></div>
-      </div>
-    </div>
-  </section>
+    </section>
+  </main>
 </div>
+
 <script>
-let state={devices:[],alerts:[],events:[],settings:{},scan:{},networks:[]};
-let refreshTimer=null;
-function qs(id){return document.getElementById(id)}
-function escapeHtml(s=''){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]||m))}
-function fmtTs(ts){if(!ts)return '—'; const d=new Date(ts*1000); return d.toLocaleString('he-IL')}
-function switchTab(tab,btn){document.querySelectorAll('.section').forEach(el=>el.classList.remove('active')); qs('tab-'+tab).classList.add('active'); document.querySelectorAll('.nav .btn').forEach(el=>el.classList.remove('active')); if(btn) btn.classList.add('active'); if(location.hash!==('#'+tab)) history.replaceState(null,'','#'+tab)}
-function setTheme(theme){document.body.classList.toggle('dark',theme==='dark'); qs('setTheme').value=theme==='dark'?'dark':'light'}
-function showMsg(id,text,ok=true){const el=qs(id); if(!el) return; el.className='msg show '+(ok?'ok':'err'); el.textContent=text; setTimeout(()=>el.className='msg',3200)}
-async function api(path){const r=await fetch(path); if(!r.ok) throw new Error('HTTP '+r.status); return r.json()}
-async function refreshAll(){const st=await api('./api/status'); state.devices=Object.values(st.devices||{}); state.alerts=st.alerts||[]; state.events=st.events||[]; state.settings=st.settings||{}; state.scan=st.scan||{}; state.networks=st.networks||[]; renderStats(st); renderDevices(); renderAlerts(); renderDashboard(); renderSettings(st); applyAutoRefresh()}
-function renderStats(st){qs('sTotal').textContent=st.total??0; qs('sOnline').textContent=st.online??0; qs('sOffline').textContent=st.offline??0; qs('sNew').textContent=st.new??0; qs('sAlerts').textContent=(st.alerts||[]).length; qs('sPinned').textContent=st.pinned??0; qs('scanState').textContent = st.scan?.running ? 'סריקה פעילה' : ('סריקה: '+(st.scan?.last_mode||'idle')); const cats=[...new Set(state.devices.map(d=>d.category).filter(Boolean))].sort(); qs('filterCategory').innerHTML='<option value="">הכל</option>'+cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
-function deviceActions(d){let buttons=''; if(d.status==='new' && !d.approved){buttons += `<button class="btn green" onclick="acceptDevice('${d.ip}')">Accept</button>`;} buttons += `<button class="btn" onclick="togglePin('${d.ip}')">${d.pinned?'Unpin':'Pin'}</button><button class="btn" onclick="pingNow('${d.ip}')">Ping</button><button class="btn" onclick="toggleCritical('${d.ip}')">${d.critical?'Critical ✓':'Mark Critical'}</button><button class="btn red" onclick="removeDevice('${d.ip}')">Remove</button>`; return `<div class="actions">${buttons}</div>`}
-function renderDeviceCard(d){return `<div class="device"><h3>${escapeHtml(d.name||d.hostname||d.ip)}</h3><div class="pillrow"><span class="badge ${escapeHtml(d.status)}">${escapeHtml(d.status)}</span>${d.pinned?'<span class="mini">Pinned</span>':''}${d.critical?'<span class="mini">Critical</span>':''}${d.manual?'<span class="mini">Manual</span>':''}${d.approved?'<span class="mini">Known</span>':'<span class="mini">Pending</span>'}</div><div class="meta"><div><strong>IP:</strong> ${escapeHtml(d.ip)}</div><div><strong>Hostname:</strong> ${escapeHtml(d.hostname||'—')}</div><div><strong>Category:</strong> ${escapeHtml(d.category||'—')}</div><div><strong>Vendor:</strong> ${escapeHtml(d.vendor||'—')}</div><div><strong>MAC:</strong> ${escapeHtml(d.mac||'—')}</div><div><strong>Last seen:</strong> ${escapeHtml(d.last_seen_relative||'—')}</div><div><strong>Source:</strong> ${escapeHtml(d.source||'—')}</div></div>${deviceActions(d)}</div>`}
-function filteredDevices(){const text=(qs('searchText').value||'').trim().toLowerCase(); const status=qs('filterStatus').value; const cat=qs('filterCategory').value; return [...state.devices].filter(d=>{const hay=`${d.name} ${d.ip} ${d.hostname} ${d.vendor} ${d.category}`.toLowerCase(); if(text && !hay.includes(text)) return false; if(status && d.status!==status) return false; if(cat && d.category!==cat) return false; return true;}).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||((a.status==='new')?-1:0)-((b.status==='new')?-1:0)||Number(b.critical)-Number(a.critical)||String(a.name||a.ip).localeCompare(String(b.name||b.ip),'he'))}
-function renderDevices(){const devices=filteredDevices(); const view=(qs('devicesView').value||state.settings.default_view||'grid'); const mount=qs('devicesMount'); if(!devices.length){mount.innerHTML='<div class="panel" style="margin-top:12px">אין התקנים להצגה.</div>'; return;} if(view==='grid'){mount.innerHTML=`<div class="devicegrid" style="margin-top:14px">${devices.map(renderDeviceCard).join('')}</div>`; return;} mount.innerHTML=`<div class="tablewrap" style="margin-top:14px"><table class="table"><thead><tr><th>שם</th><th>IP</th><th>סטטוס</th><th>Known</th><th>קטגוריה</th><th>Vendor</th><th>Last Seen</th><th>Actions</th></tr></thead><tbody>${devices.map(d=>`<tr><td>${escapeHtml(d.name||d.hostname||d.ip)}</td><td>${escapeHtml(d.ip)}</td><td><span class="badge ${escapeHtml(d.status)}">${escapeHtml(d.status)}</span></td><td>${d.approved?'yes':'pending'}</td><td>${escapeHtml(d.category||'—')}</td><td>${escapeHtml(d.vendor||'—')}</td><td>${escapeHtml(d.last_seen_relative||'—')}</td><td>${deviceActions(d)}</td></tr>`).join('')}</tbody></table></div>`}
-function renderAlerts(){const alerts=state.alerts||[]; const alertHtml=alerts.length?alerts.map(a=>`<div class="alert"><div class="alerthead"><strong>${escapeHtml(a.title||'Alert')}</strong><span class="sev ${escapeHtml(a.severity)}">${escapeHtml(a.severity)}</span></div><div>${escapeHtml(a.message||'')}</div><small class="muted">${escapeHtml(a.ip||'')} • ${fmtTs(a.created_at)}</small><div class="actions" style="margin-top:10px"><button class="btn" onclick="resolveAlert(${a.id})">Resolve</button></div></div>`).join(''):'<div class="event">אין התראות פתוחות.</div>'; const events=state.events||[]; const eventHtml=events.length?events.map(e=>`<div class="event"><div class="eventhead"><strong>${escapeHtml(e.message||e.event_type||'Event')}</strong><span class="sev ${escapeHtml(e.level)}">${escapeHtml(e.level)}</span></div><small class="muted">${escapeHtml(e.ip||'')} • ${fmtTs(e.ts)}</small></div>`).join(''):'<div class="event">אין אירועים.</div>'; qs('alertsList').innerHTML=alertHtml; qs('eventsList').innerHTML=eventHtml; qs('dashboardAlerts').innerHTML=alertHtml; qs('dashboardEvents').innerHTML=eventHtml}
-function renderDashboard(){const items=[...state.devices].slice(0,6); qs('dashboardDevices').innerHTML=items.length?items.map(renderDeviceCard).join(''):'<div class="event">אין התקנים להצגה.</div>'}
-function renderSettings(st){qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'grid'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('devicesView').value=st.settings?.default_view||'grid'; setTheme(st.settings?.theme||'light'); qs('setNetworks').value=(st.networks||[]).join('\n'); qs('currentNetworks').innerHTML=(st.networks||[]).map(n=>`<span class="networkchip">${escapeHtml(n)}</span>`).join(''); qs('systemInfo').innerHTML=`<div><strong>Version:</strong> ${escapeHtml(st.version||'')}</div><div><strong>Networks:</strong> ${(st.networks||[]).map(escapeHtml).join(', ')||'—'}</div><div><strong>DB:</strong> /data/homeii/homeii.db</div><div><strong>Last scan started:</strong> ${fmtTs(st.scan?.last_started)}</div><div><strong>Last scan finished:</strong> ${fmtTs(st.scan?.last_finished)}</div><div><strong>Scan mode:</strong> ${escapeHtml(st.scan?.last_mode||'idle')}</div>`}
-function applyAutoRefresh(){if(refreshTimer) clearInterval(refreshTimer); const sec=Number(state.settings.auto_refresh||30); if(sec>0) refreshTimer=setInterval(()=>refreshAll().catch(console.error),sec*1000)}
-async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage','סריקה התחילה'); await refreshAll()}
-async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('deviceMessage','חסר IP',false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; showMsg('deviceMessage','התקן נוסף'); await refreshAll()}
-async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
-async function togglePin(ip){await api(`./api/toggle_pinned/${encodeURIComponent(ip)}`); await refreshAll()}
-async function toggleCritical(ip){await api(`./api/toggle_critical/${encodeURIComponent(ip)}`); await refreshAll()}
-async function pingNow(ip){await api(`./api/ping_now/${encodeURIComponent(ip)}`); await refreshAll()}
-async function acceptDevice(ip){await api(`./api/accept/${encodeURIComponent(ip)}`); showMsg('deviceMessage','התקן אושר'); await refreshAll()}
-async function acceptAll(){await api('./api/accept_all'); showMsg('deviceMessage','כל ההתקנים החדשים אושרו'); await refreshAll()}
-async function resolveAlert(id){await api(`./api/resolve_alert/${id}`); await refreshAll()}
-async function saveNetworksOnly(){const networks=encodeURIComponent(qs('setNetworks').value.trim()); await api(`./api/save_networks?networks=${networks}`); showMsg('settingsMessage','הרשתות נשמרו'); await refreshAll()}
-async function saveSettings(){const theme=qs('setTheme').value; const networks=encodeURIComponent(qs('setNetworks').value.trim()); await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&networks=${networks}`); setTheme(theme); showMsg('settingsMessage','ההגדרות נשמרו'); await refreshAll()}
-window.addEventListener('load', async()=>{const hash=(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav .btn[data-tab="${hash}"]`); if(btn) switchTab(hash,btn); try{await refreshAll()}catch(e){console.error(e); alert('Failed to load HOMEii Network Monitor')} });
+const qs = (id) => document.getElementById(id);
+
+const state = {
+  status: null,
+  devices: [],
+  alerts: [],
+  events: [],
+  settings: {},
+};
+
+function escapeHtml(v){
+  return String(v ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+
+function timeAgo(ts){
+  if(!ts) return '—';
+  const now = Math.floor(Date.now()/1000);
+  const d = Math.max(0, now - Number(ts));
+  if(d < 60) return `${d}s ago`;
+  if(d < 3600) return `${Math.floor(d/60)}m ago`;
+  if(d < 86400) return `${Math.floor(d/3600)}h ago`;
+  return `${Math.floor(d/86400)}d ago`;
+}
+
+function formatTs(ts){
+  if(!ts) return '—';
+  try{
+    return new Date(Number(ts)*1000).toLocaleString('he-IL');
+  }catch{
+    return String(ts);
+  }
+}
+
+async function api(url){
+  const res = await fetch(url, {cache:'no-store'});
+  const data = await res.json().catch(()=>({ok:false,error:'Invalid JSON'}));
+  if(!res.ok) throw new Error(data.error || data.detail || `HTTP ${res.status}`);
+  return data;
+}
+
+function showMsg(id, text, type='ok'){
+  const el = qs(id);
+  if(!el) return;
+  el.textContent = text;
+  el.className = `msg show ${type === 'err' ? 'err' : 'ok'}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => {
+    el.className = 'msg';
+  }, 2800);
+}
+
+function switchTab(tab, btn){
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.navBtn').forEach(el => el.classList.remove('active'));
+  qs(`tab-${tab}`).classList.add('active');
+  if(btn) btn.classList.add('active');
+  const hash = `#${tab}`;
+  if(location.hash !== hash) history.replaceState(null, '', hash);
+}
+
+function setTheme(theme){
+  document.body.classList.toggle('light', theme === 'light');
+}
+
+function deviceStatusBadge(status){
+  const cls = ['online','offline','unstable','new'].includes(status) ? status : 'new';
+  return `<span class="badge ${cls}">${escapeHtml(status || 'unknown')}</span>`;
+}
+
+function buildDeviceCard(d){
+  return `
+    <div class="deviceCard">
+      <div class="deviceTop">
+        <div>
+          <div class="deviceName">${escapeHtml(d.name || d.hostname || d.ip)}</div>
+          <div class="pills">
+            <span class="pill">${d.approved ? 'Known' : 'New'}</span>
+            ${deviceStatusBadge(d.status)}
+            ${d.critical ? `<span class="pill">Critical</span>` : ``}
+            ${d.pinned ? `<span class="pill">Pinned</span>` : ``}
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div><b>IP:</b> ${escapeHtml(d.ip)}</div>
+        <div><b>Hostname:</b> ${escapeHtml(d.hostname || '—')}</div>
+        <div><b>Category:</b> ${escapeHtml(d.category || '—')}</div>
+        <div><b>Vendor:</b> ${escapeHtml(d.vendor || '—')}</div>
+        <div><b>MAC:</b> ${escapeHtml(d.mac || '—')}</div>
+        <div><b>Last seen:</b> ${timeAgo(d.last_seen)}</div>
+        <div><b>Source:</b> ${escapeHtml(d.source || '—')}</div>
+      </div>
+
+      <div class="cardActions">
+        <button class="btn small" onclick="pingNow('${d.ip}')">Ping</button>
+        <button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned ? 'Unpin' : 'Pin'}</button>
+        ${d.approved ? '' : `<button class="btn small green" onclick="acceptDevice('${d.ip}')">Accept</button>`}
+        <button class="btn small" onclick="editDevice('${d.ip}','${encodeURIComponent(d.name||'')}','${encodeURIComponent(d.category||'')}','${encodeURIComponent((d.tags||[]).join(','))}','${encodeURIComponent(d.notes||'')}')">Edit</button>
+        <button class="btn small" onclick="toggleCritical('${d.ip}')">${d.critical ? 'Unmark Critical' : 'Mark Critical'}</button>
+        <button class="btn small red" onclick="removeDevice('${d.ip}')">Remove</button>
+      </div>
+    </div>
+  `;
+}
+
+function populateCategories(devices){
+  const sel = qs('filterCategory');
+  const current = sel.value;
+  const cats = Array.from(new Set(devices.map(d => (d.category || '').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'he'));
+  sel.innerHTML = `<option value="">הכל</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  sel.value = current;
+}
+
+function renderDashboard(){
+  const devices = state.devices;
+  const alerts = state.alerts.slice(0, 8);
+  const events = state.events.slice(0, 8);
+
+  qs('dashboardDevices').innerHTML = devices.slice(0, 6).map(buildDeviceCard).join('') || `<div class="empty">אין התקנים להצגה</div>`;
+
+  qs('dashboardAlerts').innerHTML = alerts.map(a => `
+    <div class="alertItem">
+      <div class="row">
+        <div>
+          <div class="rowTitle">${escapeHtml(a.title || a.ip || 'Alert')}</div>
+          <div class="rowSub">${escapeHtml(a.message || '')}</div>
+        </div>
+        <div class="sev ${escapeHtml(a.severity || 'info')}">${escapeHtml(a.severity || 'info')}</div>
+      </div>
+      <div class="rowSub">${formatTs(a.created_at)}</div>
+    </div>
+  `).join('') || `<div class="empty">אין התרעות פתוחות</div>`;
+
+  qs('dashboardEvents').innerHTML = events.map(e => `
+    <div class="eventItem">
+      <div class="row">
+        <div>
+          <div class="rowTitle">${escapeHtml(e.message || e.type || 'Event')}</div>
+          <div class="rowSub">${escapeHtml(e.ip || '')}</div>
+        </div>
+        <div class="sev ${escapeHtml(e.level || 'info')}">${escapeHtml(e.level || 'info')}</div>
+      </div>
+      <div class="rowSub">${formatTs(e.ts)}</div>
+    </div>
+  `).join('') || `<div class="empty">אין אירועים</div>`;
+}
+
+function renderDevices(){
+  const q = (qs('searchText').value || '').trim().toLowerCase();
+  const status = qs('filterStatus').value;
+  const category = qs('filterCategory').value;
+  const view = qs('devicesView').value;
+
+  let rows = [...state.devices];
+
+  if(q){
+    rows = rows.filter(d => {
+      const tags = Array.isArray(d.tags) ? d.tags.join(' ') : '';
+      return [
+        d.ip, d.name, d.hostname, d.category, d.vendor, d.mac, tags, d.notes
+      ].some(v => String(v || '').toLowerCase().includes(q));
+    });
+  }
+  if(status) rows = rows.filter(d => (d.status || '') === status);
+  if(category) rows = rows.filter(d => (d.category || '') === category);
+
+  const mount = qs('devicesMount');
+  if(view === 'table'){
+    mount.innerHTML = `
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>name</th>
+              <th>ip</th>
+              <th>status</th>
+              <th>hostname</th>
+              <th>category</th>
+              <th>vendor</th>
+              <th>mac</th>
+              <th>last seen</th>
+              <th>actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(d => `
+              <tr>
+                <td>${escapeHtml(d.name || '—')}</td>
+                <td>${escapeHtml(d.ip)}</td>
+                <td>${deviceStatusBadge(d.status)}</td>
+                <td>${escapeHtml(d.hostname || '—')}</td>
+                <td>${escapeHtml(d.category || '—')}</td>
+                <td>${escapeHtml(d.vendor || '—')}</td>
+                <td>${escapeHtml(d.mac || '—')}</td>
+                <td>${timeAgo(d.last_seen)}</td>
+                <td>
+                  <div class="cardActions">
+                    <button class="btn small" onclick="pingNow('${d.ip}')">Ping</button>
+                    <button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned ? 'Unpin' : 'Pin'}</button>
+                    ${d.approved ? '' : `<button class="btn small green" onclick="acceptDevice('${d.ip}')">Accept</button>`}
+                    <button class="btn small" onclick="toggleCritical('${d.ip}')">${d.critical ? 'Unmark' : 'Critical'}</button>
+                    <button class="btn small red" onclick="removeDevice('${d.ip}')">Remove</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else {
+    mount.innerHTML = `<div class="deviceGrid">${rows.map(buildDeviceCard).join('')}</div>` || `<div class="empty">אין התקנים</div>`;
+  }
+
+  if(!rows.length){
+    mount.innerHTML = `<div class="empty">לא נמצאו התקנים בתוצאות הסינון</div>`;
+  }
+}
+
+function renderAlertsPage(){
+  qs('alertsMount').innerHTML = state.alerts.map(a => `
+    <div class="alertItem">
+      <div class="row">
+        <div>
+          <div class="rowTitle">${escapeHtml(a.title || a.ip || 'Alert')}</div>
+          <div class="rowSub">${escapeHtml(a.message || '')}</div>
+          <div class="rowSub">${formatTs(a.created_at)}</div>
+        </div>
+        <div style="display:grid;gap:10px;justify-items:end">
+          <div class="sev ${escapeHtml(a.severity || 'info')}">${escapeHtml(a.severity || 'info')}</div>
+          ${a.status === 'open' ? `<button class="btn small" onclick="resolveAlert(${a.id})">Resolve</button>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('') || `<div class="empty">אין התראות</div>`;
+
+  qs('eventsMount').innerHTML = state.events.map(e => `
+    <div class="eventItem">
+      <div class="row">
+        <div>
+          <div class="rowTitle">${escapeHtml(e.message || e.type || 'Event')}</div>
+          <div class="rowSub">${escapeHtml(e.ip || '')}</div>
+          <div class="rowSub">${formatTs(e.ts)}</div>
+        </div>
+        <div class="sev ${escapeHtml(e.level || 'info')}">${escapeHtml(e.level || 'info')}</div>
+      </div>
+    </div>
+  `).join('') || `<div class="empty">אין אירועים</div>`;
+}
+
+function renderSettings(){
+  const settings = state.settings || {};
+  const status = state.status || {};
+  const networks = status.networks || [];
+
+  qs('setTheme').value = settings.theme || 'dark';
+  qs('setRefresh').value = settings.auto_refresh || '30';
+  qs('setView').value = settings.default_view || 'grid';
+  qs('setStyle').value = settings.dashboard_style || 'advanced';
+  qs('setNetworks').value = networks.join('\n');
+  qs('networkPreview').innerHTML = networks.map(n => `<span class="networkChip">${escapeHtml(n)}</span>`).join('') || `<span class="networkChip">אין רשתות</span>`;
+
+  qs('sysVersion').textContent = status.version || '—';
+  qs('sysNetworks').textContent = networks.join(', ') || '—';
+  qs('sysDb').textContent = state.dbPath || '—';
+  qs('sysScanStarted').textContent = formatTs(status.scan?.last_started);
+  qs('sysScanFinished').textContent = formatTs(status.scan?.last_finished);
+  qs('sysScanMode').textContent = status.scan?.last_mode || '—';
+}
+
+function renderAll(){
+  const s = state.status || {};
+  qs('versionText').textContent = s.version || '3.6.1';
+  qs('heroVersion').textContent = s.version || '3.6.1';
+  qs('sTotal').textContent = s.total ?? 0;
+  qs('sOnline').textContent = s.online ?? 0;
+  qs('sOffline').textContent = s.offline ?? 0;
+  qs('sNew').textContent = s.new ?? 0;
+  qs('sAlerts').textContent = (s.alerts || []).length;
+  qs('sPinned').textContent = s.pinned ?? 0;
+
+  const scanText = s.scan?.running
+    ? 'סטטוס סריקה: running'
+    : `סטטוס סריקה: ${s.scan?.last_mode || 'idle'}`;
+  qs('scanState').textContent = scanText;
+  qs('sideScanState').textContent = s.scan?.running ? 'Running' : (s.scan?.last_mode || 'Idle');
+  qs('sideNetworksCount').textContent = (s.networks || []).length;
+  qs('lastRefresh').textContent = `עודכן: ${new Date().toLocaleTimeString('he-IL')}`;
+  qs('dbPath').textContent = `DB: ${state.dbPath || '/data/homeii/homeii.db'}`;
+
+  populateCategories(state.devices);
+  renderDashboard();
+  renderDevices();
+  renderAlertsPage();
+  renderSettings();
+}
+
+async function refreshAll(){
+  const [status, devices, alerts, events, settings] = await Promise.all([
+    api('./api/status'),
+    api('./api/devices'),
+    api('./api/alerts'),
+    api('./api/events'),
+    api('./api/settings')
+  ]);
+
+  state.status = status;
+  state.devices = devices.devices || [];
+  state.alerts = alerts.alerts || [];
+  state.events = events.events || [];
+  state.settings = settings.settings || {};
+  state.dbPath = settings.db_path || '';
+
+  renderAll();
+  setTheme(state.settings.theme || 'dark');
+}
+
+async function runScan(){
+  try{
+    await api('./api/scan?mode=manual');
+    showMsg('deviceMessage','הסריקה התחילה');
+    setTimeout(refreshAll, 1200);
+  }catch(e){
+    showMsg('deviceMessage', e.message || 'Scan failed', 'err');
+  }
+}
+
+async function removeDevice(ip){ await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll(); }
+async function togglePin(ip){ await api(`./api/toggle_pinned/${encodeURIComponent(ip)}`); await refreshAll(); }
+async function toggleCritical(ip){ await api(`./api/toggle_critical/${encodeURIComponent(ip)}`); await refreshAll(); }
+async function pingNow(ip){ await api(`./api/ping_now/${encodeURIComponent(ip)}`); await refreshAll(); }
+async function acceptDevice(ip){ await api(`./api/accept/${encodeURIComponent(ip)}`); showMsg('deviceMessage','ההתקן אושר'); await refreshAll(); }
+async function acceptAll(){ await api('./api/accept_all'); showMsg('deviceMessage','כל ההתקנים החדשים אושרו'); await refreshAll(); }
+async function resolveAlert(id){ await api(`./api/resolve_alert/${id}`); await refreshAll(); }
+
+async function saveNetworksOnly(){
+  const networks = encodeURIComponent(qs('setNetworks').value.trim());
+  await api(`./api/save_networks?networks=${networks}`);
+  showMsg('settingsMessage','הרשתות נשמרו');
+  await refreshAll();
+}
+
+async function saveSettings(){
+  const theme = qs('setTheme').value;
+  const networks = encodeURIComponent(qs('setNetworks').value.trim());
+  await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&networks=${networks}`);
+  setTheme(theme);
+  showMsg('settingsMessage','ההגדרות נשמרו');
+  await refreshAll();
+}
+
+async function addManual(){
+  const ip = encodeURIComponent(qs('manualIp').value.trim());
+  const name = encodeURIComponent(qs('manualName').value.trim());
+  const category = encodeURIComponent(qs('manualCategory').value.trim());
+  if(!ip){
+    showMsg('deviceMessage','חסר IP', 'err');
+    return;
+  }
+  await api(`./api/add_manual?ip=${ip}&name=${name}&category=${category}`);
+  qs('manualIp').value = '';
+  qs('manualName').value = '';
+  qs('manualCategory').value = '';
+  showMsg('deviceMessage','התקן ידני נוסף');
+  await refreshAll();
+}
+
+async function editDevice(ip, name, category, tags, notes){
+  const newName = prompt('שם התקן', decodeURIComponent(name || '')) ?? '';
+  const newCategory = prompt('קטגוריה', decodeURIComponent(category || '')) ?? '';
+  const newTags = prompt('תגיות (מופרדות בפסיקים)', decodeURIComponent(tags || '')) ?? '';
+  const newNotes = prompt('הערות', decodeURIComponent(notes || '')) ?? '';
+  await api(`./api/update?ip=${encodeURIComponent(ip)}&name=${encodeURIComponent(newName)}&category=${encodeURIComponent(newCategory)}&tags=${encodeURIComponent(newTags)}&notes=${encodeURIComponent(newNotes)}`);
+  showMsg('deviceMessage','ההתקן עודכן');
+  await refreshAll();
+}
+
+window.addEventListener('load', async () => {
+  const hash = (location.hash || '#dashboard').replace('#','');
+  const btn = document.querySelector(`.navBtn[data-tab="${hash}"]`);
+  if(btn) switchTab(hash, btn);
+  try{
+    await refreshAll();
+  }catch(e){
+    console.error(e);
+    alert('Failed to load HOMEii Network Monitor');
+  }
+});
 </script>
 </body>
 </html>
