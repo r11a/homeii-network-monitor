@@ -117,6 +117,7 @@ body {
 
 .main {
   padding: 24px;
+  overflow-x: hidden;
 }
 
 .topbar {
@@ -284,11 +285,15 @@ body {
   max-width: 320px;
 }
 
+/* ----- DASHBOARD GRID ----- */
+
 .device-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 16px;
 }
+
+/* ----- REGULAR DEVICE CARDS (other pages) ----- */
 
 .device-card {
   padding: 16px;
@@ -364,6 +369,126 @@ body {
   flex-wrap: wrap;
 }
 
+/* ----- DASHBOARD DEVICE CARD - NEW LAYOUT ----- */
+
+.dashboard-device-card {
+  background: rgba(18, 27, 45, 0.88);
+  border: 3px solid var(--offline);
+  border-radius: 26px;
+  padding: 16px 18px;
+  min-height: 155px;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 18px;
+  direction: ltr;
+  backdrop-filter: blur(8px);
+}
+
+.dashboard-device-card.online {
+  border-color: var(--online);
+}
+
+.dashboard-device-card.offline {
+  border-color: var(--offline);
+}
+
+.dashboard-device-card.new {
+  border-color: var(--new);
+}
+
+.dashboard-device-card.unstable {
+  border-color: var(--warning);
+}
+
+.dashboard-device-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+
+.dashboard-device-right {
+  min-width: 0;
+  text-align: right;
+  direction: rtl;
+}
+
+.dashboard-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.dashboard-status-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--offline);
+  flex: 0 0 auto;
+}
+
+.dashboard-device-card.online .dashboard-status-dot {
+  background: var(--online);
+}
+
+.dashboard-device-card.offline .dashboard-status-dot {
+  background: var(--offline);
+}
+
+.dashboard-device-card.new .dashboard-status-dot {
+  background: var(--new);
+}
+
+.dashboard-device-card.unstable .dashboard-status-dot {
+  background: var(--warning);
+}
+
+.dashboard-last-seen {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.25;
+}
+
+.dashboard-last-seen b {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.dashboard-device-name {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.05;
+  font-weight: 900;
+  word-break: break-word;
+}
+
+.dashboard-device-ip {
+  margin-top: 10px;
+  font-size: 17px;
+  line-height: 1.15;
+  word-break: break-word;
+  color: var(--text);
+}
+
+.dashboard-device-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  margin-top: 14px;
+}
+
+/* ----- BADGES ----- */
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -393,6 +518,8 @@ body {
   color: #b8d6ff;
   border: 1px solid rgba(59, 130, 246, 0.32);
 }
+
+/* ----- ALERTS ----- */
 
 .alerts-list {
   display: grid;
@@ -494,6 +621,27 @@ body {
   }
 }
 
+@media (max-width: 900px) {
+  .dashboard-device-card {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    direction: rtl;
+  }
+
+  .dashboard-device-left {
+    text-align: right;
+    align-items: flex-start;
+  }
+
+  .dashboard-device-right {
+    text-align: right;
+  }
+
+  .dashboard-device-actions {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 640px) {
   .main {
     padding: 16px;
@@ -509,5 +657,13 @@ body {
 
   .topbar {
     flex-direction: column;
+  }
+
+  .dashboard-device-name {
+    font-size: 22px;
+  }
+
+  .dashboard-device-ip {
+    font-size: 16px;
   }
 }
