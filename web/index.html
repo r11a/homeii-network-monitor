@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.6.4</title>
+<title>HOMEii Network Monitor 3.6.5</title>
 <style>
 :root{
   color-scheme:dark;
@@ -18,7 +18,7 @@
   --line2:rgba(255,255,255,.12);
   --blue:#78a9ff;
   --green:#5ad891;
-  --red:#ff7a85;
+  --red:#ff4d62;
   --orange:#ffbf63;
   --gold:#f2cd67;
   --shadow:0 16px 42px rgba(0,0,0,.26);
@@ -36,7 +36,7 @@ body.light{
   --line2:rgba(17,34,68,.16);
   --blue:#4c7fea;
   --green:#16945a;
-  --red:#d85e68;
+  --red:#e84c61;
   --orange:#d68822;
   --gold:#b78a10;
   --shadow:0 12px 30px rgba(17,34,68,.08);
@@ -74,9 +74,7 @@ button,input,select,textarea{font:inherit}
   gap:12px;
   padding:4px 6px 10px;
 }
-.brandLeft{
-  min-width:0;
-}
+.brandLeft{min-width:0}
 .brandTitle{
   font-size:18px;
   font-weight:900;
@@ -158,6 +156,12 @@ button,input,select,textarea{font:inherit}
   font-size:18px;
   font-weight:900;
 }
+.health{
+  display:flex;align-items:center;gap:8px;
+  color:var(--muted);font-size:13px;
+}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
+
 .main{
   height:100vh;
   overflow-y:auto;
@@ -171,7 +175,7 @@ button,input,select,textarea{font:inherit}
   align-items:start;
   margin-bottom:14px;
 }
-.hero,.actionbar,.kpi,.panel,.toolbar,.tableWrap,.deviceMini,.empty,.alertItem,.eventItem,.msg{
+.hero,.actionbar,.kpi,.panel,.toolbar,.tableWrap,.empty,.alertItem,.eventItem,.msg{
   border:1px solid var(--line);
   background:linear-gradient(180deg,var(--card),var(--card2));
   box-shadow:var(--shadow);
@@ -223,7 +227,7 @@ button,input,select,textarea{font:inherit}
 .btn.green{background:linear-gradient(180deg,#32ba72,#17955c);border:none;color:#fff}
 .btn.red{background:linear-gradient(180deg,#ff8690,#d4626c);border:none;color:#fff}
 .btn.ghost{background:transparent}
-.btn.small{padding:7px 10px;font-size:12px;border-radius:12px}
+.btn.small{padding:8px 12px;font-size:12px;border-radius:12px}
 .scanState{
   display:inline-flex;
   align-items:center;
@@ -233,9 +237,10 @@ button,input,select,textarea{font:inherit}
   border:1px solid var(--line);
   color:var(--muted);
 }
+
 .kpis{
   display:grid;
-  grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns:1.5fr 1fr 1fr 1fr 1fr 1fr;
   gap:12px;
   margin-bottom:14px;
 }
@@ -249,9 +254,9 @@ button,input,select,textarea{font:inherit}
 .kpi.active{outline:2px solid rgba(120,169,255,.26)}
 .kpi.primaryAlert{
   background:
-    linear-gradient(180deg, rgba(255,122,133,.14), rgba(255,122,133,.06)),
+    linear-gradient(180deg, rgba(255,77,98,.14), rgba(255,77,98,.06)),
     linear-gradient(180deg,var(--card),var(--card2));
-  border-color:rgba(255,122,133,.24);
+  border-color:rgba(255,77,98,.24);
 }
 .kpi .label{
   font-size:11px;
@@ -261,7 +266,7 @@ button,input,select,textarea{font:inherit}
 }
 .kpi .value{
   margin-top:10px;
-  font-size:28px;
+  font-size:30px;
   font-weight:900;
 }
 .kpi .value.online{color:var(--green)}
@@ -269,8 +274,10 @@ button,input,select,textarea{font:inherit}
 .kpi .value.new{color:var(--blue)}
 .kpi .value.alerts{color:var(--orange)}
 .kpi .value.pinned{color:var(--gold)}
+
 .section{display:none}
 .section.active{display:block}
+
 .grid{
   display:grid;
   grid-template-columns:1fr .9fr;
@@ -295,54 +302,96 @@ button,input,select,textarea{font:inherit}
   color:var(--muted);
   font-size:13px;
 }
+
 .dashboardCards{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:14px;
 }
-.deviceMini{
-  border-radius:18px;
-  padding:16px;
-  background:linear-gradient(180deg,var(--card2),var(--card));
-  min-width:0;
+
+.deviceDashboardCard{
+  border:4px solid var(--red);
+  border-radius:28px;
+  background:var(--card);
+  padding:22px 20px;
+  min-height:220px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  align-items:start;
 }
-.deviceMiniTop{
+.deviceDashboardCard.online{border-color:var(--green)}
+.deviceDashboardCard.offline{border-color:var(--red)}
+.deviceDashboardCard.new{border-color:var(--blue)}
+.deviceDashboardCard.unstable{border-color:var(--orange)}
+
+.ddLeft{
   display:flex;
-  align-items:flex-start;
+  flex-direction:column;
   justify-content:space-between;
-  gap:10px;
+  min-width:0;
+  height:100%;
 }
-.deviceMiniName{
-  font-size:24px;
-  font-weight:900;
-  line-height:1.05;
-  margin:0;
-}
-.deviceMiniIp{
-  margin-top:10px;
-  font-size:20px;
-  font-weight:500;
-}
-.badge{
+.ddStatus{
   display:inline-flex;
   align-items:center;
-  gap:8px;
-  padding:8px 12px;
+  gap:10px;
+  width:max-content;
+  max-width:100%;
+  padding:10px 18px;
   border-radius:999px;
   border:1px solid var(--line);
-  font-size:12px;
   background:rgba(255,255,255,.02);
-  white-space:nowrap;
+  font-size:18px;
 }
-.badge::before{
-  content:"";
-  width:10px;height:10px;border-radius:50%;
+.ddStatusDot{
+  width:18px;height:18px;border-radius:50%;
   background:var(--blue);
+  flex:0 0 auto;
 }
-.badge.online::before{background:var(--green)}
-.badge.offline::before{background:var(--red)}
-.badge.unstable::before{background:var(--orange)}
-.badge.new::before{background:var(--blue)}
+.deviceDashboardCard.online .ddStatusDot{background:var(--green)}
+.deviceDashboardCard.offline .ddStatusDot{background:var(--red)}
+.deviceDashboardCard.new .ddStatusDot{background:var(--blue)}
+.deviceDashboardCard.unstable .ddStatusDot{background:var(--orange)}
+
+.ddMeta{
+  margin-top:20px;
+  display:grid;
+  gap:12px;
+}
+.ddMetaRow{
+  font-size:18px;
+  color:var(--muted);
+}
+.ddMetaRow b{
+  color:var(--text);
+  font-size:20px;
+}
+
+.ddActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:18px;
+}
+.ddRight{
+  text-align:right;
+  min-width:0;
+}
+.ddName{
+  margin:0;
+  font-size:34px;
+  line-height:1.05;
+  font-weight:900;
+  word-break:break-word;
+}
+.ddIp{
+  margin-top:14px;
+  font-size:26px;
+  line-height:1.1;
+  word-break:break-word;
+}
+
 .alerts,.events{
   display:grid;
   gap:10px;
@@ -366,6 +415,7 @@ button,input,select,textarea{font:inherit}
 .sev.high{color:var(--red)}
 .sev.medium{color:var(--orange)}
 .sev.info,.sev.success{color:var(--blue)}
+
 .toolbar{
   padding:12px;
   display:grid;
@@ -378,6 +428,7 @@ button,input,select,textarea{font:inherit}
 input,select,textarea{width:100%;padding:10px 12px;outline:none}
 textarea{min-height:120px;resize:vertical}
 .quickActions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+
 .tableWrap{
   overflow:auto;
   max-width:100%;
@@ -420,6 +471,27 @@ td strong{font-size:14px}
   font-size:12px;
   background:rgba(255,255,255,.02);
 }
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px;
+  background:rgba(255,255,255,.02);
+  white-space:nowrap;
+}
+.badge::before{
+  content:"";
+  width:10px;height:10px;border-radius:50%;
+  background:var(--blue);
+}
+.badge.online::before{background:var(--green)}
+.badge.offline::before{background:var(--red)}
+.badge.unstable::before{background:var(--orange)}
+.badge.new::before{background:var(--blue)}
+
 .msg{
   display:none;
   margin-bottom:10px;
@@ -429,6 +501,7 @@ td strong{font-size:14px}
 .msg.show{display:block}
 .msg.ok{background:rgba(90,216,145,.08);border-color:rgba(90,216,145,.25)}
 .msg.err{background:rgba(255,122,133,.08);border-color:rgba(255,122,133,.25)}
+
 .networkList{
   display:flex;
   gap:8px;
@@ -448,10 +521,15 @@ td strong{font-size:14px}
   color:var(--muted);
   background:rgba(255,255,255,.02);
 }
-@media (max-width:1450px){
+
+@media (max-width:1500px){
   .kpis{grid-template-columns:repeat(3,1fr)}
-  .dashboardCards{grid-template-columns:repeat(2,1fr)}
   .grid{grid-template-columns:1fr}
+}
+@media (max-width:1200px){
+  .deviceDashboardCard{
+    grid-template-columns:1fr;
+  }
 }
 @media (max-width:1100px){
   body{overflow:auto}
@@ -470,6 +548,8 @@ td strong{font-size:14px}
   .top{grid-template-columns:1fr}
   .kpis,.toolbar,.dashboardCards{grid-template-columns:1fr}
   .hero{flex-direction:column;align-items:flex-start}
+  .ddName{font-size:28px}
+  .ddIp{font-size:22px}
 }
 </style>
 </head>
@@ -479,7 +559,7 @@ td strong{font-size:14px}
     <div class="brand">
       <div class="brandLeft">
         <div class="brandTitle">HOMEii Network</div>
-        <div class="brandSub">Monitor <span id="versionText">3.6.4</span></div>
+        <div class="brandSub">Monitor <span id="versionText">3.6.5</span></div>
       </div>
       <div class="logoWrap">
         <img src="./logo" alt="HOMEii" onerror="this.style.display='none'; this.parentNode.textContent='H';">
@@ -521,7 +601,7 @@ td strong{font-size:14px}
       <div class="hero">
         <div>
           <h1 class="heroTitle">HOMEii Network Monitor</h1>
-          <div class="heroSub">v<span id="heroVersion">3.6.4</span> • Clean Dashboard • Minimal Device Cards • Fixed Sidebar</div>
+          <div class="heroSub">v<span id="heroVersion">3.6.5</span> • Dashboard Cards Updated • Auto Responsive Layout</div>
         </div>
         <div class="heroRight">
           <span id="lastRefresh">—</span>
@@ -569,7 +649,7 @@ td strong{font-size:14px}
           <div class="panelHead">
             <div>
               <h2>מכשירים בדשבורד</h2>
-              <p>רק המידע הרלוונטי: שם, כתובת IP ומצב</p>
+              <p>שם, IP, מצב וכפתורי פעולה באותו layout שביקשת</p>
             </div>
           </div>
           <div id="dashboardDevices" class="dashboardCards"></div>
@@ -827,11 +907,6 @@ function previewTheme(theme){
   setTheme(theme);
 }
 
-function deviceStatusBadge(status){
-  const cls = ['online','offline','unstable','new'].includes(status) ? status : 'new';
-  return `<span class="badge ${cls}">${escapeHtml(status || 'unknown')}</span>`;
-}
-
 function populateCategories(devices){
   const sel = qs('filterCategory');
   const current = sel.value;
@@ -873,19 +948,42 @@ function getDashboardDevices(){
     };
     return score(b) - score(a);
   });
-  return rows.slice(0, 6);
+  return rows.slice(0, 8);
 }
 
 function dashboardCard(d){
+  const status = escapeHtml(d.status || 'unknown');
   return `
-    <div class="deviceMini">
-      <div class="deviceMiniTop">
-        ${deviceStatusBadge(d.status)}
+    <div class="deviceDashboardCard ${status}">
+      <div class="ddLeft">
+        <div>
+          <div class="ddStatus">
+            <span>${status}</span>
+            <span class="ddStatusDot"></span>
+          </div>
+          <div class="ddMeta">
+            <div class="ddMetaRow"><b>Last seen:</b> ${timeAgo(d.last_seen)}</div>
+          </div>
+        </div>
+
+        <div class="ddActions">
+          <button class="btn small" onclick="pingNow('${d.ip}')">PING</button>
+          <button class="btn small" onclick="togglePin('${d.ip}')">${d.pinned ? 'UNPIN' : 'PIN'}</button>
+          <button class="btn small" onclick="editDevice('${d.ip}','${encodeURIComponent(d.name||'')}','${encodeURIComponent(d.category||'')}','${encodeURIComponent((d.tags||[]).join(','))}','${encodeURIComponent(d.notes||'')}')">EDIT</button>
+        </div>
       </div>
-      <div class="deviceMiniName">${escapeHtml(d.name || d.hostname || d.ip)}</div>
-      <div class="deviceMiniIp">${escapeHtml(d.ip)}</div>
+
+      <div class="ddRight">
+        <h3 class="ddName">${escapeHtml(d.name || d.hostname || d.ip)}</h3>
+        <div class="ddIp">${escapeHtml(d.ip)}</div>
+      </div>
     </div>
   `;
+}
+
+function deviceStatusBadge(status){
+  const cls = ['online','offline','unstable','new'].includes(status) ? status : 'new';
+  return `<span class="badge ${cls}">${escapeHtml(status || 'unknown')}</span>`;
 }
 
 function renderDashboard(){
@@ -966,13 +1064,7 @@ function renderDevices(){
   if(view === 'grid'){
     mount.innerHTML = `
       <div class="dashboardCards">
-        ${rows.map(d => `
-          <div class="deviceMini">
-            <div class="deviceMiniTop">${deviceStatusBadge(d.status)}</div>
-            <div class="deviceMiniName">${escapeHtml(d.name || d.hostname || d.ip)}</div>
-            <div class="deviceMiniIp">${escapeHtml(d.ip)}</div>
-          </div>
-        `).join('')}
+        ${rows.map(dashboardCard).join('')}
       </div>
     `;
     return;
@@ -1050,6 +1142,21 @@ function renderAlertsPage(){
     `).join('')
     : `<div class="empty">אין התראות</div>`;
 
+  qs('dashboardEvents').innerHTML = state.events.length
+    ? state.events.map(e => `
+      <div class="eventItem">
+        <div class="row">
+          <div>
+            <div class="rowTitle">${escapeHtml(e.message || e.type || 'Event')}</div>
+            <div class="rowSub">${escapeHtml(e.ip || '')}</div>
+            <div class="rowSub">${formatTs(e.ts)}</div>
+          </div>
+          <div class="sev ${escapeHtml(e.level || 'info')}">${escapeHtml(e.level || 'info')}</div>
+        </div>
+      </div>
+    `).join('')
+    : `<div class="empty">אין אירועים</div>`;
+
   qs('eventsMount').innerHTML = state.events.length
     ? state.events.map(e => `
       <div class="eventItem">
@@ -1090,8 +1197,8 @@ function renderSettings(){
 
 function renderAll(){
   const s = state.status || {};
-  qs('versionText').textContent = s.version || '3.6.4';
-  qs('heroVersion').textContent = s.version || '3.6.4';
+  qs('versionText').textContent = s.version || '3.6.5';
+  qs('heroVersion').textContent = s.version || '3.6.5';
   qs('sTotal').textContent = s.total ?? 0;
   qs('sOnline').textContent = s.online ?? 0;
   qs('sOffline').textContent = s.offline ?? 0;
