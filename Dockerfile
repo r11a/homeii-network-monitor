@@ -1,24 +1,9 @@
 ARG BUILD_FROM
-FROM $BUILD_FROM
-
-ENV LANG=C.UTF-8
-
+FROM ${BUILD_FROM}
+RUN apk add --no-cache python3 py3-pip iputils bind-tools iproute2
 WORKDIR /app
-
-RUN apk add --no-cache \
-    python3 \
-    py3-pip \
-    iputils
-
-COPY app /app
-COPY web /web
+COPY app /app/app
+COPY web /app/web
 COPY run.sh /run.sh
-
-RUN pip3 install --no-cache-dir --break-system-packages \
-    fastapi \
-    uvicorn \
-    python-multipart
-
-RUN chmod a+x /run.sh
-
+RUN chmod a+x /run.sh && python3 -m venv /opt/venv && . /opt/venv/bin/activate && pip install fastapi uvicorn
 CMD ["/run.sh"]
