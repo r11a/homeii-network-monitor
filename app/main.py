@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "3.9.4"
+APP_VERSION = "3.9.5"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -1169,7 +1169,16 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = ""):
+def api_update(
+    ip: str,
+    name: str = "",
+    category: str = "",
+    tags: str = "",
+    notes: str = "",
+    assigned_network: str = "",
+    pinned: int = 0,
+    critical: int = 0,
+):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -1178,10 +1187,14 @@ def api_update(ip: str, name: str = "", category: str = "", tags: str = "", note
             d["name"] = unquote(name)
             d["category"] = unquote(category)
             d["notes"] = unquote(notes)
+            d["assigned_network"] = unquote(assigned_network)
+            d["pinned"] = bool(int(pinned or 0))
+            d["critical"] = bool(int(critical or 0))
             d["tags"] = [x.strip() for x in unquote(tags).split(",") if x.strip()]
             d["updated_at"] = now_ts()
             upsert_device(ip, d)
-        return {"ok": True}
+            return {"ok": True, "device": d}
+        return {"ok": False, "error": "device not found"}
     finally:
         conn.close()
 
