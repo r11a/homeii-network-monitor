@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "3.9.3"
+APP_VERSION = "3.9.4"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -90,8 +90,8 @@ CREATE TABLE IF NOT EXISTS devices (
   updated_at INTEGER DEFAULT 0,
   source TEXT DEFAULT 'ping',
   notes TEXT DEFAULT '',
-  tags_json TEXT DEFAULT '[]',
-  assigned_network TEXT DEFAULT ''
+  assigned_network TEXT DEFAULT '',
+  tags_json TEXT DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS device_history (
@@ -137,6 +137,7 @@ DEFAULT_SETTINGS = {
     "default_view": "table",
     "dashboard_style": "advanced",
     "networks_json": json.dumps(HOMEII_NETWORKS),
+    "network_configs_json": json.dumps([{"cidr": n, "name": n} for n in HOMEII_NETWORKS]),
 }
 
 
@@ -164,6 +165,12 @@ def init_db() -> None:
                 conn.execute(
                     "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                     ("networks_json", json.dumps(HOMEII_NETWORKS)),
+                )
+            existing_network_cfg = conn.execute("SELECT value FROM settings WHERE key='network_configs_json'").fetchone()
+            if not existing_network_cfg or not (existing_network_cfg[0] or '').strip():
+                conn.execute(
+                    "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    ("network_configs_json", json.dumps([{"cidr": n, "name": n} for n in normalize_networks(HOMEII_NETWORKS)])),
                 )
             conn.commit()
         finally:
@@ -393,8 +400,8 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "updated_at": int(row["updated_at"] or 0),
         "source": row["source"] or "",
         "notes": row["notes"] or "",
-        "tags": tags,
         "assigned_network": row["assigned_network"] or "",
+        "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
     }
 
@@ -523,18 +530,38 @@ def normalize_networks(values: list[str] | str | None) -> list[str]:
     return out
 
 
-def get_networks() -> list[str]:
+def get_network_configs() -> list[dict[str, str]]:
     try:
-        stored = get_setting("networks_json", "")
+        stored = get_setting("network_configs_json", "")
         if stored:
             data = json.loads(stored)
             if isinstance(data, list):
-                nets = normalize_networks(data)
-                if nets:
-                    return nets
+                out: list[dict[str, str]] = []
+                seen: set[str] = set()
+                for item in data:
+                    if isinstance(item, dict):
+                        cidr = str(item.get("cidr", "")).strip()
+                        name = str(item.get("name", "")).strip()
+                    else:
+                        cidr = str(item).strip()
+                        name = cidr
+                    try:
+                        cidr = str(ipaddress.ip_network(cidr, strict=False))
+                    except Exception:
+                        continue
+                    if cidr in seen:
+                        continue
+                    seen.add(cidr)
+                    out.append({"cidr": cidr, "name": name or cidr})
+                if out:
+                    return out
     except Exception:
         pass
-    return normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"]
+    return [{"cidr": n, "name": n} for n in (normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"])]
+
+
+def get_networks() -> list[str]:
+    return [item["cidr"] for item in get_network_configs()]
 
 
 def save_networks(raw: list[str] | str) -> list[str]:
@@ -542,7 +569,37 @@ def save_networks(raw: list[str] | str) -> list[str]:
     if not nets:
         nets = normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"]
     set_setting("networks_json", json.dumps(nets))
+    set_setting("network_configs_json", json.dumps([{"cidr": n, "name": n} for n in nets]))
     return nets
+
+
+def save_network_configs(items: list[dict[str, str]] | str | None) -> list[dict[str, str]]:
+    parsed: list[dict[str, str]] = []
+    if isinstance(items, str):
+        try:
+            items = json.loads(items)
+        except Exception:
+            items = []
+    if isinstance(items, list):
+        seen: set[str] = set()
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            cidr = str(item.get("cidr", "")).strip()
+            name = str(item.get("name", "")).strip()
+            try:
+                cidr = str(ipaddress.ip_network(cidr, strict=False))
+            except Exception:
+                continue
+            if cidr in seen:
+                continue
+            seen.add(cidr)
+            parsed.append({"cidr": cidr, "name": name or cidr})
+    if not parsed:
+        parsed = [{"cidr": n, "name": n} for n in (normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"])]
+    set_setting("network_configs_json", json.dumps(parsed))
+    set_setting("networks_json", json.dumps([x["cidr"] for x in parsed]))
+    return parsed
 
 
 
@@ -564,22 +621,22 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "tags": [], "assigned_network": ""
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "tags": []
         }
         base.update(fields)
         conn.execute(
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json,assigned_network
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
               pinned=excluded.pinned, manual=excluded.manual, ignored=excluded.ignored, approved=excluded.approved,
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
-              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, tags_json=excluded.tags_json, assigned_network=excluded.assigned_network
+              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network, tags_json=excluded.tags_json
             """,
             (
                 ip,
@@ -588,7 +645,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
                 1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
                 int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
                 int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
-                base["notes"], json.dumps(base["tags"]), base.get("assigned_network", ""),
+                base["notes"], json.dumps(base["tags"]),
             ),
         )
         conn.commit()
@@ -1015,7 +1072,7 @@ def api_settings():
     conn = db()
     try:
         rows = conn.execute("SELECT key, value FROM settings ORDER BY key").fetchall()
-        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": HOMEII_NETWORKS, "db_path": str(DB_PATH)}
+        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": get_networks(), "network_configs": get_network_configs(), "db_path": str(DB_PATH)}
     finally:
         conn.close()
 
@@ -1112,7 +1169,7 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", pinned: int = Query(-1), critical: int = Query(-1)):
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = ""):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -1178,7 +1235,7 @@ def api_ping_now(ip: str):
 
 
 @app.get("/api/add_manual")
-def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = ""):
+def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "", assigned_network: str = ""):
     host = reverse_dns(ip)
     vendor = ""
     d = {
@@ -1201,8 +1258,8 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
         "updated_at": now_ts(),
         "source": "manual",
         "notes": notes,
+        "assigned_network": assigned_network,
         "tags": [],
-        "assigned_network": "",
     }
     upsert_device(ip, d)
     log_event("info", f"Manual device added: {name or ip}", "device_manual", ip)
@@ -1221,20 +1278,25 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = ""):
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = "", network_config: str = ""):
     set_setting("auto_refresh", auto_refresh)
     set_setting("default_view", default_view)
     set_setting("dashboard_style", dashboard_style)
     set_setting("theme", theme if theme in ("light", "dark") else "light")
     set_setting("language", language if language in ("he", "en") else "he")
-    if networks.strip():
+    if network_config.strip():
+        save_network_configs(unquote(network_config))
+    elif networks.strip():
         save_networks(networks)
-    return {"ok": True, "networks": get_networks()}
+    return {"ok": True, "networks": get_networks(), "network_configs": get_network_configs()}
 
 
 @app.get("/api/save_networks")
-def api_save_networks(networks: str = ""):
-    return {"ok": True, "networks": save_networks(networks)}
+def api_save_networks(networks: str = "", network_config: str = ""):
+    if network_config.strip():
+        items = save_network_configs(unquote(network_config))
+        return {"ok": True, "networks": get_networks(), "network_configs": items}
+    return {"ok": True, "networks": save_networks(networks), "network_configs": get_network_configs()}
 
 
 init_db()
