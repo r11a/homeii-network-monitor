@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor 3.9.0</title>
+<title>HOMEii Network Monitor 3.9.1</title>
 <style>
 :root{
   color-scheme: light;
@@ -116,18 +116,17 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08
 .item{padding:13px 14px;border-radius:18px;background:rgba(255,255,255,.02)}
 .item-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
 .item small{color:var(--muted)}
-.settings-layout{display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:start}
-.settings-nav{position:sticky;top:20px;display:grid;gap:10px}
-.settings-nav .panel{padding:12px}
-.settings-nav a{display:block;padding:12px 14px;border:1px solid var(--line);border-radius:14px;color:var(--text);text-decoration:none;background:rgba(255,255,255,.02)}
-.settings-nav a:hover{border-color:var(--line2);background:rgba(255,255,255,.04)}
-.settings-main{display:grid;gap:14px}
-.settings-section-card{scroll-margin-top:24px}
-.settings-stack{display:grid;gap:14px}
+.settings-page{display:none}
+.settings-page.active{display:block}
+.sidebar.settings-mode .main-nav{display:none}
+.sidebar .settings-side-nav{display:none}
+.sidebar.settings-mode .settings-side-nav{display:grid}
+.sidebar.settings-mode .brand-sub::after{content:" • Settings"}
+.settings-topnote{margin-bottom:10px;color:var(--muted);font-size:13px}
 .msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px}.msg.show{display:block}.msg.ok{background:rgba(78,212,138,.08);border-color:rgba(78,212,138,.24)}.msg.err{background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.24)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
 .empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted)}
-@media (max-width:1320px){.kpis{grid-template-columns:repeat(3,1fr)} .grid.two,.settings-layout{grid-template-columns:1fr}.settings-nav{position:relative;top:auto}}
+@media (max-width:1320px){.kpis{grid-template-columns:repeat(3,1fr)} .grid.two{grid-template-columns:1fr}}
 @media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto;overflow:visible}.toolbar{grid-template-columns:1fr 1fr} .dashboard-card{grid-template-columns:1fr;direction:rtl}.d-actions{flex-wrap:wrap}}
 @media (max-width:760px){.top{grid-template-columns:1fr}.kpis,.toolbar,.dashboard-cards{grid-template-columns:1fr}}
 </style>
@@ -138,15 +137,24 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08
     <div class="brand">
       <div class="brandLeft">
         <div class="brand-title" id="brandTitle">HOMEii Network</div>
-        <div class="brand-sub">Monitor <span id="versionText">3.9.0</span></div>
+        <div class="brand-sub">Monitor <span id="versionText">3.9.1</span></div>
       </div>
       <div class="logo"><img src="./logo" alt="" onerror="this.style.display='none'; this.parentNode.textContent='H';"></div>
     </div>
-    <div class="nav">
+    <div class="nav main-nav">
       <button class="nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard', this)" id="navDashboard">Dashboard</button>
       <button class="nav-btn" data-tab="devices" onclick="switchTab('devices', this)" id="navDevices">Devices</button>
       <button class="nav-btn" data-tab="alerts" onclick="switchTab('alerts', this)" id="navAlerts">Alerts</button>
       <button class="nav-btn" data-tab="settings" onclick="switchTab('settings', this)" id="navSettings">Settings</button>
+    </div>
+    <div class="nav settings-side-nav">
+      <button class="nav-btn" onclick="backToMainNav()" id="settingsBackBtn">← חזרה</button>
+      <button class="nav-btn active settings-nav-btn" data-settings-page="general" onclick="switchSettingsPage('general', this)" id="sideGeneral">כללי</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="networks" onclick="switchSettingsPage('networks', this)" id="sideNetworks">רשתות</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="manual" onclick="switchSettingsPage('manual', this)" id="sideManual">התקן ידני</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="appearance" onclick="switchSettingsPage('appearance', this)" id="sideAppearance">מראה</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="language" onclick="switchSettingsPage('language', this)" id="sideLanguage">שפה</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="system" onclick="switchSettingsPage('system', this)" id="sideSystem">מערכת</button>
     </div>
     <div class="sidebar-footer">
       <div class="info-card"><div class="k" id="lblStatus">Status</div><div class="v" id="sideScanState">Idle</div></div>
@@ -160,7 +168,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08
       <div class="hero">
         <div>
           <h1 class="hero-title" id="heroTitle">HOMEii Network Monitor</h1>
-          <div class="hero-sub" id="heroSub">v3.9.0 • Full UI Refresh • Global Language • Better Devices & Settings</div>
+          <div class="hero-sub" id="heroSub">v3.9.1 • Full UI Refresh • Global Language • Better Devices & Settings</div>
         </div>
         <div class="heroRight"><span id="lastRefresh">—</span></div>
       </div>
@@ -227,74 +235,80 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08
     </section>
 
     <section id="tab-settings" class="section">
-      <div class="settings-layout">
-        <div class="settings-nav">
-          <div class="panel">
-            <div class="panel-head"><div><h2 id="settingsNavTitle">Settings</h2><p id="settingsNavSub">בחר סעיף להגדרה</p></div></div>
-            <a href="#settings-general" id="navGeneral">General</a>
-            <a href="#settings-networks" id="navNetworks">Networks</a>
-            <a href="#settings-manual" id="navManual">Manual Device</a>
-            <a href="#settings-appearance" id="navAppearance">Appearance</a>
-            <a href="#settings-system" id="navSystem">System</a>
+      <div class="settings-topnote" id="settingsTopNote">הגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.</div>
+
+      <div class="settings-page active" id="settings-page-general">
+        <div class="panel">
+          <div class="panel-head"><div><h2 id="settingsGeneralTitle">כללי</h2><p id="settingsGeneralSub">הגדרות כלליות של הממשק ותצוגת ברירת מחדל.</p></div></div>
+          <div class="toolbar">
+            <div class="field"><label id="lblRefresh">רענון אוטומטי (שניות)</label><input id="setRefresh" type="number" min="5" step="5"></div>
+            <div class="field"><label id="lblDefaultView">תצוגת ברירת מחדל</label><select id="setView"><option value="table">table</option><option value="grid">grid</option></select></div>
+            <div class="field"><label id="lblDashboardStyle">סגנון דשבורד</label><select id="setStyle"><option value="advanced">advanced</option><option value="compact">compact</option></select></div>
           </div>
         </div>
+      </div>
 
-        <div class="settings-main">
-          <div class="panel settings-section-card" id="settings-general">
-            <div class="panel-head"><div><h2 id="settingsGeneralTitle">General</h2><p id="settingsGeneralSub">שפה, תצוגה ורענון אוטומטי של הממשק.</p></div></div>
-            <div class="toolbar">
-              <div class="field"><label id="lblLanguage">Language</label><select id="setLanguage"><option value="he">עברית</option><option value="en">English</option></select></div>
-              <div class="field"><label id="lblTheme">Theme</label><select id="setTheme"><option value="light">light</option><option value="dark">dark</option></select></div>
-              <div class="field"><label id="lblRefresh">Auto refresh (seconds)</label><input id="setRefresh" type="number" min="5" step="5"></div>
-              <div class="field"><label id="lblDefaultView">Default view</label><select id="setView"><option value="table">table</option><option value="grid">grid</option></select></div>
-            </div>
+      <div class="settings-page" id="settings-page-networks">
+        <div class="panel">
+          <div class="panel-head"><div><h2 id="settingsNetworksTitle">רשתות</h2><p id="settingsNetworksSub">הגדר את כל טווחי הרשת שברצונך לסרוק.</p></div></div>
+          <div class="field"><label id="lblNetworksInput">רשתות</label><textarea id="setNetworks" placeholder="192.168.1.0/24&#10;192.168.0.0/24"></textarea></div>
+          <div class="chips" id="currentNetworks"></div>
+          <div class="quick-actions" style="margin-top:12px">
+            <button class="btn" onclick="runScan()" id="btnRunNetworkScan">הפעל סריקה עכשיו</button>
+            <button class="btn primary" onclick="saveNetworksOnly()" id="btnSaveNetworks">שמור רשתות בלבד</button>
           </div>
+          <div id="settingsMessage" class="msg"></div>
+        </div>
+      </div>
 
-          <div class="panel settings-section-card" id="settings-networks">
-            <div class="panel-head"><div><h2 id="settingsNetworksTitle">Networks</h2><p id="settingsNetworksSub">הגדר את כל טווחי הרשת שברצונך לסרוק.</p></div></div>
-            <div class="field"><label id="lblNetworksInput">Networks</label><textarea id="setNetworks" placeholder="192.168.1.0/24&#10;192.168.0.0/24"></textarea></div>
-            <div class="chips" id="currentNetworks"></div>
-            <div class="quick-actions" style="margin-top:12px">
-              <button class="btn" onclick="runScan()" id="btnRunNetworkScan">Run scan now</button>
-              <button class="btn primary" onclick="saveNetworksOnly()" id="btnSaveNetworks">שמור רשתות בלבד</button>
-            </div>
+      <div class="settings-page" id="settings-page-manual">
+        <div class="panel">
+          <div class="panel-head"><div><h2 id="settingsManualTitle">הוספת התקן ידנית</h2><p id="settingsManualSub">הוסף התקן ידנית אם לא זוהה אוטומטית.</p></div></div>
+          <div class="toolbar">
+            <div class="field"><label id="lblManualIp">כתובת IP</label><input id="manualIp" placeholder="192.168.1.50"></div>
+            <div class="field"><label id="lblManualName">שם</label><input id="manualName" placeholder="למשל שרת ארון"></div>
+            <div class="field"><label id="lblManualCategory">קטגוריה</label><input id="manualCategory" placeholder="למשל שרת / מצלמה / רשת"></div>
+            <div class="field"><label id="lblManualNotes">הערות</label><input id="manualNotes" placeholder="אופציונלי"></div>
           </div>
-
-          <div class="panel settings-section-card" id="settings-manual">
-            <div class="panel-head"><div><h2 id="settingsManualTitle">Manual Device</h2><p id="settingsManualSub">הוסף התקן ידנית אם לא זוהה אוטומטית.</p></div></div>
-            <div class="toolbar">
-              <div class="field"><label id="lblManualIp">IP</label><input id="manualIp" placeholder="192.168.1.50"></div>
-              <div class="field"><label id="lblManualName">Name</label><input id="manualName" placeholder="Rack Server"></div>
-              <div class="field"><label id="lblManualCategory">Category</label><input id="manualCategory" placeholder="server / camera / network"></div>
-              <div class="field"><label id="lblManualNotes">Notes</label><input id="manualNotes" placeholder="optional"></div>
-            </div>
-            <div class="quick-actions">
-              <button class="btn green" onclick="addManual()" id="btnAddManual">הוסף התקן</button>
-            </div>
+          <div class="quick-actions">
+            <button class="btn green" onclick="addManual()" id="btnAddManual">הוסף התקן</button>
           </div>
+          <div id="manualMessage" class="msg"></div>
+        </div>
+      </div>
 
-          <div class="panel settings-section-card" id="settings-appearance">
-            <div class="panel-head"><div><h2 id="settingsAppearanceTitle">Appearance</h2><p id="settingsAppearanceSub">בחר ערכת נושא וסגנון דשבורד.</p></div></div>
-            <div class="toolbar">
-              <div class="field"><label id="lblDashboardStyle">Dashboard style</label><select id="setStyle"><option value="advanced">advanced</option><option value="compact">compact</option></select></div>
-              <div class="field"><label id="lblAppearancePreview">Preview</label><div class="chips"><span class="chip" id="appearanceCurrent">Active theme</span></div></div>
-            </div>
-            <div class="quick-actions" style="margin-top:12px">
-              <button class="btn primary" onclick="saveSettings()" id="btnSaveSettings">שמור הגדרות</button>
-            </div>
-            <div id="settingsMessage" class="msg"></div>
+      <div class="settings-page" id="settings-page-appearance">
+        <div class="panel">
+          <div class="panel-head"><div><h2 id="settingsAppearanceTitle">מראה</h2><p id="settingsAppearanceSub">בחר ערכת נושא והעדפות תצוגה.</p></div></div>
+          <div class="toolbar">
+            <div class="field"><label id="lblTheme">ערכת נושא</label><select id="setTheme"><option value="light">light</option><option value="dark">dark</option></select></div>
+            <div class="field"><label id="lblAppearancePreview">תצוגה פעילה</label><div class="chips"><span class="chip" id="appearanceCurrent">ערכת נושא פעילה</span></div></div>
           </div>
+        </div>
+      </div>
 
-          <div class="panel settings-section-card" id="settings-system">
-            <div class="panel-head"><div><h2 id="settingsSystemTitle">System</h2><p id="settingsSystemSub">מידע מערכת, מסד הנתונים וסטטוס סריקה.</p></div></div>
-            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-              <div class="item"><div class="item-head"><strong id="sysVersionLabel">Version</strong></div><small id="sysVersion">—</small></div>
-              <div class="item"><div class="item-head"><strong id="sysDbLabel">DB</strong></div><small id="sysDb">—</small></div>
-              <div class="item"><div class="item-head"><strong id="sysNetworksLabel">Networks</strong></div><small id="sysNetworks">—</small></div>
-              <div class="item"><div class="item-head"><strong id="sysScanModeLabel">Scan mode</strong></div><small id="sysScanMode">—</small></div>
-              <div class="item"><div class="item-head"><strong id="sysScanStartedLabel">Last scan started</strong></div><small id="sysScanStarted">—</small></div>
-              <div class="item"><div class="item-head"><strong id="sysScanFinishedLabel">Last scan finished</strong></div><small id="sysScanFinished">—</small></div>
-            </div>
+      <div class="settings-page" id="settings-page-language">
+        <div class="panel">
+          <div class="panel-head"><div><h2 id="settingsLanguageTitle">שפה</h2><p id="settingsLanguageSub">בחר שפת ממשק לכל המערכת.</p></div></div>
+          <div class="toolbar">
+            <div class="field"><label id="lblLanguage">שפה</label><select id="setLanguage"><option value="he">עברית</option><option value="en">English</option></select></div>
+          </div>
+          <div class="quick-actions" style="margin-top:12px">
+            <button class="btn primary" onclick="saveSettings()" id="btnSaveSettings">שמור הגדרות</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-page" id="settings-page-system">
+        <div class="panel">
+          <div class="panel-head"><div><h2 id="settingsSystemTitle">מערכת</h2><p id="settingsSystemSub">מידע מערכת, מסד הנתונים וסטטוס סריקה.</p></div></div>
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+            <div class="item"><div class="item-head"><strong id="sysVersionLabel">גרסה</strong></div><small id="sysVersion">—</small></div>
+            <div class="item"><div class="item-head"><strong id="sysDbLabel">מסד נתונים</strong></div><small id="sysDb">—</small></div>
+            <div class="item"><div class="item-head"><strong id="sysNetworksLabel">רשתות</strong></div><small id="sysNetworks">—</small></div>
+            <div class="item"><div class="item-head"><strong id="sysScanModeLabel">מצב סריקה</strong></div><small id="sysScanMode">—</small></div>
+            <div class="item"><div class="item-head"><strong id="sysScanStartedLabel">סריקה אחרונה התחילה</strong></div><small id="sysScanStarted">—</small></div>
+            <div class="item"><div class="item-head"><strong id="sysScanFinishedLabel">סריקה אחרונה הסתיימה</strong></div><small id="sysScanFinished">—</small></div>
           </div>
         </div>
       </div>
@@ -307,13 +321,13 @@ const qs=id=>document.getElementById(id);
 const state={status:null,devices:[],alerts:[],events:[],settings:{},activeFilter:''};
 const I18N={
   he:{
-    brand:"HOMEii Network",dashboard:"דשבורד",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",
+    brand:"HOMEii Network",dashboard:"דשבורד",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
     scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",critical:"קריטיים",pinned:"נעוצים",
     dashboardTitle:"מכשירים בדשבורד",dashboardSub:"שם, IP, מצב ופעולות מהירות.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית עם כל המידע והפעולות בשורה אחת.",
     search:"חיפוש",status:"סטטוס",category:"קטגוריה",view:"תצוגה",all:"הכל",clearFilters:"נקה סינונים",rescan:"סריקה מחדש",alertsTitle:"התראות",eventsTitle:"אירועים",openAlerts:"התראות פתוחות",recentEvents:"אירועים אחרונים",
-    general:"כללי",generalSub:"שפה, מראה והעדפות כלליות של הממשק.",language:"שפה",theme:"ערכת נושא",autoRefresh:"רענון אוטומטי (שניות)",defaultView:"תצוגת ברירת מחדל",
-    networks:"רשתות",networksSub:"רשת אחת בכל שורה.",manualDevice:"הוספת התקן ידנית",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"שם",manualCategory:"קטגוריה",manualNotes:"הערות",addDevice:"הוסף התקן",
-    appearance:"מראה",appearanceSub:"תצוגת מערכת והעדפות.",dashboardStyle:"סגנון דשבורד",saveSettings:"שמור הגדרות",saveNetworks:"שמור רשתות בלבד",system:"מערכת",systemSub:"מידע מערכת וסטטוס.",
+    general:"כללי",generalSub:"הגדרות כלליות של הממשק ותצוגת ברירת מחדל.",language:"שפה",languageSub:"בחר שפת ממשק לכל המערכת.",theme:"ערכת נושא",autoRefresh:"רענון אוטומטי (שניות)",defaultView:"תצוגת ברירת מחדל",
+    networks:"רשתות",networksSub:"הגדר את כל טווחי הרשת שברצונך לסרוק.",manualDevice:"התקן ידני",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"שם",manualCategory:"קטגוריה",manualNotes:"הערות",addDevice:"הוסף התקן",appearancePreview:"תצוגה פעילה",activeTheme:"ערכת נושא פעילה",runScanNow:"הפעל סריקה עכשיו",
+    appearance:"מראה",appearanceSub:"בחר ערכת נושא והעדפות תצוגה.",dashboardStyle:"סגנון דשבורד",saveSettings:"שמור הגדרות",saveNetworks:"שמור רשתות בלבד",system:"מערכת",systemSub:"מידע מערכת, מסד הנתונים וסטטוס סריקה.",
     statusText:"סטטוס",networksText:"רשתות",scanStarted:"הסריקה התחילה",deviceAdded:"התקן נוסף",deviceApproved:"ההתקן אושר",allApproved:"כל ההתקנים החדשים אושרו",settingsSaved:"ההגדרות נשמרו",networksSaved:"הרשתות נשמרו",
     lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"פינג",pin:"נעץ",unpin:"בטל נעיצה",edit:"ערוך",remove:"הסר",accept:"אשר",criticalMark:"סמן קריטי",criticalUnmark:"בטל קריטי",yes:"כן",manualIp:"כתובת IP",
     status_online:"מחובר",status_offline:"מנותק",status_unstable:"לא יציב",status_new:"חדש",status_unknown:"לא ידוע",ipRequired:"חובה להזין כתובת IP",running:"רץ",idle:"מוכן",
@@ -321,13 +335,13 @@ const I18N={
     version:"גרסה",db:"מסד נתונים",scanMode:"מצב סריקה",lastScanStarted:"סריקה אחרונה התחילה",lastScanFinished:"סריקה אחרונה הסתיימה",light:"בהיר",dark:"כהה",table:"טבלה",grid:"כרטיסים",advanced:"מתקדם",compact:"קומפקטי",optional:"אופציונלי",severity:"חומרה",updatedNow:"עודכן"
   },
   en:{
-    brand:"HOMEii Network",dashboard:"Dashboard",devices:"Devices",alerts:"Alerts",settings:"Settings",
+    brand:"HOMEii Network",dashboard:"Dashboard",devices:"Devices",alerts:"Alerts",settings:"Settings",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
     scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",critical:"Critical",pinned:"Pinned",
     dashboardTitle:"Dashboard Devices",dashboardSub:"Name, IP, status and quick actions.",devicesTitle:"Devices",devicesSub:"Compact table with all info and actions in one row.",
     search:"Search",status:"Status",category:"Category",view:"View",all:"All",clearFilters:"Clear filters",rescan:"Rescan",alertsTitle:"Alerts",eventsTitle:"Events",openAlerts:"Open alerts",recentEvents:"Recent events",
-    general:"General",generalSub:"Language, appearance and general preferences.",language:"Language",theme:"Theme",autoRefresh:"Auto refresh (seconds)",defaultView:"Default view",
-    networks:"Networks",networksSub:"One network per line.",manualDevice:"Manual Device",manualDeviceSub:"Add a device manually if it was not detected automatically.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"Add device",
-    appearance:"Appearance",appearanceSub:"System appearance and preferences.",dashboardStyle:"Dashboard style",saveSettings:"Save settings",saveNetworks:"Save networks only",system:"System",systemSub:"System information and status.",
+    general:"General",generalSub:"General interface settings and default view.",language:"Language",languageSub:"Choose the interface language for the whole system.",theme:"Theme",autoRefresh:"Auto refresh (seconds)",defaultView:"Default view",
+    networks:"Networks",networksSub:"Configure all network ranges you want to scan.",manualDevice:"Manual Device",manualDeviceSub:"Add a device manually if it was not detected automatically.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"Add device",appearancePreview:"Active view",activeTheme:"Active theme",runScanNow:"Run scan now",
+    appearance:"Appearance",appearanceSub:"Choose theme and display preferences.",dashboardStyle:"Dashboard style",saveSettings:"Save settings",saveNetworks:"Save networks only",system:"System",systemSub:"System information, database and scan status.",
     statusText:"Status",networksText:"Networks",scanStarted:"Scan started",deviceAdded:"Device added",deviceApproved:"Device accepted",allApproved:"All new devices accepted",settingsSaved:"Settings saved",networksSaved:"Networks saved",
     lastSeen:"Last seen",known:"Known",pending:"Pending",ping:"Ping",pin:"Pin",unpin:"Unpin",edit:"Edit",remove:"Remove",accept:"Accept",criticalMark:"Mark critical",criticalUnmark:"Unmark critical",yes:"Yes",manualIp:"IP Address",
     status_online:"Online",status_offline:"Offline",status_unstable:"Unstable",status_new:"New",status_unknown:"Unknown",ipRequired:"IP address is required",running:"Running",idle:"Idle",
@@ -344,9 +358,14 @@ async function api(url){const res=await fetch(url,{cache:'no-store'}); const dat
 function switchTab(tab,btn){document.querySelectorAll('.section').forEach(el=>el.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active')); qs(`tab-${tab}`).classList.add('active'); if(btn) btn.classList.add('active'); const hash=`#${tab}`; if(location.hash!==hash) history.replaceState(null,'',hash)}
 function setTheme(theme){document.body.classList.toggle('dark',theme==='dark')}
 function showMsg(id,text,ok=true){const el=qs(id); if(!el)return; el.textContent=text; el.className=`msg show ${ok?'ok':'err'}`; clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',2500)}
+function setSidebarMode(settingsMode){const sb=document.querySelector('.sidebar'); sb.classList.toggle('settings-mode',!!settingsMode)}
+function backToMainNav(){setSidebarMode(false); switchTab('dashboard', document.querySelector('.nav-btn[data-tab="dashboard"]'))}
+function switchSettingsPage(page, btn){document.querySelectorAll('.settings-page').forEach(el=>el.classList.remove('active')); const target=qs(`settings-page-${page}`); if(target) target.classList.add('active'); document.querySelectorAll('.settings-nav-btn').forEach(el=>el.classList.remove('active')); if(btn) btn.classList.add('active')}
 function applyTranslations(){
   qs('brandTitle').textContent=tr('brand');
   qs('navDashboard').textContent=tr('dashboard'); qs('navDevices').textContent=tr('devices'); qs('navAlerts').textContent=tr('alerts'); qs('navSettings').textContent=tr('settings');
+  qs('settingsBackBtn').textContent=tr('settingsBack'); qs('sideGeneral').textContent=tr('general'); qs('sideNetworks').textContent=tr('networks'); qs('sideManual').textContent=tr('manualDevice'); qs('sideAppearance').textContent=tr('appearance'); qs('sideLanguage').textContent=tr('language'); qs('sideSystem').textContent=tr('system');
+  qs('settingsTopNote').textContent=tr('settingsTopNote');
   qs('btnScan').textContent=tr('scan'); qs('btnAcceptAll').textContent=tr('acceptAll'); qs('btnRefresh').textContent=tr('refresh');
   qs('kpiOfflineLabel').textContent=tr('offlineDevices'); qs('kpiOnlineLabel').textContent=tr('online'); qs('kpiTotalLabel').textContent=tr('total'); qs('kpiNewLabel').textContent=tr('new'); qs('kpiCriticalLabel').textContent=tr('critical'); qs('kpiPinnedLabel').textContent=tr('pinned');
   qs('dashboardTitle').textContent=tr('dashboardTitle'); qs('dashboardSub').textContent=tr('dashboardSub'); qs('alertsOpenTitle').textContent=tr('openAlerts'); qs('eventsRecentTitle').textContent=tr('recentEvents');
@@ -357,21 +376,15 @@ function applyTranslations(){
   qs('devicesView').options[0].text=tr('table'); qs('devicesView').options[1].text=tr('grid');
   qs('btnClearFilters').textContent=tr('clearFilters'); qs('btnAcceptAll2').textContent=tr('acceptAll'); qs('btnRescan').textContent=tr('rescan');
   qs('alertsTitle').textContent=tr('alertsTitle'); qs('eventsTitle').textContent=tr('eventsTitle');
-  qs('settingsNavTitle').textContent=tr('settings'); qs('settingsNavSub').textContent=tr('settingsNavSub'); qs('navGeneral').textContent=tr('navGeneral'); qs('navNetworks').textContent=tr('navNetworks'); qs('navManual').textContent=tr('navManual'); qs('navAppearance').textContent=tr('navAppearance'); qs('navSystem').textContent=tr('navSystem'); qs('settingsGeneralTitle').textContent=tr('general'); qs('settingsGeneralSub').textContent=tr('generalSub');
-  qs('lblLanguage').textContent=tr('language'); qs('lblTheme').textContent=tr('theme'); qs('lblRefresh').textContent=tr('autoRefresh'); qs('lblDefaultView').textContent=tr('defaultView');
-  qs('setTheme').options[0].text=tr('light'); qs('setTheme').options[1].text=tr('dark');
-  qs('setView').options[0].text=tr('table'); qs('setView').options[1].text=tr('grid');
+  qs('settingsGeneralTitle').textContent=tr('general'); qs('settingsGeneralSub').textContent=tr('generalSub'); qs('lblRefresh').textContent=tr('autoRefresh'); qs('lblDefaultView').textContent=tr('defaultView'); qs('lblDashboardStyle').textContent=tr('dashboardStyle');
+  qs('setView').options[0].text=tr('table'); qs('setView').options[1].text=tr('grid'); qs('setStyle').options[0].text=tr('advanced'); qs('setStyle').options[1].text=tr('compact');
   qs('settingsNetworksTitle').textContent=tr('networks'); qs('settingsNetworksSub').textContent=tr('networksSub'); qs('lblNetworksInput').textContent=tr('networks'); qs('btnRunNetworkScan').textContent=tr('runScanNow'); qs('btnSaveNetworks').textContent=tr('saveNetworks');
   qs('settingsManualTitle').textContent=tr('manualDevice'); qs('settingsManualSub').textContent=tr('manualDeviceSub'); qs('lblManualIp').textContent=tr('manualIp'); qs('lblManualName').textContent=tr('manualName'); qs('lblManualCategory').textContent=tr('manualCategory'); qs('lblManualNotes').textContent=tr('manualNotes'); qs('btnAddManual').textContent=tr('addDevice');
   qs('manualName').placeholder=(state.settings.language||'he')==='he'?'למשל שרת ארון':'e.g. Rack Server'; qs('manualCategory').placeholder=(state.settings.language||'he')==='he'?'למשל שרת / מצלמה / רשת':'e.g. server / camera / network'; qs('manualNotes').placeholder=tr('optional');
-  qs('settingsAppearanceTitle').textContent=tr('appearance'); qs('settingsAppearanceSub').textContent=tr('appearanceSub'); qs('lblAppearancePreview').textContent=tr('appearancePreview'); qs('appearanceCurrent').textContent=tr('activeTheme'); qs('lblDashboardStyle').textContent=tr('dashboardStyle'); qs('setStyle').options[0].text=tr('advanced'); qs('setStyle').options[1].text=tr('compact'); qs('btnSaveSettings').textContent=tr('saveSettings');
+  qs('settingsAppearanceTitle').textContent=tr('appearance'); qs('settingsAppearanceSub').textContent=tr('appearanceSub'); qs('lblTheme').textContent=tr('theme'); qs('lblAppearancePreview').textContent=tr('appearancePreview'); qs('appearanceCurrent').textContent=tr('activeTheme'); qs('setTheme').options[0].text=tr('light'); qs('setTheme').options[1].text=tr('dark');
+  qs('settingsLanguageTitle').textContent=tr('language'); qs('settingsLanguageSub').textContent=tr('languageSub'); qs('lblLanguage').textContent=tr('language'); qs('btnSaveSettings').textContent=tr('saveSettings');
   qs('settingsSystemTitle').textContent=tr('system'); qs('settingsSystemSub').textContent=tr('systemSub');
-  document.querySelector('#sysVersion').parentElement.querySelector('strong').textContent=tr('version');
-  document.querySelector('#sysDb').parentElement.querySelector('strong').textContent=tr('db');
-  document.querySelector('#sysNetworks').parentElement.querySelector('strong').textContent=tr('networks');
-  document.querySelector('#sysScanMode').parentElement.querySelector('strong').textContent=tr('scanMode');
-  document.querySelector('#sysScanStarted').parentElement.querySelector('strong').textContent=tr('lastScanStarted');
-  document.querySelector('#sysScanFinished').parentElement.querySelector('strong').textContent=tr('lastScanFinished');
+  qs('sysVersionLabel').textContent=tr('version'); qs('sysDbLabel').textContent=tr('db'); qs('sysNetworksLabel').textContent=tr('networks'); qs('sysScanModeLabel').textContent=tr('scanMode'); qs('sysScanStartedLabel').textContent=tr('lastScanStarted'); qs('sysScanFinishedLabel').textContent=tr('lastScanFinished');
   qs('lblStatus').textContent=tr('statusText'); qs('lblNetworks').textContent=tr('networksText');
 }
 function deviceStatusBadge(status){const cls=['online','offline','unstable','new'].includes(status)?status:'new'; return `<span class="badge ${cls}">${escapeHtml(statusLabel(status||'unknown'))}</span>`}
@@ -386,9 +399,9 @@ function renderDevices(){const devices=filteredDevices(); const view=(qs('device
 function renderAlerts(){const alerts=state.alerts||[]; const alertHtml=alerts.length?alerts.map(a=>`<div class="item"><div class="item-head"><strong>${escapeHtml(a.title||tr('alertsTitle'))}</strong><span>${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><small>${escapeHtml(a.ip||'')} • ${fmtTs(a.created_at)}</small><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noAlerts'))}</div>`; const eventHtml=(state.events||[]).length?(state.events||[]).map(e=>`<div class="item"><div class="item-head"><strong>${escapeHtml(e.message||e.event_type||tr('eventsTitle'))}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${escapeHtml(e.ip||'')} • ${fmtTs(e.ts)}</small></div>`).join(''):`<div class="empty">${escapeHtml(tr('noEvents'))}</div>`; qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml; qs('dashboardAlerts').innerHTML=alertHtml; qs('dashboardEvents').innerHTML=eventHtml}
 function renderDashboard(){const items=getDashboardDevices(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`}
 function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setLanguage').value=st.settings?.language||'he'; qs('setNetworks').value=(st.networks||[]).join('\n'); qs('currentNetworks').innerHTML=(st.networks||[]).map(n=>`<span class="chip">${escapeHtml(n)}</span>`).join(''); qs('sysVersionLabel').textContent=tr('sysVersionLabel'); qs('sysDbLabel').textContent=tr('sysDbLabel'); qs('sysNetworksLabel').textContent=tr('sysNetworksLabel'); qs('sysScanModeLabel').textContent=tr('sysScanModeLabel'); qs('sysScanStartedLabel').textContent=tr('sysScanStartedLabel'); qs('sysScanFinishedLabel').textContent=tr('sysScanFinishedLabel'); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(escapeHtml).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(st.scan?.running?tr('running'):(st.scan?.last_mode==='idle'?tr('idle'):(st.scan?.last_mode||'idle')))}
-async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); populateCategories(state.devices); renderDashboard(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'3.9.0'; qs('heroSub').textContent=`v${status.version||'3.9.0'} • ${tr('dashboardTitle')} • ${tr('devicesTitle')} • ${tr('settings')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${status.scan?.running?tr('running'):(status.scan?.last_mode==='idle'?tr('idle'):(status.scan?.last_mode||'idle'))}`; qs('sideScanState').textContent=status.scan?.running?tr('running'):(status.scan?.last_mode==='idle'?tr('idle'):(status.scan?.last_mode||'idle')); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('lastRefresh').textContent=`${new Date().toLocaleTimeString((state.settings.language||'he')==='he'?'he-IL':'en-US')}`; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
+async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); populateCategories(state.devices); renderDashboard(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'3.9.1'; qs('heroSub').textContent=`v${status.version||'3.9.1'} • ${tr('dashboardTitle')} • ${tr('devicesTitle')} • ${tr('settings')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${status.scan?.running?tr('running'):(status.scan?.last_mode==='idle'?tr('idle'):(status.scan?.last_mode||'idle'))}`; qs('sideScanState').textContent=status.scan?.running?tr('running'):(status.scan?.last_mode==='idle'?tr('idle'):(status.scan?.last_mode||'idle')); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('lastRefresh').textContent=`${new Date().toLocaleTimeString((state.settings.language||'he')==='he'?'he-IL':'en-US')}`; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
 async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
-async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('settingsMessage',tr('deviceAdded')); await refreshAll()}
+async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage',tr('deviceAdded')); await refreshAll()}
 async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
 async function togglePin(ip){await api(`./api/toggle_pinned/${encodeURIComponent(ip)}`); await refreshAll()}
 async function toggleCritical(ip){await api(`./api/toggle_critical/${encodeURIComponent(ip)}`); await refreshAll()}
