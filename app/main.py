@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "3.9.2"
+APP_VERSION = "3.9.3"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS devices (
   updated_at INTEGER DEFAULT 0,
   source TEXT DEFAULT 'ping',
   notes TEXT DEFAULT '',
-  tags_json TEXT DEFAULT '[]'
+  tags_json TEXT DEFAULT '[]',
+  assigned_network TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS device_history (
@@ -153,6 +154,7 @@ def init_db() -> None:
         try:
             conn.executescript(SCHEMA)
             ensure_column(conn, "devices", "approved", "approved INTEGER DEFAULT 0")
+            ensure_column(conn, "devices", "assigned_network", "assigned_network TEXT DEFAULT ''")
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
                     "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v)
@@ -392,6 +394,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "source": row["source"] or "",
         "notes": row["notes"] or "",
         "tags": tags,
+        "assigned_network": row["assigned_network"] or "",
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
     }
 
@@ -561,22 +564,22 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "tags": []
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "tags": [], "assigned_network": ""
         }
         base.update(fields)
         conn.execute(
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json,assigned_network
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
               pinned=excluded.pinned, manual=excluded.manual, ignored=excluded.ignored, approved=excluded.approved,
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
-              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, tags_json=excluded.tags_json
+              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, tags_json=excluded.tags_json, assigned_network=excluded.assigned_network
             """,
             (
                 ip,
@@ -585,7 +588,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
                 1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
                 int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
                 int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
-                base["notes"], json.dumps(base["tags"]),
+                base["notes"], json.dumps(base["tags"]), base.get("assigned_network", ""),
             ),
         )
         conn.commit()
@@ -1109,7 +1112,7 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = ""):
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", pinned: int = Query(-1), critical: int = Query(-1)):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -1199,6 +1202,7 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
         "source": "manual",
         "notes": notes,
         "tags": [],
+        "assigned_network": "",
     }
     upsert_device(ip, d)
     log_event("info", f"Manual device added: {name or ip}", "device_manual", ip)
