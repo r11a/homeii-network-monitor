@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "3.9.6"
+APP_VERSION = "3.9.7"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -538,6 +538,17 @@ def get_networks() -> list[str]:
     return normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"]
 
 
+def get_network_names() -> Dict[str, str]:
+    try:
+        stored = get_setting("network_names_json", "{}")
+        data = json.loads(stored)
+        if isinstance(data, dict):
+            return {str(k): str(v) for k, v in data.items()}
+    except Exception:
+        pass
+    return {}
+
+
 def save_networks(raw: list[str] | str) -> list[str]:
     nets = normalize_networks(raw)
     if not nets:
@@ -636,15 +647,15 @@ def arp_scan_networks() -> List[Dict[str, str]]:
 
 def get_local_ips() -> List[str]:
     ips: List[str] = []
-    if shutil.which("hostname"):
-        try:
-            out = subprocess.check_output(["hostname", "-I"], timeout=3).decode("utf-8", "ignore")
-            for item in out.split():
-                item = item.strip()
-                if item and item.count(".") == 3 and not item.startswith("127."):
-                    ips.append(item)
-        except Exception:
-            pass
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        if ip and ip.count(".") == 3 and not ip.startswith("127."):
+            ips.append(ip)
+    except Exception:
+        pass
     if shutil.which("ip"):
         try:
             out = subprocess.check_output(["ip", "-4", "addr", "show"], timeout=3).decode("utf-8", "ignore")
@@ -1235,26 +1246,24 @@ def api_save_settings(auto_refresh: str = "30", default_view: str = "table", das
     set_setting("language", language if language in ("he", "en") else "he")
     if networks.strip():
         save_networks(networks)
-    if network_names.strip():
-        try:
-            data = json.loads(unquote(network_names))
-            if isinstance(data, dict):
-                set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
-        except Exception:
-            pass
+    try:
+        data = json.loads(unquote(network_names or "{}"))
+        if isinstance(data, dict):
+            set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
+    except Exception:
+        pass
     return {"ok": True, "networks": get_networks(), "network_names": get_network_names()}
 
 
 @app.get("/api/save_networks")
 def api_save_networks(networks: str = "", network_names: str = ""):
     saved = save_networks(networks)
-    if network_names.strip():
-        try:
-            data = json.loads(unquote(network_names))
-            if isinstance(data, dict):
-                set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
-        except Exception:
-            pass
+    try:
+        data = json.loads(unquote(network_names or "{}"))
+        if isinstance(data, dict):
+            set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
+    except Exception:
+        pass
     return {"ok": True, "networks": saved, "network_names": get_network_names()}
 
 
