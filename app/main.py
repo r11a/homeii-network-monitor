@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.0.8"
+APP_VERSION = "4.1.0"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -1325,6 +1325,53 @@ def api_toggle_critical(ip: str):
     finally:
         conn.close()
 
+
+
+
+@app.get("/api/bulk_update")
+def api_bulk_update(ips: str, pinned: int = -1, critical: int = -1, category: str = "", assigned_network: str = ""):
+    ip_list = [x.strip() for x in unquote(ips).split(",") if x.strip()]
+    if not ip_list:
+        return {"ok": False, "updated": 0}
+    conn = db()
+    try:
+        updated = 0
+        for ip in ip_list:
+            row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+            if not row:
+                continue
+            d = row_to_device(row)
+            if pinned in (0, 1):
+                d["pinned"] = bool(pinned)
+            if critical in (0, 1):
+                d["critical"] = bool(critical)
+            if category != "":
+                d["category"] = unquote(category)
+            if assigned_network != "":
+                d["assigned_network"] = unquote(assigned_network)
+            d["updated_at"] = now_ts()
+            upsert_device(ip, d)
+            updated += 1
+        log_event("info", f"Bulk update on {updated} devices", "bulk_update")
+        return {"ok": True, "updated": updated}
+    finally:
+        conn.close()
+
+
+@app.get("/api/bulk_delete")
+def api_bulk_delete(ips: str):
+    ip_list = [x.strip() for x in unquote(ips).split(",") if x.strip()]
+    if not ip_list:
+        return {"ok": False, "deleted": 0}
+    conn = db()
+    try:
+        for ip in ip_list:
+            conn.execute("DELETE FROM devices WHERE ip=?", (ip,))
+        conn.commit()
+        log_event("warning", f"Bulk removed {len(ip_list)} devices", "bulk_delete")
+        return {"ok": True, "deleted": len(ip_list)}
+    finally:
+        conn.close()
 
 @app.get("/api/toggle_pinned/{ip}")
 def api_toggle_pinned(ip: str):
