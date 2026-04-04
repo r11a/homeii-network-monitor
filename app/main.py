@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.0.0"
+APP_VERSION = "4.0.1"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -281,6 +281,19 @@ def migrate_legacy_files() -> None:
 
 def short_hostname(hostname: str) -> str:
     return hostname.split(".")[0] if hostname else ""
+
+
+def choose_auto_name(current_name: str, hostname: str, vendor: str, ip: str) -> str:
+    current = (current_name or '').strip()
+    host = short_hostname((hostname or '').strip())
+    ven = (vendor or '').strip()
+    if current and current not in ('', ip) and current.lower() not in {'unknown', 'device'}:
+        return current
+    if host:
+        return host
+    if ven:
+        return f"{ven} {ip}"
+    return current or ip
 
 
 
@@ -815,7 +828,7 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         host = reverse_dns(ip) if "dns" in protocols else (row["hostname"] if row else "")
         vendor = row["vendor"] if row else ""
         mac = row["mac"] if row else ""
-        name = row["name"] if row and row["name"] else host or ip
+        name = choose_auto_name(row["name"] if row and row["name"] else "", host, vendor, ip)
         category = row["category"] if row and row["category"] else auto_category(f"{name} {host}", vendor)
         is_new = row is None
         if is_new and not allow_new:
@@ -888,7 +901,7 @@ def run_full_scan(mode: str = "manual") -> None:
                     ts = now_ts()
                     host = reverse_dns(item["ip"]) if "dns" in protocols else (row["hostname"] if row else "")
                     vendor = item["vendor"] if "vendor" in protocols else (row["vendor"] if row else "")
-                    name = row["name"] if row and row["name"] else host or item["ip"]
+                    name = choose_auto_name(row["name"] if row and row["name"] else "", host, vendor, item["ip"])
                     category = row["category"] if row and row["category"] else auto_category(name, vendor)
                     approved = bool(row["approved"]) if row and "approved" in row.keys() else False
                     status = row["status"] if row and row["status"] not in ("unknown", "") else ("online" if approved else "new")
@@ -913,11 +926,57 @@ def run_full_scan(mode: str = "manual") -> None:
                     conn.commit()
                 finally:
                     conn.close()
+        enrich_known_devices()
     except Exception as e:
         scan_state["last_error"] = str(e)
     finally:
         scan_state["running"] = False
         scan_state["last_finished"] = now_ts()
+
+
+def enrich_known_devices() -> None:
+    protocols = set(get_discovery_protocols())
+    arp_items: Dict[str, Dict[str, str]] = {}
+    if "arp" in protocols or "vendor" in protocols:
+        for item in arp_scan_networks() + read_proc_arp():
+            ip = item.get("ip", "")
+            if ip:
+                arp_items[ip] = item
+    conn = db()
+    try:
+        rows = conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()
+        changed = False
+        for row in rows:
+            d = row_to_device(row)
+            ip = d["ip"]
+            arp = arp_items.get(ip, {})
+            if not d.get("mac") and arp.get("mac"):
+                d["mac"] = arp.get("mac", "")
+            if not d.get("vendor"):
+                if arp.get("vendor"):
+                    d["vendor"] = arp.get("vendor", "")
+                elif d.get("mac") and "vendor" in protocols:
+                    d["vendor"] = vendor_from_mac(d["mac"])
+            if (not d.get("hostname")) and "dns" in protocols:
+                host = reverse_dns(ip)
+                if host:
+                    d["hostname"] = host
+            new_name = choose_auto_name(d.get("name", ""), d.get("hostname", ""), d.get("vendor", ""), ip)
+            if new_name != d.get("name", ""):
+                d["name"] = new_name
+            if not d.get("category"):
+                d["category"] = auto_category(f"{d.get('name','')} {d.get('hostname','')}", d.get("vendor", ""))
+            if not d.get("assigned_network"):
+                d["assigned_network"] = infer_assigned_network(ip)
+            conn.execute(
+                "UPDATE devices SET name=?, hostname=?, vendor=?, mac=?, category=?, assigned_network=?, updated_at=? WHERE ip=?",
+                (d["name"], d["hostname"], d["vendor"], d["mac"], d["category"], d["assigned_network"], now_ts(), ip),
+            )
+            changed = True
+        if changed:
+            conn.commit()
+    finally:
+        conn.close()
 
 
 def monitor_one(ip: str) -> None:
@@ -941,12 +1000,11 @@ def monitor_one(ip: str) -> None:
             host = reverse_dns(ip)
             if host and d["hostname"] != host:
                 d["hostname"] = host
-                if not d["name"]:
-                    d["name"] = host
             if not d.get("assigned_network"):
                 d["assigned_network"] = infer_assigned_network(ip)
             if not d["vendor"] and d.get("mac") and "vendor" in set(get_discovery_protocols()):
                 d["vendor"] = vendor_from_mac(d["mac"])
+            d["name"] = choose_auto_name(d.get("name", ""), d.get("hostname", ""), d.get("vendor", ""), ip)
             if not d["category"]:
                 d["category"] = auto_category(f"{d['name']} {d['hostname']}", d["vendor"])
             if get_discovery_mode() == "manual_only" and not d.get("approved") and not d.get("manual"):
