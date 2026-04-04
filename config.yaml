@@ -1,7 +1,7 @@
 name: "HOMEii Network Monitor"
 slug: "homeii_network_monitor"
 description: "SQLite-based network monitor with multi-network scan, accept workflow and improved theme handling"
-version: "4.0.3"
+version: "4.0.4"
 build: .
 startup: services
 boot: auto
