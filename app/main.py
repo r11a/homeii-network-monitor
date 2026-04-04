@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.0.7"
+APP_VERSION = "4.0.8"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -279,9 +279,53 @@ def migrate_legacy_files() -> None:
 
 
 
-def short_hostname(hostname: str) -> str:
-    return hostname.split(".")[0] if hostname else ""
+def looks_like_ip(value: str) -> bool:
+    try:
+        ipaddress.ip_address((value or "").strip())
+        return True
+    except Exception:
+        return False
 
+
+
+def short_hostname(hostname: str) -> str:
+    host = (hostname or "").strip().rstrip(".")
+    if not host:
+        return ""
+    first = host.split(".")[0].strip()
+    if not first or looks_like_ip(first) or first.isdigit():
+        return ""
+    return first
+
+
+
+def is_local_admin_mac(mac: str) -> bool:
+    mac = normalize_mac(mac)
+    if not mac:
+        return False
+    try:
+        first_octet = int(mac.split(":")[0], 16)
+        return bool(first_octet & 0x02)
+    except Exception:
+        return False
+
+
+
+def choose_display_name(name: str, hostname: str, vendor: str, ip: str) -> str:
+    raw_name = (name or "").strip()
+    raw_host = short_hostname(hostname or "")
+    raw_vendor = (vendor or "").strip()
+    if raw_name and not raw_name.isdigit() and not looks_like_ip(raw_name):
+        return raw_name
+    if raw_host:
+        return raw_host
+    if raw_vendor and raw_vendor not in ("Private / Randomized",):
+        try:
+            suffix = str(ip).split('.')[-1]
+        except Exception:
+            suffix = ""
+        return f"{raw_vendor} {suffix}".strip()
+    return (ip or raw_name or raw_host or raw_vendor or "").strip()
 
 
 
@@ -293,24 +337,17 @@ def reverse_dns(ip: str) -> str:
         host, _, _ = socket.gethostbyaddr(ip)
         host = short_hostname(host)
     except Exception:
-        host = ""
-    if not host and shutil.which("getent"):
         try:
-            out = subprocess.check_output(["getent", "hosts", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
-            parts = out.strip().split()
-            if len(parts) >= 2:
-                host = short_hostname(parts[1])
+            out = subprocess.check_output(["nslookup", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
+            for line in out.splitlines():
+                if "name =" in line:
+                    host = short_hostname(line.split("name =", 1)[1].strip().rstrip("."))
+                    break
         except Exception:
-            pass
-    try:
-        if not host:
-            fqdn = socket.getfqdn(ip)
-            if fqdn and fqdn != ip:
-                host = short_hostname(fqdn)
-    except Exception:
-        pass
-    _dns_cache[ip] = host or ""
-    return host or ""
+            host = ""
+    _dns_cache[ip] = host
+    return host
+
 
 
 def normalize_mac(mac: str) -> str:
@@ -320,18 +357,6 @@ def normalize_mac(mac: str) -> str:
 
 
 
-
-def is_locally_administered_mac(mac: str) -> bool:
-    mac = normalize_mac(mac)
-    if not mac:
-        return False
-    try:
-        first_octet = int(mac.split(":")[0], 16)
-        return bool(first_octet & 0x02)
-    except Exception:
-        return False
-
-
 def vendor_from_mac(mac: str) -> str:
     mac = normalize_mac(mac)
     if not mac:
@@ -339,55 +364,45 @@ def vendor_from_mac(mac: str) -> str:
     prefix = ":".join(mac.split(":")[:3])
     if prefix in _vendor_cache:
         return _vendor_cache[prefix]
-    if is_locally_administered_mac(mac):
+    if is_local_admin_mac(mac):
         _vendor_cache[prefix] = "Private / Randomized"
         return _vendor_cache[prefix]
     vendors = {
-        "b8:27:eb": "Raspberry Pi", "dc:a6:32": "Raspberry Pi",
-        "3c:52:82": "Google", "f4:f5:d8": "Google", "28:6c:07": "Google", "a4:77:33": "Google",
-        "fc:a6:67": "Amazon", "44:65:0d": "Amazon", "28:6d:cd": "Amazon",
-        "00:17:88": "Philips",
-        "ec:fa:bc": "Samsung", "70:4f:57": "Samsung", "48:3f:da": "Samsung",
-        "00:1a:79": "Cisco",
-        "00:1b:63": "Apple", "f0:18:98": "Apple", "ac:bc:32": "Apple", "28:cf:e9": "Apple", "3c:15:c2": "Apple",
+        "b8:27:eb": "Raspberry Pi",
+        "dc:a6:32": "Raspberry Pi",
         "e4:5f:01": "Xiaomi",
-        "64:09:80": "Ubiquiti", "24:5a:4c": "Ubiquiti", "68:d7:9a": "Ubiquiti",
-        "1c:5f:2b": "Hikvision", "bc:ad:28": "Hikvision",
+        "64:09:80": "Ubiquiti",
+        "24:5a:4c": "Ubiquiti",
+        "f4:f2:6d": "Ubiquiti",
+        "00:17:88": "Philips",
+        "3c:52:82": "Google",
+        "f4:f5:d8": "Google",
+        "00:1b:63": "Apple",
+        "ac:bc:32": "Apple",
+        "f0:18:98": "Apple",
+        "d0:03:4b": "Apple",
+        "ec:fa:bc": "Samsung",
+        "70:4f:57": "Samsung",
+        "44:65:0d": "Amazon",
+        "fc:a6:67": "Amazon",
+        "1c:5f:2b": "Hikvision",
+        "bc:ad:28": "Hikvision",
         "00:40:8c": "Axis",
-        "f8:b3:b7": "TP-Link", "28:87:ba": "TP-Link", "50:c7:bf": "TP-Link",
-        "00:e0:4c": "Realtek", "2c:f0:5d": "ASUSTek", "d8:5d:4c": "Intel",
+        "00:1a:79": "Cisco",
+        "c8:5b:76": "Apple",
+        "9c:20:7b": "Apple",
+        "48:3f:da": "HUAWEI",
+        "28:6d:cd": "TP-Link",
+        "a0:b5:3c": "Intel",
+        "f8:3b:09": "Intel",
+        "1c:69:7a": "Intel",
+        "f4:cf:a2": "Espressif",
+        "e4:60:17": "Espressif",
     }
-    name = vendors.get(prefix, "")
-    _vendor_cache[prefix] = name
-    return name
+    vendor = vendors.get(prefix, "")
+    _vendor_cache[prefix] = vendor
+    return vendor
 
-
-def auto_display_name(current_name: str, hostname: str, vendor: str, ip: str) -> str:
-    name = (current_name or "").strip()
-    host = (hostname or "").strip()
-    ven = (vendor or "").strip()
-    if name and not re.fullmatch(r"\d{1,3}", name):
-        return name
-    if host and host != ip and not re.fullmatch(r"\d{1,3}", host):
-        return host
-    if ven and ip:
-        last = ip.split(".")[-1] if "." in ip else ip
-        return f"{ven} {last}".strip()
-    return ip
-
-
-def lookup_mac_for_ip(ip: str) -> str:
-    if not shutil.which("ip"):
-        return ""
-    try:
-        out = subprocess.check_output(["ip", "neigh", "show", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
-        for line in out.splitlines():
-            parts = line.split()
-            if "lladdr" in parts:
-                return normalize_mac(parts[parts.index("lladdr") + 1])
-    except Exception:
-        pass
-    return ""
 
 
 def auto_category(name: str, vendor: str = "") -> str:
@@ -422,7 +437,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         tags = []
     return {
         "ip": row["ip"],
-        "name": auto_display_name(row["name"] or "", row["hostname"] or "", row["vendor"] or "", row["ip"]),
+        "name": row["name"] or "",
         "hostname": row["hostname"] or "",
         "category": row["category"] or "",
         "vendor": row["vendor"] or "",
@@ -444,6 +459,8 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "assigned_network": row["assigned_network"] if "assigned_network" in row.keys() else "",
         "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
+        "display_name": choose_display_name(row["name"] or "", row["hostname"] or "", row["vendor"] or "", row["ip"]),
+        "subtitle": short_hostname(row["hostname"] or "") or (row["vendor"] or ""),
     }
 
 
@@ -840,11 +857,7 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         host = reverse_dns(ip) if "dns" in protocols else (row["hostname"] if row else "")
         vendor = row["vendor"] if row else ""
         mac = row["mac"] if row else ""
-        if not mac:
-            mac = lookup_mac_for_ip(ip)
-        if mac and not vendor:
-            vendor = vendor_from_mac(mac)
-        name = auto_display_name(row["name"] if row else "", host, vendor, ip)
+        name = choose_display_name(row["name"] if row else "", host, vendor, ip)
         category = row["category"] if row and row["category"] else auto_category(f"{name} {host}", vendor)
         is_new = row is None
         if is_new and not allow_new:
@@ -917,9 +930,7 @@ def run_full_scan(mode: str = "manual") -> None:
                     ts = now_ts()
                     host = reverse_dns(item["ip"]) if "dns" in protocols else (row["hostname"] if row else "")
                     vendor = item["vendor"] if "vendor" in protocols else (row["vendor"] if row else "")
-                    if not vendor and item.get("mac"):
-                        vendor = vendor_from_mac(item.get("mac",""))
-                    name = auto_display_name(row["name"] if row else "", host, vendor, item["ip"])
+                    name = choose_display_name(row["name"] if row else "", host, vendor, item["ip"])
                     category = row["category"] if row and row["category"] else auto_category(name, vendor)
                     approved = bool(row["approved"]) if row and "approved" in row.keys() else False
                     status = row["status"] if row and row["status"] not in ("unknown", "") else ("online" if approved else "new")
@@ -944,7 +955,6 @@ def run_full_scan(mode: str = "manual") -> None:
                     conn.commit()
                 finally:
                     conn.close()
-        enrich_existing_devices()
     except Exception as e:
         scan_state["last_error"] = str(e)
     finally:
@@ -973,12 +983,14 @@ def monitor_one(ip: str) -> None:
             host = reverse_dns(ip)
             if host and d["hostname"] != host:
                 d["hostname"] = host
-                if not d["name"]:
-                    d["name"] = host
+            d["name"] = choose_display_name(d.get("name",""), d.get("hostname",""), d.get("vendor",""), ip)
             if not d.get("assigned_network"):
                 d["assigned_network"] = infer_assigned_network(ip)
-            if not d["vendor"] and d.get("mac") and "vendor" in set(get_discovery_protocols()):
-                d["vendor"] = vendor_from_mac(d["mac"])
+            if (not d["vendor"] or d["vendor"] == "—") and d.get("mac") and "vendor" in set(get_discovery_protocols()):
+                maybe_vendor = vendor_from_mac(d["mac"])
+                if maybe_vendor:
+                    d["vendor"] = maybe_vendor
+            d["name"] = choose_display_name(d.get("name",""), d.get("hostname",""), d.get("vendor",""), ip)
             if not d["category"]:
                 d["category"] = auto_category(f"{d['name']} {d['hostname']}", d["vendor"])
             if get_discovery_mode() == "manual_only" and not d.get("approved") and not d.get("manual"):
@@ -1138,45 +1150,6 @@ def logo():
         return FileResponse(path, media_type="image/gif")
     return JSONResponse({"error": "logo not found"}, status_code=404)
 
-
-
-
-
-def enrich_existing_devices() -> None:
-    conn = db()
-    try:
-        rows = conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()
-        for row in rows:
-            d = row_to_device(row)
-            changed = False
-            host = reverse_dns(d["ip"])
-            if host and host != (d.get("hostname") or ""):
-                d["hostname"] = host
-                changed = True
-            if not d.get("mac"):
-                mac = lookup_mac_for_ip(d["ip"])
-                if mac:
-                    d["mac"] = mac
-                    changed = True
-            if d.get("mac") and not d.get("vendor"):
-                ven = vendor_from_mac(d["mac"])
-                if ven:
-                    d["vendor"] = ven
-                    changed = True
-            new_name = auto_display_name(d.get("name", ""), d.get("hostname", ""), d.get("vendor", ""), d["ip"])
-            if new_name != d.get("name", ""):
-                d["name"] = new_name
-                changed = True
-            if not d.get("category"):
-                cat = auto_category(f"{d.get('name','')} {d.get('hostname','')}", d.get("vendor", ""))
-                if cat:
-                    d["category"] = cat
-                    changed = True
-            if changed:
-                d["updated_at"] = now_ts()
-                upsert_device(d["ip"], d)
-    finally:
-        conn.close()
 
 @app.get("/api/status")
 def api_status():
@@ -1389,14 +1362,13 @@ def api_ping_now(ip: str):
 @app.get("/api/add_manual")
 def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = ""):
     host = reverse_dns(ip)
-    mac = lookup_mac_for_ip(ip)
-    vendor = vendor_from_mac(mac) if mac else ""
+    vendor = ""
     d = {
-        "name": name or auto_display_name("", host, vendor, ip),
+        "name": choose_display_name(name, host, vendor, ip),
         "hostname": host,
         "category": category or auto_category(name or host or ip, vendor),
         "vendor": vendor,
-        "mac": mac,
+        "mac": "",
         "status": "online" if ping(ip) else "offline",
         "last_seen": now_ts() if ping(ip) else 0,
         "critical": False,
