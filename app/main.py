@@ -13,11 +13,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import unquote
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.0.1"
+APP_VERSION = "4.0.2"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -32,7 +33,6 @@ UNSTABLE_WINDOW = 600
 UNSTABLE_THRESHOLD = 4
 MAX_EVENTS = 300
 SCAN_RESCHEDULE_SECONDS = 300
-KNOWN_PROTOCOLS = ["ping", "arp", "dns", "special", "vendor"]
 
 
 def load_options() -> Dict[str, Any]:
@@ -91,7 +91,6 @@ CREATE TABLE IF NOT EXISTS devices (
   updated_at INTEGER DEFAULT 0,
   source TEXT DEFAULT 'ping',
   notes TEXT DEFAULT '',
-  assigned_network TEXT DEFAULT '',
   tags_json TEXT DEFAULT '[]'
 );
 
@@ -138,9 +137,6 @@ DEFAULT_SETTINGS = {
     "default_view": "table",
     "dashboard_style": "advanced",
     "networks_json": json.dumps(HOMEII_NETWORKS),
-    "network_names_json": json.dumps({}),
-    "discovery_mode": "auto_manual",
-    "discovery_protocols_json": json.dumps(KNOWN_PROTOCOLS),
 }
 
 
@@ -158,7 +154,6 @@ def init_db() -> None:
         try:
             conn.executescript(SCHEMA)
             ensure_column(conn, "devices", "approved", "approved INTEGER DEFAULT 0")
-            ensure_column(conn, "devices", "assigned_network", "assigned_network TEXT DEFAULT ''")
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
                     "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v)
@@ -279,21 +274,28 @@ def migrate_legacy_files() -> None:
 
 
 
+def is_ip_like(value: str) -> bool:
+    value = (value or "").strip().strip(".")
+    if not value:
+        return False
+    parts = value.split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        return all(0 <= int(p) <= 255 for p in parts)
+    except Exception:
+        return False
+
+
+
 def short_hostname(hostname: str) -> str:
-    return hostname.split(".")[0] if hostname else ""
-
-
-def choose_auto_name(current_name: str, hostname: str, vendor: str, ip: str) -> str:
-    current = (current_name or '').strip()
-    host = short_hostname((hostname or '').strip())
-    ven = (vendor or '').strip()
-    if current and current not in ('', ip) and current.lower() not in {'unknown', 'device'}:
-        return current
-    if host:
-        return host
-    if ven:
-        return f"{ven} {ip}"
-    return current or ip
+    hostname = (hostname or "").strip().strip(".")
+    if not hostname or is_ip_like(hostname):
+        return ""
+    short = hostname.split(".")[0].strip()
+    if not short or is_ip_like(short) or re.fullmatch(r"\d+", short):
+        return ""
+    return short
 
 
 
@@ -305,16 +307,22 @@ def reverse_dns(ip: str) -> str:
         host, _, _ = socket.gethostbyaddr(ip)
         host = short_hostname(host)
     except Exception:
+        host = ""
+    if not host and shutil.which("getent"):
         try:
-            out = subprocess.check_output(["nslookup", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
-            for line in out.splitlines():
-                if "name =" in line:
-                    host = short_hostname(line.split("name =", 1)[1].strip().rstrip("."))
-                    break
+            out = subprocess.check_output(["getent", "hosts", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
+            parts = out.strip().split()
+            if len(parts) >= 2:
+                host = short_hostname(parts[1])
         except Exception:
-            host = ""
-    _dns_cache[ip] = host
-    return host
+            pass
+    try:
+        if not host:
+            host = short_hostname(socket.getfqdn(ip))
+    except Exception:
+        pass
+    _dns_cache[ip] = host or ""
+    return host or ""
 
 
 
@@ -325,6 +333,18 @@ def normalize_mac(mac: str) -> str:
 
 
 
+def is_locally_administered_mac(mac: str) -> bool:
+    mac = normalize_mac(mac)
+    if not mac:
+        return False
+    try:
+        first = int(mac.split(":")[0], 16)
+        return bool(first & 0x02)
+    except Exception:
+        return False
+
+
+
 def vendor_from_mac(mac: str) -> str:
     mac = normalize_mac(mac)
     if not mac:
@@ -332,47 +352,37 @@ def vendor_from_mac(mac: str) -> str:
     prefix = ":".join(mac.split(":")[:3])
     if prefix in _vendor_cache:
         return _vendor_cache[prefix]
+    if is_locally_administered_mac(mac):
+        _vendor_cache[prefix] = "Private / Randomized"
+        return _vendor_cache[prefix]
     vendors = {
-        "b8:27:eb": "Raspberry Pi",
-        "dc:a6:32": "Raspberry Pi",
-        "e4:5f:01": "Xiaomi",
-        "64:09:80": "Ubiquiti",
-        "24:5a:4c": "Ubiquiti",
-        "f4:f2:6d": "Ubiquiti",
+        "b8:27:eb": "Raspberry Pi", "dc:a6:32": "Raspberry Pi",
+        "3c:52:82": "Google", "f4:f5:d8": "Google", "28:6c:07": "Google", "a4:77:33": "Google",
+        "fc:a6:67": "Amazon", "44:65:0d": "Amazon", "28:6d:cd": "Amazon",
         "00:17:88": "Philips",
-        "3c:52:82": "Google",
-        "f4:f5:d8": "Google",
-        "00:1b:63": "Apple",
-        "ac:bc:32": "Apple",
-        "f0:18:98": "Apple",
-        "d0:03:4b": "Apple",
-        "ec:fa:bc": "Samsung",
-        "70:4f:57": "Samsung",
-        "44:65:0d": "Amazon",
-        "fc:a6:67": "Amazon",
-        "1c:5f:2b": "Hikvision",
-        "bc:ad:28": "Hikvision",
-        "00:40:8c": "Axis",
-        "dc:a6:32": "Raspberry Pi",
-        "3c:52:82": "Google",
-        "f4:f5:d8": "Google",
-        "fc:a6:67": "Amazon",
-        "44:65:0d": "Amazon",
-        "00:17:88": "Philips",
-        "ec:fa:bc": "Samsung",
-        "70:4f:57": "Samsung",
+        "ec:fa:bc": "Samsung", "70:4f:57": "Samsung", "48:3f:da": "Samsung",
         "00:1a:79": "Cisco",
-        "00:1b:63": "Apple",
-        "f0:18:98": "Apple",
-        "ac:bc:32": "Apple",
+        "00:1b:63": "Apple", "f0:18:98": "Apple", "ac:bc:32": "Apple", "28:cf:e9": "Apple", "3c:15:c2": "Apple",
         "e4:5f:01": "Xiaomi",
-        "64:09:80": "Ubiquiti",
-        "24:5a:4c": "Ubiquiti",
-        "1c:5f:2b": "Hikvision",
-        "bc:ad:28": "Hikvision",
+        "64:09:80": "Ubiquiti", "24:5a:4c": "Ubiquiti", "68:d7:9a": "Ubiquiti",
+        "1c:5f:2b": "Hikvision", "bc:ad:28": "Hikvision",
         "00:40:8c": "Axis",
+        "f8:b3:b7": "TP-Link", "28:87:ba": "TP-Link", "50:c7:bf": "TP-Link",
+        "00:e0:4c": "Realtek", "2c:f0:5d": "ASUSTek",
+        "d8:5d:4c": "Intel", "a0:ce:c8": "Intel",
+        "e8:c8:29": "Espressif", "30:c9:22": "Espressif", "44:17:93": "Espressif",
+        "f8:3b:09": "Huawei", "a0:b5:3c": "AzureWave",
     }
     vendor = vendors.get(prefix, "")
+    if not vendor:
+        try:
+            req = Request(f"https://api.macvendors.com/{prefix.replace(':', '-')}", headers={"User-Agent": f"HOMEii-Network-Monitor/{APP_VERSION}"})
+            with urlopen(req, timeout=2) as resp:
+                raw = resp.read().decode("utf-8", "ignore").strip()
+                if 2 <= len(raw) <= 80 and "not found" not in raw.lower() and "errors" not in raw.lower():
+                    vendor = raw
+        except Exception:
+            vendor = ""
     _vendor_cache[prefix] = vendor
     return vendor
 
@@ -397,6 +407,53 @@ def auto_category(name: str, vendor: str = "") -> str:
 
 
 
+def auto_display_name(existing_name: str, hostname: str, vendor: str, ip: str) -> str:
+    existing_name = (existing_name or "").strip()
+    hostname = (hostname or "").strip()
+    vendor = (vendor or "").strip()
+    if existing_name and existing_name != ip and not re.fullmatch(r"\d+", existing_name):
+        return existing_name
+    if hostname:
+        return hostname
+    last = ip.split(".")[-1] if ip and "." in ip else ip
+    if vendor and vendor != "Private / Randomized":
+        return f"{vendor} {last}".strip()
+    if vendor == "Private / Randomized":
+        return f"Device {last}"
+    return ip
+
+
+
+def lookup_mac_for_ip(ip: str) -> str:
+    if not shutil.which("ip"):
+        return ""
+    try:
+        out = subprocess.check_output(["ip", "neigh", "show", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
+        for line in out.splitlines():
+            parts = line.split()
+            if "lladdr" in parts:
+                return normalize_mac(parts[parts.index("lladdr") + 1])
+    except Exception:
+        pass
+    return ""
+
+
+
+def assigned_network_for_ip(ip: str) -> str:
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+    except Exception:
+        return ""
+    for net in get_networks():
+        try:
+            if ip_obj in ipaddress.ip_network(net, strict=False):
+                return net
+        except Exception:
+            continue
+    return ""
+
+
+
 def now_ts() -> int:
     return int(time.time())
 
@@ -410,7 +467,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         tags = []
     return {
         "ip": row["ip"],
-        "name": row["name"] or "",
+        "name": auto_display_name(row["name"] or "", row["hostname"] or "", row["vendor"] or "", row["ip"]),
         "hostname": row["hostname"] or "",
         "category": row["category"] or "",
         "vendor": row["vendor"] or "",
@@ -429,7 +486,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "updated_at": int(row["updated_at"] or 0),
         "source": row["source"] or "",
         "notes": row["notes"] or "",
-        "assigned_network": row["assigned_network"] if "assigned_network" in row.keys() else "",
+        "assigned_network": assigned_network_for_ip(row["ip"]),
         "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
     }
@@ -573,64 +630,6 @@ def get_networks() -> list[str]:
     return normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"]
 
 
-def get_network_names() -> Dict[str, str]:
-    try:
-        stored = get_setting("network_names_json", "{}")
-        data = json.loads(stored)
-        if isinstance(data, dict):
-            return {str(k): str(v) for k, v in data.items()}
-    except Exception:
-        pass
-    return {}
-
-def get_discovery_mode() -> str:
-    mode = (get_setting("discovery_mode", "auto_manual") or "auto_manual").strip()
-    return mode if mode in ("auto_manual", "manual_only", "auto_only") else "auto_manual"
-
-
-def get_discovery_protocols() -> list[str]:
-    try:
-        stored = get_setting("discovery_protocols_json", "")
-        if stored:
-            data = json.loads(stored)
-            if isinstance(data, list):
-                prots = [str(x).strip() for x in data if str(x).strip() in KNOWN_PROTOCOLS]
-                if prots:
-                    return sorted(set(prots), key=KNOWN_PROTOCOLS.index)
-    except Exception:
-        pass
-    return KNOWN_PROTOCOLS.copy()
-
-
-def set_discovery_protocols(protocols: list[str] | str | None) -> list[str]:
-    if protocols is None:
-        prots = KNOWN_PROTOCOLS.copy()
-    elif isinstance(protocols, str):
-        raw = re.split(r"[\n,;]+", protocols)
-        prots = [p.strip() for p in raw if p.strip() in KNOWN_PROTOCOLS]
-    else:
-        prots = [str(p).strip() for p in protocols if str(p).strip() in KNOWN_PROTOCOLS]
-    prots = sorted(set(prots), key=KNOWN_PROTOCOLS.index)
-    if not prots:
-        prots = ["ping"]
-    set_setting("discovery_protocols_json", json.dumps(prots))
-    return prots
-
-
-def infer_assigned_network(ip: str) -> str:
-    try:
-        ip_obj = ipaddress.ip_address(ip)
-    except Exception:
-        return ""
-    for net in get_networks():
-        try:
-            if ip_obj in ipaddress.ip_network(net, strict=False):
-                return net
-        except Exception:
-            continue
-    return ""
-
-
 def save_networks(raw: list[str] | str) -> list[str]:
     nets = normalize_networks(raw)
     if not nets:
@@ -658,22 +657,22 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "tags": []
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "tags": []
         }
         base.update(fields)
         conn.execute(
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,tags_json
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
               pinned=excluded.pinned, manual=excluded.manual, ignored=excluded.ignored, approved=excluded.approved,
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
-              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network, tags_json=excluded.tags_json
+              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, tags_json=excluded.tags_json
             """,
             (
                 ip,
@@ -682,7 +681,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
                 1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
                 int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
                 int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
-                base["notes"], base.get("assigned_network", ""), json.dumps(base["tags"]),
+                base["notes"], json.dumps(base["tags"]),
             ),
         )
         conn.commit()
@@ -725,22 +724,6 @@ def arp_scan_networks() -> List[Dict[str, str]]:
             pass
     return results
 
-def read_proc_arp() -> List[Dict[str, str]]:
-    items: List[Dict[str, str]] = []
-    try:
-        with open("/proc/net/arp", "r", encoding="utf-8", errors="ignore") as f:
-            next(f, None)
-            for line in f:
-                parts = line.split()
-                if len(parts) >= 4:
-                    ip, _, _, mac = parts[:4]
-                    mac = normalize_mac(mac)
-                    if mac and mac != "00:00:00:00:00:00":
-                        items.append({"ip": ip, "mac": mac, "vendor": vendor_from_mac(mac)})
-    except Exception:
-        pass
-    return items
-
 
 
 def get_local_ips() -> List[str]:
@@ -748,10 +731,10 @@ def get_local_ips() -> List[str]:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
+        local_ip = s.getsockname()[0]
         s.close()
-        if ip and ip.count(".") == 3 and not ip.startswith("127."):
-            ips.append(ip)
+        if local_ip and local_ip.count(".") == 3 and not local_ip.startswith("127."):
+            ips.append(local_ip)
     except Exception:
         pass
     if shutil.which("ip"):
@@ -779,8 +762,6 @@ def get_default_gateway() -> str:
 
 
 def discover_special_hosts() -> None:
-    if "special" not in set(get_discovery_protocols()):
-        return
     candidates = set(get_local_ips())
     gw = get_default_gateway()
     if gw:
@@ -815,38 +796,32 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
         if row and row["ignored"]:
             return
-        discovery_mode = get_discovery_mode()
-        allow_new = discovery_mode != "manual_only"
-        protocols = set(get_discovery_protocols())
-        ok = True
-        if "ping" in protocols:
-            ok = ping(ip)
-            if not ok:
-                return
-        elif row is None and not allow_new:
+        ok = ping(ip)
+        if not ok:
             return
-        host = reverse_dns(ip) if "dns" in protocols else (row["hostname"] if row else "")
+        host = reverse_dns(ip)
         vendor = row["vendor"] if row else ""
         mac = row["mac"] if row else ""
-        name = choose_auto_name(row["name"] if row and row["name"] else "", host, vendor, ip)
+        if not mac:
+            mac = lookup_mac_for_ip(ip)
+        if mac and not vendor:
+            vendor = vendor_from_mac(mac)
+        name = auto_display_name(row["name"] if row else "", host, vendor, ip)
         category = row["category"] if row and row["category"] else auto_category(f"{name} {host}", vendor)
         is_new = row is None
-        if is_new and not allow_new:
-            return
-        assigned_network = (row["assigned_network"] if row and "assigned_network" in row.keys() and row["assigned_network"] else infer_assigned_network(ip))
         ts = now_ts()
         conn.execute(
             """
-            INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-                                fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,tags_json)
-            VALUES(?,?,?,?,?,?, 'new', ?,0,0,0,0,0,0,0,0,?,?,?,?, '[]')
-            ON CONFLICT(ip) DO UPDATE SET hostname=?, last_seen=?, updated_at=?, source=?, assigned_network=CASE WHEN devices.assigned_network='' THEN excluded.assigned_network ELSE devices.assigned_network END,
+            INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,
+                                fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json)
+            VALUES(?,?,?,?,?,?, 'new', ?,0,0,0,0,0,0,0,?,?,?, '', '[]')
+            ON CONFLICT(ip) DO UPDATE SET hostname=?, last_seen=?, updated_at=?, source=?,
                 name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
                 category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
                 status=CASE WHEN devices.approved=1 THEN devices.status WHEN devices.manual=1 AND devices.status!='offline' THEN devices.status ELSE 'new' END
             """,
             (
-                ip, name, host, category, vendor, mac, ts, ts, ts, source, '', assigned_network,
+                ip, name, host, category, vendor, mac, ts, ts, ts, source,
                 host, ts, ts, source,
             ),
         )
@@ -863,120 +838,61 @@ def run_full_scan(mode: str = "manual") -> None:
         return
     scan_state.update({"running": True, "last_started": now_ts(), "last_mode": mode, "last_error": ""})
     try:
-        protocols = set(get_discovery_protocols())
-        discovery_mode = get_discovery_mode()
         discover_special_hosts()
-        candidates: Dict[str, str] = {}
-        if "ping" in protocols:
+        with ThreadPoolExecutor(max_workers=THREADS) as ex:
             for net in get_networks():
                 try:
                     network = ipaddress.ip_network(net, strict=False)
                     for ip in network.hosts():
-                        candidates.setdefault(str(ip), mode)
+                        ex.submit(scan_candidate_ip, str(ip), mode)
                 except Exception as e:
                     scan_state["last_error"] = str(e)
-        with ThreadPoolExecutor(max_workers=THREADS) as ex:
-            for ip, src in candidates.items():
-                ex.submit(scan_candidate_ip, ip, src)
-        if "arp" in protocols or "vendor" in protocols:
-            networks = [ipaddress.ip_network(n, strict=False) for n in get_networks()]
-            arp_items: Dict[str, Dict[str, str]] = {}
-            for item in arp_scan_networks() + read_proc_arp():
-                if item.get("ip"):
-                    arp_items[item["ip"]] = item
-            for item in arp_items.values():
-                try:
-                    ip_obj = ipaddress.ip_address(item["ip"])
-                except Exception:
+        networks = [ipaddress.ip_network(n, strict=False) for n in get_networks()]
+        for item in arp_scan_networks():
+            try:
+                ip_obj = ipaddress.ip_address(item["ip"])
+            except Exception:
+                continue
+            if networks and not any(ip_obj in net for net in networks):
+                continue
+            conn = db()
+            try:
+                row = conn.execute("SELECT * FROM devices WHERE ip=?", (item["ip"],)).fetchone()
+                if row and row["ignored"]:
                     continue
-                if networks and not any(ip_obj in net for net in networks):
-                    continue
-                conn = db()
-                try:
-                    row = conn.execute("SELECT * FROM devices WHERE ip=?", (item["ip"],)).fetchone()
-                    if row and row["ignored"]:
-                        continue
-                    if row is None and discovery_mode == "manual_only":
-                        continue
-                    ts = now_ts()
-                    host = reverse_dns(item["ip"]) if "dns" in protocols else (row["hostname"] if row else "")
-                    vendor = item["vendor"] if "vendor" in protocols else (row["vendor"] if row else "")
-                    name = choose_auto_name(row["name"] if row and row["name"] else "", host, vendor, item["ip"])
-                    category = row["category"] if row and row["category"] else auto_category(name, vendor)
-                    approved = bool(row["approved"]) if row and "approved" in row.keys() else False
-                    status = row["status"] if row and row["status"] not in ("unknown", "") else ("online" if approved else "new")
-                    assigned_network = row["assigned_network"] if row and row["assigned_network"] else infer_assigned_network(item["ip"])
-                    conn.execute(
-                        """
-                        INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-                                            fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,tags_json)
-                        VALUES(?,?,?,?,?,?,?,?,0,0,0,0,0,0,0,0,?,?,?,?,?, '[]')
-                        ON CONFLICT(ip) DO UPDATE SET mac=excluded.mac, vendor=CASE WHEN excluded.vendor!='' THEN excluded.vendor ELSE devices.vendor END,
-                            hostname=CASE WHEN excluded.hostname!='' THEN excluded.hostname ELSE devices.hostname END,
-                            category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
-                            name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
-                            assigned_network=CASE WHEN devices.assigned_network='' THEN excluded.assigned_network ELSE devices.assigned_network END,
-                            status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN
-                                    CASE WHEN devices.status IN ('unknown','new') THEN 'online' ELSE devices.status END
-                                  ELSE CASE WHEN devices.status='unknown' THEN excluded.status ELSE devices.status END END,
-                            updated_at=excluded.updated_at, source='arp'
-                        """,
-                        (item["ip"], name, host, category, vendor, item["mac"], status, ts, ts, ts, "arp", '', assigned_network),
-                    )
-                    conn.commit()
-                finally:
-                    conn.close()
-        enrich_known_devices()
+                ts = now_ts()
+                host = reverse_dns(item["ip"])
+                vendor = item["vendor"] or (row["vendor"] if row else "")
+                name = auto_display_name(row["name"] if row else "", host, vendor, item["ip"])
+                category = row["category"] if row and row["category"] else auto_category(name, vendor)
+                approved = bool(row["approved"]) if row and "approved" in row.keys() else False
+                status = row["status"] if row and row["status"] not in ("unknown", "") else ("online" if approved else "new")
+                conn.execute(
+                    """
+                    INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
+                                        fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json)
+                    VALUES(?,?,?,?,?,?,?,?,0,0,0,0,0,0,0,0,?,?,?, '', '[]')
+                    ON CONFLICT(ip) DO UPDATE SET mac=excluded.mac, vendor=excluded.vendor,
+                        hostname=CASE WHEN excluded.hostname!='' THEN excluded.hostname ELSE devices.hostname END,
+                        category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
+                        name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
+                        status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN
+                                CASE WHEN devices.status IN ('unknown','new') THEN 'online' ELSE devices.status END
+                              ELSE CASE WHEN devices.status='unknown' THEN excluded.status ELSE devices.status END END,
+                        updated_at=excluded.updated_at, source='arp'
+                    """,
+                    (item["ip"], name, host, category, vendor, item["mac"], status, ts, ts, ts, "arp"),
+                )
+                conn.commit()
+            finally:
+                conn.close()
     except Exception as e:
         scan_state["last_error"] = str(e)
+        enrich_existing_devices()
     finally:
         scan_state["running"] = False
         scan_state["last_finished"] = now_ts()
 
-
-def enrich_known_devices() -> None:
-    protocols = set(get_discovery_protocols())
-    arp_items: Dict[str, Dict[str, str]] = {}
-    if "arp" in protocols or "vendor" in protocols:
-        for item in arp_scan_networks() + read_proc_arp():
-            ip = item.get("ip", "")
-            if ip:
-                arp_items[ip] = item
-    conn = db()
-    try:
-        rows = conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()
-        changed = False
-        for row in rows:
-            d = row_to_device(row)
-            ip = d["ip"]
-            arp = arp_items.get(ip, {})
-            if not d.get("mac") and arp.get("mac"):
-                d["mac"] = arp.get("mac", "")
-            if not d.get("vendor"):
-                if arp.get("vendor"):
-                    d["vendor"] = arp.get("vendor", "")
-                elif d.get("mac") and "vendor" in protocols:
-                    d["vendor"] = vendor_from_mac(d["mac"])
-            if (not d.get("hostname")) and "dns" in protocols:
-                host = reverse_dns(ip)
-                if host:
-                    d["hostname"] = host
-            new_name = choose_auto_name(d.get("name", ""), d.get("hostname", ""), d.get("vendor", ""), ip)
-            if new_name != d.get("name", ""):
-                d["name"] = new_name
-            if not d.get("category"):
-                d["category"] = auto_category(f"{d.get('name','')} {d.get('hostname','')}", d.get("vendor", ""))
-            if not d.get("assigned_network"):
-                d["assigned_network"] = infer_assigned_network(ip)
-            conn.execute(
-                "UPDATE devices SET name=?, hostname=?, vendor=?, mac=?, category=?, assigned_network=?, updated_at=? WHERE ip=?",
-                (d["name"], d["hostname"], d["vendor"], d["mac"], d["category"], d["assigned_network"], now_ts(), ip),
-            )
-            changed = True
-        if changed:
-            conn.commit()
-    finally:
-        conn.close()
 
 
 def monitor_one(ip: str) -> None:
@@ -1000,15 +916,13 @@ def monitor_one(ip: str) -> None:
             host = reverse_dns(ip)
             if host and d["hostname"] != host:
                 d["hostname"] = host
-            if not d.get("assigned_network"):
-                d["assigned_network"] = infer_assigned_network(ip)
-            if not d["vendor"] and d.get("mac") and "vendor" in set(get_discovery_protocols()):
+            if not d.get("mac"):
+                d["mac"] = lookup_mac_for_ip(ip)
+            if d.get("mac") and not d.get("vendor"):
                 d["vendor"] = vendor_from_mac(d["mac"])
-            d["name"] = choose_auto_name(d.get("name", ""), d.get("hostname", ""), d.get("vendor", ""), ip)
+            d["name"] = auto_display_name(d.get("name", ""), d.get("hostname", "") or host, d.get("vendor", ""), ip)
             if not d["category"]:
-                d["category"] = auto_category(f"{d['name']} {d['hostname']}", d["vendor"])
-            if get_discovery_mode() == "manual_only" and not d.get("approved") and not d.get("manual"):
-                return
+                d["category"] = auto_category(f"{d['name']} {d['hostname'] or host}", d["vendor"])
             if not d.get("approved") and not d.get("manual"):
                 d["status"] = "new"
             elif prev_state in ("offline", "unstable", "new", "unknown") and d["success_count"] >= RECOVER_THRESHOLD:
@@ -1059,6 +973,44 @@ def monitor_one(ip: str) -> None:
     finally:
         conn.close()
 
+
+
+def enrich_existing_devices() -> None:
+    conn = db()
+    try:
+        rows = conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()
+        ts = now_ts()
+        for row in rows:
+            d = row_to_device(row)
+            changed = False
+            host = reverse_dns(d["ip"])
+            if host and host != d.get("hostname"):
+                d["hostname"] = host
+                changed = True
+            if not d.get("mac"):
+                mac = lookup_mac_for_ip(d["ip"])
+                if mac:
+                    d["mac"] = mac
+                    changed = True
+            if d.get("mac") and not d.get("vendor"):
+                vendor = vendor_from_mac(d["mac"])
+                if vendor:
+                    d["vendor"] = vendor
+                    changed = True
+            new_name = auto_display_name(d.get("name", ""), d.get("hostname", ""), d.get("vendor", ""), d["ip"])
+            if new_name != d.get("name", ""):
+                d["name"] = new_name
+                changed = True
+            if not d.get("category"):
+                category = auto_category(f"{d.get('name','')} {d.get('hostname','')}", d.get("vendor", ""))
+                if category:
+                    d["category"] = category
+                    changed = True
+            if changed:
+                d["updated_at"] = ts
+                upsert_device(d["ip"], d)
+    finally:
+        conn.close()
 
 
 def monitor_loop() -> None:
@@ -1141,9 +1093,6 @@ def status_payload() -> Dict[str, Any]:
         "alerts": alerts,
         "scan": scan_state,
         "settings": {k: get_setting(k, v) for k, v in DEFAULT_SETTINGS.items()},
-        "network_names": get_network_names(),
-        "discovery_mode": get_discovery_mode(),
-        "discovery_protocols": get_discovery_protocols(),
     }
 
 
@@ -1206,7 +1155,7 @@ def api_settings():
     conn = db()
     try:
         rows = conn.execute("SELECT key, value FROM settings ORDER BY key").fetchall()
-        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": get_networks(), "network_names": get_network_names(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "db_path": str(DB_PATH)}
+        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": HOMEII_NETWORKS, "db_path": str(DB_PATH)}
     finally:
         conn.close()
 
@@ -1303,7 +1252,7 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", pinned: int = -1, critical: int = -1):
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = ""):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -1312,12 +1261,7 @@ def api_update(ip: str, name: str = "", category: str = "", tags: str = "", note
             d["name"] = unquote(name)
             d["category"] = unquote(category)
             d["notes"] = unquote(notes)
-            d["assigned_network"] = unquote(assigned_network)
             d["tags"] = [x.strip() for x in unquote(tags).split(",") if x.strip()]
-            if pinned in (0,1):
-                d["pinned"] = bool(pinned)
-            if critical in (0,1):
-                d["critical"] = bool(critical)
             d["updated_at"] = now_ts()
             upsert_device(ip, d)
         return {"ok": True}
@@ -1376,13 +1320,14 @@ def api_ping_now(ip: str):
 @app.get("/api/add_manual")
 def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = ""):
     host = reverse_dns(ip)
-    vendor = ""
+    mac = lookup_mac_for_ip(ip)
+    vendor = vendor_from_mac(mac) if mac else ""
     d = {
-        "name": name or host or ip,
+        "name": name or auto_display_name("", host, vendor, ip),
         "hostname": host,
         "category": category or auto_category(name or host or ip, vendor),
         "vendor": vendor,
-        "mac": "",
+        "mac": mac,
         "status": "online" if ping(ip) else "offline",
         "last_seen": now_ts() if ping(ip) else 0,
         "critical": False,
@@ -1397,7 +1342,6 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
         "updated_at": now_ts(),
         "source": "manual",
         "notes": notes,
-        "assigned_network": infer_assigned_network(ip),
         "tags": [],
     }
     upsert_device(ip, d)
@@ -1417,35 +1361,20 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
-    set_setting("auto_refresh", auto_refresh or "30")
-    set_setting("default_view", default_view or "table")
-    set_setting("dashboard_style", dashboard_style or "advanced")
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = ""):
+    set_setting("auto_refresh", auto_refresh)
+    set_setting("default_view", default_view)
+    set_setting("dashboard_style", dashboard_style)
     set_setting("theme", theme if theme in ("light", "dark") else "light")
     set_setting("language", language if language in ("he", "en") else "he")
-    set_setting("discovery_mode", discovery_mode if discovery_mode in ("auto_manual", "manual_only", "auto_only") else "auto_manual")
-    set_discovery_protocols(discovery_protocols or KNOWN_PROTOCOLS)
     if networks.strip():
         save_networks(networks)
-    try:
-        data = json.loads(unquote(network_names or "{}"))
-        if isinstance(data, dict):
-            set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
-    except Exception:
-        pass
-    return {"ok": True, "networks": get_networks(), "network_names": get_network_names(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols()}
+    return {"ok": True, "networks": get_networks()}
 
 
 @app.get("/api/save_networks")
-def api_save_networks(networks: str = "", network_names: str = ""):
-    saved = save_networks(networks)
-    try:
-        data = json.loads(unquote(network_names or "{}"))
-        if isinstance(data, dict):
-            set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
-    except Exception:
-        pass
-    return {"ok": True, "networks": saved, "network_names": get_network_names()}
+def api_save_networks(networks: str = ""):
+    return {"ok": True, "networks": save_networks(networks)}
 
 
 init_db()
