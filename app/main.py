@@ -18,7 +18,7 @@ from urllib.request import Request, urlopen
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.0.3"
+APP_VERSION = "4.0.4"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -137,6 +137,7 @@ DEFAULT_SETTINGS = {
     "default_view": "table",
     "dashboard_style": "advanced",
     "networks_json": json.dumps(HOMEII_NETWORKS),
+    "network_names_json": json.dumps({}),
 }
 
 
@@ -154,6 +155,7 @@ def init_db() -> None:
         try:
             conn.executescript(SCHEMA)
             ensure_column(conn, "devices", "approved", "approved INTEGER DEFAULT 0")
+            ensure_column(conn, "devices", "assigned_network", "assigned_network TEXT DEFAULT ''")
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
                     "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v)
@@ -486,7 +488,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "updated_at": int(row["updated_at"] or 0),
         "source": row["source"] or "",
         "notes": row["notes"] or "",
-        "assigned_network": assigned_network_for_ip(row["ip"]),
+        "assigned_network": row["assigned_network"] if "assigned_network" in row.keys() and (row["assigned_network"] or "").strip() else assigned_network_for_ip(row["ip"]),
         "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
     }
@@ -657,22 +659,22 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "tags": []
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "tags": []
         }
         base.update(fields)
         conn.execute(
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,tags_json
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
               pinned=excluded.pinned, manual=excluded.manual, ignored=excluded.ignored, approved=excluded.approved,
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
-              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, tags_json=excluded.tags_json
+              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network, tags_json=excluded.tags_json
             """,
             (
                 ip,
@@ -1093,6 +1095,7 @@ def status_payload() -> Dict[str, Any]:
         "alerts": alerts,
         "scan": scan_state,
         "settings": {k: get_setting(k, v) for k, v in DEFAULT_SETTINGS.items()},
+        "network_names": get_network_names(),
     }
 
 
@@ -1155,7 +1158,7 @@ def api_settings():
     conn = db()
     try:
         rows = conn.execute("SELECT key, value FROM settings ORDER BY key").fetchall()
-        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": HOMEII_NETWORKS, "db_path": str(DB_PATH)}
+        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": get_networks(), "network_names": get_network_names(), "db_path": str(DB_PATH)}
     finally:
         conn.close()
 
@@ -1252,7 +1255,7 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = ""):
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", pinned: int = -1, critical: int = -1):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -1261,7 +1264,12 @@ def api_update(ip: str, name: str = "", category: str = "", tags: str = "", note
             d["name"] = unquote(name)
             d["category"] = unquote(category)
             d["notes"] = unquote(notes)
+            d["assigned_network"] = unquote(assigned_network)
             d["tags"] = [x.strip() for x in unquote(tags).split(",") if x.strip()]
+            if pinned in (0,1):
+                d["pinned"] = bool(pinned)
+            if critical in (0,1):
+                d["critical"] = bool(critical)
             d["updated_at"] = now_ts()
             upsert_device(ip, d)
         return {"ok": True}
@@ -1361,7 +1369,7 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = ""):
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = "", network_names: str = ""):
     set_setting("auto_refresh", auto_refresh)
     set_setting("default_view", default_view)
     set_setting("dashboard_style", dashboard_style)
@@ -1369,7 +1377,13 @@ def api_save_settings(auto_refresh: str = "30", default_view: str = "table", das
     set_setting("language", language if language in ("he", "en") else "he")
     if networks.strip():
         save_networks(networks)
-    return {"ok": True, "networks": get_networks()}
+    try:
+        data = json.loads(unquote(network_names or "{}"))
+        if isinstance(data, dict):
+            set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
+    except Exception:
+        pass
+    return {"ok": True, "networks": get_networks(), "network_names": get_network_names()}
 
 
 @app.get("/api/save_networks")
