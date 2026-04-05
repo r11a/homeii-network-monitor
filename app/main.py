@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.6.0"
+APP_VERSION = "4.7.0"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -58,6 +58,67 @@ scan_state = {
 }
 _dns_cache: Dict[str, str] = {}
 _vendor_cache: Dict[str, str] = {}
+
+def try_command_output(cmd: list[str], timeout: int = 2) -> str:
+    try:
+        return subprocess.check_output(cmd, stderr=subprocess.DEVNULL, timeout=timeout).decode("utf-8", "ignore")
+    except Exception:
+        return ""
+
+
+def resolve_hostname_enriched(ip: str) -> str:
+    # Reverse DNS
+    try:
+        host, _, _ = socket.gethostbyaddr(ip)
+        host = short_hostname(host)
+        if host:
+            return host
+    except Exception:
+        pass
+
+    # nslookup
+    out = try_command_output(["nslookup", ip], timeout=2)
+    for line in out.splitlines():
+        if "name =" in line:
+            host = short_hostname(line.split("name =", 1)[1].strip().rstrip("."))
+            if host:
+                return host
+
+    # getent hosts
+    out = try_command_output(["getent", "hosts", ip], timeout=2)
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 2:
+            host = short_hostname(parts[1])
+            if host:
+                return host
+
+    # avahi / mDNS
+    out = try_command_output(["avahi-resolve-address", ip], timeout=2)
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 2:
+            host = short_hostname(parts[-1])
+            if host:
+                return host
+
+    # NetBIOS (BusyBox image may not have it, harmless fallback)
+    out = try_command_output(["nmblookup", "-A", ip], timeout=2)
+    for line in out.splitlines():
+        if "<00>" in line and "GROUP" not in line:
+            host = short_hostname(line.strip().split()[0])
+            if host:
+                return host
+
+    return ""
+
+
+def arp_identity_for_ip(ip: str) -> dict[str, str]:
+    for item in arp_scan_networks() + read_proc_arp():
+        if item.get("ip") == ip:
+            mac = normalize_mac(item.get("mac", ""))
+            return {"mac": mac, "vendor": vendor_from_mac(mac) if mac else ""}
+    return {"mac": "", "vendor": ""}
 
 
 def db() -> sqlite3.Connection:
@@ -319,11 +380,13 @@ def choose_display_name(name: str, hostname: str, vendor: str, ip: str) -> str:
         return raw_name
     if raw_host:
         return raw_host
-    if raw_vendor and raw_vendor not in ("Private / Randomized",):
+    if raw_vendor:
         try:
             suffix = str(ip).split('.')[-1]
         except Exception:
             suffix = ""
+        if raw_vendor == "Private / Randomized":
+            return f"Device {suffix}".strip() or "Device"
         return f"{raw_vendor} {suffix}".strip()
     return (ip or raw_name or raw_host or raw_vendor or "").strip()
 
@@ -332,19 +395,7 @@ def choose_display_name(name: str, hostname: str, vendor: str, ip: str) -> str:
 def reverse_dns(ip: str) -> str:
     if ip in _dns_cache:
         return _dns_cache[ip]
-    host = ""
-    try:
-        host, _, _ = socket.gethostbyaddr(ip)
-        host = short_hostname(host)
-    except Exception:
-        try:
-            out = subprocess.check_output(["nslookup", ip], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8", "ignore")
-            for line in out.splitlines():
-                if "name =" in line:
-                    host = short_hostname(line.split("name =", 1)[1].strip().rstrip("."))
-                    break
-        except Exception:
-            host = ""
+    host = resolve_hostname_enriched(ip)
     _dns_cache[ip] = host
     return host
 
@@ -398,6 +449,23 @@ def vendor_from_mac(mac: str) -> str:
         "1c:69:7a": "Intel",
         "f4:cf:a2": "Espressif",
         "e4:60:17": "Espressif",
+        "7c:dd:90": "Apple",
+        "d8:96:95": "Apple",
+        "10:27:f5": "Apple",
+        "b0:95:75": "Samsung",
+        "2c:54:cf": "Samsung",
+        "cc:2d:e0": "Huawei",
+        "50:d4:f7": "Xiaomi",
+        "64:16:66": "Xiaomi",
+        "84:16:f9": "Sonos",
+        "b8:e9:37": "Sonos",
+        "18:b4:30": "Nest",
+        "d4:f5:47": "Amazon",
+        "44:65:0d": "Amazon",
+        "08:66:98": "TP-Link",
+        "50:c7:bf": "TP-Link",
+        "00:e0:4c": "Realtek",
+        "3c:84:6a": "Hon Hai / Foxconn",
     }
     vendor = vendors.get(prefix, "")
     _vendor_cache[prefix] = vendor
@@ -870,6 +938,10 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         host = reverse_dns(ip) if "dns" in protocols else (row["hostname"] if row else "")
         vendor = row["vendor"] if row else ""
         mac = row["mac"] if row else ""
+        if not mac or not vendor:
+            ident = arp_identity_for_ip(ip)
+            mac = mac or ident.get("mac", "")
+            vendor = vendor or ident.get("vendor", "")
         name = choose_display_name(row["name"] if row else "", host, vendor, ip)
         category = row["category"] if row and row["category"] else auto_category(f"{name} {host}", vendor)
         is_new = row is None
@@ -944,6 +1016,8 @@ def run_full_scan(mode: str = "manual") -> None:
                     ts = now_ts()
                     host = reverse_dns(item["ip"]) if "dns" in protocols else (row["hostname"] if row else "")
                     vendor = item["vendor"] if "vendor" in protocols else (row["vendor"] if row else "")
+                    if not vendor and item.get("mac"):
+                        vendor = vendor_from_mac(item["mac"])
                     name = choose_display_name(row["name"] if row else "", host, vendor, item["ip"])
                     category = row["category"] if row and row["category"] else auto_category(name, vendor)
                     approved = bool(row["approved"]) if row and "approved" in row.keys() else False
