@@ -17,7 +17,7 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.3.1"
+APP_VERSION = "4.3.2"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -497,6 +497,19 @@ def log_event(level: str, message: str, event_type: str, ip: str = "") -> None:
 
 
 
+
+
+def log_system_event(level: str, message: str, event_type: str) -> None:
+    log_event(level, message, event_type, "")
+
+def db_status_payload() -> dict:
+    try:
+        exists = DB_PATH.exists()
+        size = DB_PATH.stat().st_size if exists else 0
+        return {"exists": exists, "size": size, "path": str(DB_PATH)}
+    except Exception:
+        return {"exists": False, "size": 0, "path": str(DB_PATH)}
+
 def create_alert(ip: str, severity: str, title: str, message: str) -> None:
     with _db_lock:
         conn = db()
@@ -891,6 +904,7 @@ def run_full_scan(mode: str = "manual") -> None:
     if scan_state["running"]:
         return
     scan_state.update({"running": True, "last_started": now_ts(), "last_mode": mode, "last_error": ""})
+    log_system_event("info", f"Scan started ({mode})", "scan_started")
     try:
         protocols = set(get_discovery_protocols())
         discovery_mode = get_discovery_mode()
@@ -960,6 +974,9 @@ def run_full_scan(mode: str = "manual") -> None:
     finally:
         scan_state["running"] = False
         scan_state["last_finished"] = now_ts()
+        dbs = db_status_payload()
+        size_kb = round((dbs.get("size") or 0)/1024, 1)
+        log_system_event("info", f"Scan finished ({mode}) • DB {'OK' if dbs.get('exists') else 'MISSING'} • {size_kb} KB", "scan_finished")
 
 
 def monitor_one(ip: str) -> None:
@@ -1130,6 +1147,8 @@ def status_payload() -> Dict[str, Any]:
         "network_names": get_network_names(),
         "discovery_mode": get_discovery_mode(),
         "discovery_protocols": get_discovery_protocols(),
+        "db_ok": DB_PATH.exists(),
+        "db_path": str(DB_PATH),
     }
 
 
