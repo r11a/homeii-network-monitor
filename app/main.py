@@ -60,6 +60,8 @@ scan_state = {
     "last_finished": 0,
     "last_mode": "idle",
     "last_error": "",
+    "target_count": 0,
+    "target_networks": [],
 }
 _dns_cache: Dict[str, str] = {}
 
@@ -637,6 +639,81 @@ def get_network_names() -> Dict[str, str]:
         pass
     return {}
 
+
+def normalize_network_name_map(raw: Any, allowed_networks: list[str] | None = None) -> Dict[str, str]:
+    allowed = set(allowed_networks or [])
+    if not isinstance(raw, dict):
+        return {}
+    normalized: Dict[str, str] = {}
+    for key, value in raw.items():
+        alias = str(value or "").strip()
+        if not alias:
+            continue
+        try:
+            cidr = str(ipaddress.ip_network(str(key).strip(), strict=False))
+        except Exception:
+            continue
+        if allowed and cidr not in allowed:
+            continue
+        normalized[cidr] = alias
+    return normalized
+
+
+def estimated_hosts_for_network(cidr: str) -> int:
+    try:
+        network = ipaddress.ip_network(cidr, strict=False)
+    except Exception:
+        return 0
+    if network.version != 4:
+        return 0
+    if network.num_addresses <= 2:
+        return int(network.num_addresses)
+    return max(0, int(network.num_addresses) - 2)
+
+
+def network_stats_payload(devices: list[Dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    rows = devices if devices is not None else get_devices()
+    names = get_network_names()
+    stats: dict[str, dict[str, Any]] = {}
+    for cidr in get_networks():
+        stats[cidr] = {
+            "cidr": cidr,
+            "label": names.get(cidr, "").strip() or cidr,
+            "hosts": estimated_hosts_for_network(cidr),
+            "devices": 0,
+            "online": 0,
+            "offline": 0,
+            "new": 0,
+            "critical": 0,
+        }
+    for device in rows:
+        cidr = (device.get("assigned_network") or "").strip()
+        if not cidr:
+            continue
+        item = stats.setdefault(
+            cidr,
+            {
+                "cidr": cidr,
+                "label": names.get(cidr, "").strip() or cidr,
+                "hosts": estimated_hosts_for_network(cidr),
+                "devices": 0,
+                "online": 0,
+                "offline": 0,
+                "new": 0,
+                "critical": 0,
+            },
+        )
+        item["devices"] += 1
+        if device.get("status") == "online":
+            item["online"] += 1
+        if device.get("status") == "offline":
+            item["offline"] += 1
+        if device.get("status") == "new":
+            item["new"] += 1
+        if device.get("critical"):
+            item["critical"] += 1
+    return sorted(stats.values(), key=lambda item: item["cidr"])
+
 def get_discovery_mode() -> str:
     mode = (get_setting("discovery_mode", "auto_manual") or "auto_manual").strip()
     return mode if mode in ("auto_manual", "manual_only", "auto_only") else "auto_manual"
@@ -685,11 +762,54 @@ def infer_assigned_network(ip: str) -> str:
     return ""
 
 
+def infer_assigned_network_for_list(ip: str, networks: list[str] | None = None) -> str:
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+    except Exception:
+        return ""
+    for net in (networks or get_networks()):
+        try:
+            if ip_obj in ipaddress.ip_network(net, strict=False):
+                return net
+        except Exception:
+            continue
+    return ""
+
+
+def refresh_assigned_networks(networks: list[str] | None = None) -> int:
+    monitored = list(networks or get_networks())
+    monitored_set = set(monitored)
+    conn = db()
+    try:
+        rows = conn.execute("SELECT ip, assigned_network FROM devices").fetchall()
+        changed = 0
+        for row in rows:
+            current = (row["assigned_network"] or "").strip()
+            inferred = infer_assigned_network_for_list(row["ip"], monitored)
+            should_update = (
+                current != inferred
+                and (
+                    not current
+                    or current not in monitored_set
+                )
+            )
+            if not should_update:
+                continue
+            conn.execute("UPDATE devices SET assigned_network=? WHERE ip=?", (inferred, row["ip"]))
+            changed += 1
+        if changed:
+            conn.commit()
+        return changed
+    finally:
+        conn.close()
+
+
 def save_networks(raw: list[str] | str) -> list[str]:
     nets = normalize_networks(raw)
     if not nets:
         nets = normalize_networks(HOMEII_NETWORKS) or ["192.168.1.0/24"]
     set_setting("networks_json", json.dumps(nets))
+    log_system_event("info", f"Saved {len(nets)} monitored network(s): {', '.join(nets)}", "networks_saved")
     return nets
 
 
@@ -924,21 +1044,29 @@ def run_full_scan(mode: str = "manual") -> None:
     try:
         protocols = set(get_discovery_protocols())
         discovery_mode = get_discovery_mode()
+        monitored_networks = get_networks()
+        scan_state["target_networks"] = monitored_networks
         discover_special_hosts()
         candidates: Dict[str, str] = {}
         if "ping" in protocols:
-            for net in get_networks():
+            for net in monitored_networks:
                 try:
                     network = ipaddress.ip_network(net, strict=False)
                     for ip in network.hosts():
                         candidates.setdefault(str(ip), mode)
                 except Exception as e:
                     scan_state["last_error"] = str(e)
+        scan_state["target_count"] = len(candidates)
+        log_system_event(
+            "info",
+            f"Scan targets prepared: {scan_state['target_count']} IPs across {len(monitored_networks)} network(s)",
+            "scan_targets",
+        )
         with ThreadPoolExecutor(max_workers=THREADS) as ex:
             for ip, src in candidates.items():
                 ex.submit(scan_candidate_ip, ip, src)
         if "arp" in protocols or "vendor" in protocols:
-            networks = [ipaddress.ip_network(n, strict=False) for n in get_networks()]
+            networks = [ipaddress.ip_network(n, strict=False) for n in monitored_networks]
             arp_items: Dict[str, Dict[str, str]] = {}
             for item in arp_scan_networks() + read_proc_arp():
                 if item.get("ip"):
@@ -1163,6 +1291,7 @@ def status_payload() -> Dict[str, Any]:
         "scan": scan_state,
         "settings": {k: get_setting(k, v) for k, v in DEFAULT_SETTINGS.items()},
         "network_names": get_network_names(),
+        "network_stats": network_stats_payload(devices),
         "discovery_mode": get_discovery_mode(),
         "discovery_protocols": get_discovery_protocols(),
         "db_ok": DB_PATH.exists(),
@@ -1610,27 +1739,31 @@ def api_save_settings(auto_refresh: str = "30", default_view: str = "table", das
     set_setting("language", language if language in ("he", "en") else "he")
     set_setting("discovery_mode", discovery_mode if discovery_mode in ("auto_manual", "manual_only", "auto_only") else "auto_manual")
     set_discovery_protocols(discovery_protocols or KNOWN_PROTOCOLS)
+    saved_networks = get_networks()
+    reassigned = 0
     if networks.strip():
-        save_networks(networks)
+        saved_networks = save_networks(networks)
+        reassigned = refresh_assigned_networks(saved_networks)
     try:
         data = json.loads(unquote(network_names or "{}"))
-        if isinstance(data, dict):
-            set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
+        normalized_names = normalize_network_name_map(data, saved_networks)
+        set_setting("network_names_json", json.dumps(normalized_names, ensure_ascii=False))
     except Exception:
         pass
-    return {"ok": True, "networks": get_networks(), "network_names": get_network_names(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols()}
+    return {"ok": True, "networks": get_networks(), "network_names": get_network_names(), "network_stats": network_stats_payload(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "reassigned": reassigned}
 
 
 @app.get("/api/save_networks")
 def api_save_networks(networks: str = "", network_names: str = ""):
     saved = save_networks(networks)
+    reassigned = refresh_assigned_networks(saved)
     try:
         data = json.loads(unquote(network_names or "{}"))
-        if isinstance(data, dict):
-            set_setting("network_names_json", json.dumps(data, ensure_ascii=False))
+        normalized_names = normalize_network_name_map(data, saved)
+        set_setting("network_names_json", json.dumps(normalized_names, ensure_ascii=False))
     except Exception:
         pass
-    return {"ok": True, "networks": saved, "network_names": get_network_names()}
+    return {"ok": True, "networks": saved, "network_names": get_network_names(), "network_stats": network_stats_payload(), "reassigned": reassigned}
 
 
 init_db()
