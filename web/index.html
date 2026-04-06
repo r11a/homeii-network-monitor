@@ -160,7 +160,10 @@ body.dark{
 .d-right{direction:rtl;text-align:right;min-width:0}
 .status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;background:rgba(255,255,255,.03)}
 .status-dot{width:12px;height:12px;border-radius:50%;background:var(--red)}
-.dashboard-card.online .status-dot{background:var(--green)} .dashboard-card.offline .status-dot{background:var(--red)} .dashboard-card.new .status-dot{background:var(--blue)} .dashboard-card.unstable .status-dot{background:var(--orange)} .dashboard-card.gold .status-dot{background:var(--gold)}
+.status-dot.online{background:var(--green);animation:pulseStatus 1.6s ease-in-out infinite}
+.status-dot.offline{background:var(--red);animation:pulseStatus 1.25s ease-in-out infinite}
+.status-dot.unstable{background:var(--orange);animation:pulseStatus 1.35s ease-in-out infinite}
+.status-dot.new{background:var(--green)}
 .d-name{margin:0;font-size:24px;line-height:1.05;font-weight:900;word-break:break-word}
 .d-ip{margin-top:8px;font-size:15px;direction:ltr;color:var(--muted)}
 .d-meta{font-size:13px;color:var(--muted);margin-top:10px}
@@ -295,6 +298,24 @@ body:not(.dark) .metric,
 body:not(.dark) .badge,
 body:not(.dark) .status-pill{
   background:rgba(245,249,255,.94);
+}
+body.viewer-mode .actionbar,
+body.viewer-mode .kpis,
+body.viewer-mode #tab-dashboard,
+body.viewer-mode #tab-devices,
+body.viewer-mode #tab-alerts,
+body.viewer-mode #tab-settings{display:none !important}
+body.viewer-mode .main-nav{display:grid;grid-template-columns:1fr}
+body.viewer-mode .main-nav .nav-btn:not([data-tab="viewer"]){display:none}
+body.viewer-mode .top{grid-template-columns:1fr}
+body.viewer-mode .hero{padding:18px 22px}
+body.viewer-mode .hero-sub{display:block}
+body.viewer-mode .sidebar{gap:18px}
+
+@keyframes pulseStatus{
+  0%{transform:scale(.92);opacity:.65}
+  50%{transform:scale(1.08);opacity:1}
+  100%{transform:scale(.92);opacity:.65}
 }
 
 .modal.hidden{display:none}.modal{position:fixed;inset:0;z-index:2000}.modal-backdrop{position:absolute;inset:0;background:rgba(5,10,20,.45);backdrop-filter:blur(4px)}.modal-card{position:relative;max-width:760px;margin:8vh auto;background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:20px 22px;z-index:2}.modal-card input,.modal-card select,.modal-card textarea{background:var(--bg);color:var(--text);border:1px solid var(--line2)}.modal-card label,.modal-card small,.modal-card .muted{color:var(--muted)}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px}.msg.show{display:block}.msg.ok{background:rgba(78,212,138,.08);border-color:rgba(78,212,138,.24)}.msg.err{background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.24)}
@@ -595,6 +616,8 @@ function setText(id,val){const el=qs(id); if(el) el.textContent=val}
 function setPlaceholder(id,val){const el=qs(id); if(el) el.placeholder=val}
 function setOptText(id,idx,val){const el=qs(id); if(el && el.options && el.options[idx]) el.options[idx].text=val}
 const state={status:null,devices:[],alerts:[],events:[],settings:{},activeFilter:'',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null};
+const normalizedPath=(location.pathname||'').replace(/\/+$/,'');
+const directViewerMode=(normalizedPath.endsWith('/viewer')||normalizedPath.endsWith('/viewer.html'));
 const I18N={
   he:{
     brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
@@ -605,7 +628,7 @@ const I18N={
     networks:"רשתות",networksSub:"הגדר את כל טווחי הרשת שברצונך לסרוק.",manualDevice:"התקן ידני",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"שם",manualCategory:"קטגוריה",manualNotes:"הערות",addDevice:"הוסף התקן",assignedNetwork:"שיוך לרשת",flags:"דגלים",save:"שמור",close:"סגור",editDeviceTitle:"עריכת התקן",appearancePreview:"תצוגה פעילה",activeTheme:"ערכת נושא פעילה",runScanNow:"שמור והפעל סריקה",
     appearance:"מראה",appearanceSub:"בחר ערכת נושא והעדפות תצוגה.",dashboardStyle:"סגנון דשבורד",saveSettings:"שמור הגדרות",saveNetworks:"שמור רשתות",system:"מערכת",systemSub:"מידע מערכת, מסד הנתונים וסטטוס סריקה.",
     statusText:"סטטוס",networksText:"רשתות",discoveryMode:"מצב גילוי",protocols:"פרוטוקולי גילוי",modeAutoManual:"אוטומטי + ידני",modeManualOnly:"ידני בלבד",modeAutoOnly:"אוטומטי בלבד",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"זיהוי שרת/שער",protoVendor:"זיהוי יצרן",scanStarted:"הסריקה התחילה",deviceAdded:"התקן נוסף",deviceApproved:"ההתקן אושר",allApproved:"כל ההתקנים החדשים אושרו",settingsSaved:"ההגדרות נשמרו",networksSaved:"הרשתות נשמרו",
-    lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"פינג",pin:"נעץ",unpin:"בטל נעיצה",edit:"ערוך",remove:"הסר",accept:"אשר",criticalMark:"סמן קריטי",criticalUnmark:"בטל קריטי",yes:"כן",manualIp:"כתובת IP",
+    lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"פינג",pin:"נעץ",unpin:"בטל נעיצה",edit:"ערוך",remove:"הסר",accept:"אשר",addShort:"הוסף",criticalMark:"סמן קריטי",criticalUnmark:"בטל קריטי",yes:"כן",manualIp:"כתובת IP",
     status_online:"מחובר",status_offline:"מנותק",status_unstable:"לא יציב",status_new:"חדש",status_unknown:"לא ידוע",ipRequired:"חובה להזין כתובת IP",running:"רץ",idle:"מוכן",
     noDevices:"לא נמצאו התקנים בתוצאות הסינון",noAlerts:"אין התראות",noEvents:"אין אירועים",noDashboardDevices:"אין מכשירים להצגה",noAttentionDevices:"אין התקנים שדורשים טיפול כרגע",noNetworkSummary:"אין נתוני רשת להצגה",noViewerItems:"אין כרגע פריטים להצגה",resolve:"סגור",nameCol:"שם",ipCol:"IP",statusCol:"סטטוס",categoryCol:"קטגוריה",vendorCol:"יצרן",macCol:"MAC",lastSeenCol:"נראה לאחרונה",actionsCol:"פעולות",
     version:"גרסה",db:"מסד נתונים",scanMode:"מצב סריקה",lastScanStarted:"סריקה אחרונה התחילה",lastScanFinished:"סריקה אחרונה הסתיימה",light:"בהיר",dark:"כהה",table:"טבלה",grid:"כרטיסים",advanced:"מתקדם",compact:"קומפקטי",optional:"אופציונלי",severity:"חומרה",updatedNow:"עודכן",networkCol:"רשת",details:"פרטים",alertSearch:"חיפוש בהתראות",eventSearch:"חיפוש באירועים",systemEvent:"אירוע מערכת",dbHealth:"מצב מסד הנתונים",scanSummary:"סיכום סריקה",productPolish:"ליטוש מוצר",sysVersionLabel:"גרסת מערכת",sysDbLabel:"מסד נתונים פעיל",sysNetworksLabel:"רשתות מנוטרות",sysScanModeLabel:"מצב סריקה נוכחי",sysScanStartedLabel:"זמן התחלת הסריקה האחרונה",sysScanFinishedLabel:"זמן סיום הסריקה האחרונה",networkNamesHint:"אם יש שם רשת, הוא יוצג בממשק במקום ה-CIDR",networkEditorTitle:"שיוך שמות לרשתות",networkManagerHint:"הוסף טווח רשת וכינוי באותה שורה. ניתן גם לערוך או למחוק לפני השמירה.",networkCidr:"טווח רשת (CIDR)",networkAlias:"כינוי רשת",addNetwork:"הוסף רשת",edit:"ערוך",delete:"מחק",saveNetworksOnly:"שמור רשתות",networkEmpty:"עדיין לא הוגדרו רשתות",settingsHelperNote:"שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים",saveAppearance:"שמור מראה"
@@ -619,7 +642,7 @@ const I18N={
     networks:"Networks",networksSub:"Configure all network ranges you want to scan.",manualDevice:"Manual Device",manualDeviceSub:"Add a device manually if it was not detected automatically.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"Add device",assignedNetwork:"Assigned Network",flags:"Flags",save:"Save",close:"Close",editDeviceTitle:"Edit Device",appearancePreview:"Active view",activeTheme:"Active theme",runScanNow:"Run scan now",
     appearance:"Appearance",appearanceSub:"Choose theme and display preferences.",dashboardStyle:"Dashboard style",saveSettings:"Save settings",saveNetworks:"Save networks only",system:"System",systemSub:"System information, database and scan status.",
     statusText:"Status",networksText:"Networks",discoveryMode:"Discovery mode",protocols:"Discovery protocols",modeAutoManual:"Auto + Manual",modeManualOnly:"Manual only",modeAutoOnly:"Auto only",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"Host/Gateway",protoVendor:"Vendor lookup",scanStarted:"Scan started",deviceAdded:"Device added",deviceApproved:"Device accepted",allApproved:"All new devices accepted",settingsSaved:"Settings saved",networksSaved:"Networks saved",
-    lastSeen:"Last seen",known:"Known",pending:"Pending",ping:"Ping",pin:"Pin",unpin:"Unpin",edit:"Edit",remove:"Remove",accept:"Accept",criticalMark:"Mark critical",criticalUnmark:"Unmark critical",yes:"Yes",manualIp:"IP Address",
+    lastSeen:"Last seen",known:"Known",pending:"Pending",ping:"Ping",pin:"Pin",unpin:"Unpin",edit:"Edit",remove:"Remove",accept:"Accept",addShort:"Add",criticalMark:"Mark critical",criticalUnmark:"Unmark critical",yes:"Yes",manualIp:"IP Address",
     status_online:"Online",status_offline:"Offline",status_unstable:"Unstable",status_new:"New",status_unknown:"Unknown",ipRequired:"IP address is required",running:"Running",idle:"Idle",
     noDevices:"No devices found",noAlerts:"No alerts",noEvents:"No events",noDashboardDevices:"No devices to display",noAttentionDevices:"No devices need attention right now",noNetworkSummary:"No network summary available",noViewerItems:"Nothing to show right now",resolve:"Resolve",nameCol:"Name",ipCol:"IP",statusCol:"Status",categoryCol:"Category",vendorCol:"Vendor",macCol:"MAC",lastSeenCol:"Last seen",actionsCol:"Actions",
     version:"Version",db:"DB",scanMode:"Scan mode",lastScanStarted:"Last scan started",lastScanFinished:"Last scan finished",light:"Light",dark:"Dark",table:"Table",grid:"Grid",advanced:"Advanced",compact:"Compact",optional:"Optional",severity:"Severity",updatedNow:"Updated",networkCol:"Network",details:"Details",alertSearch:"Search alerts",eventSearch:"Search events",systemEvent:"System event",dbHealth:"Database health",scanSummary:"Scan summary",productPolish:"Product polish",sysVersionLabel:"System version",sysDbLabel:"Active database",sysNetworksLabel:"Monitored networks",sysScanModeLabel:"Current scan mode",sysScanStartedLabel:"Last scan start time",sysScanFinishedLabel:"Last scan finish time",networkNamesHint:"If a network has a name, it will be shown in the UI instead of the CIDR",networkEditorTitle:"Network name mapping",networkManagerHint:"Add a network range and alias in one row. You can edit or remove entries before saving.",networkCidr:"Network range (CIDR)",networkAlias:"Network alias",addNetwork:"Add network",edit:"Edit",delete:"Delete",saveNetworksOnly:"Save networks only",networkEmpty:"No networks configured yet",settingsHelperNote:"Save each section after changes so the settings are written to the database",saveAppearance:"Save appearance"
@@ -629,7 +652,7 @@ function tr(key){const lang=(state.settings.language||'he');return (I18N[lang]&&
 function statusLabel(status){const map={online:'status_online',offline:'status_offline',unstable:'status_unstable',new:'status_new',unknown:'status_unknown'}; return tr(map[status]||'status_unknown')}
 function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function fmtTs(ts){if(!ts)return '—'; try{return new Date(Number(ts)*1000).toLocaleString((state.settings.language||'he')==='he'?'he-IL':'en-US')}catch{return String(ts)}}
-function timeAgo(ts){if(!ts)return '—'; const now=Math.floor(Date.now()/1000); const d=Math.max(0,now-Number(ts)); if(d<60)return `${d}s`; if(d<3600)return `${Math.floor(d/60)}m`; if(d<86400)return `${Math.floor(d/3600)}h`; return `${Math.floor(d/86400)}d`}
+function timeAgo(ts){if(!ts)return '—'; const now=Math.floor(Date.now()/1000); const d=Math.max(0,now-Number(ts)); const he=(state.settings.language||'he')==='he'; if(d<60)return `${d} ${he?'שניות':'sec'}`; if(d<3600)return `${Math.floor(d/60)} ${he?'דקות':'min'}`; if(d<86400)return `${Math.floor(d/3600)} ${he?'שעות':'hours'}`; return `${Math.floor(d/86400)} ${he?'ימים':'days'}`}
 async function api(url,options){const res=await fetch(url,{cache:'no-store',...(options||{})}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
 function switchTab(tab,btn){
   document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
@@ -637,6 +660,7 @@ function switchTab(tab,btn){
   const target=qs(`tab-${tab}`); if(target) target.classList.add('active');
   if(btn) btn.classList.add('active');
   const settingsMode = tab === 'settings';
+  applyViewerMode(directViewerMode && tab === 'viewer');
   setSidebarMode(settingsMode);
   document.body.classList.toggle('settings-mode', settingsMode);
   if(settingsMode){
@@ -644,10 +668,12 @@ function switchTab(tab,btn){
     const page=(activeSettingsBtn && activeSettingsBtn.dataset.settingsPage) || 'general';
     switchSettingsPage(page, activeSettingsBtn);
   }
-  const hash=`#${tab}`; if(location.hash!==hash) history.replaceState(null,'',hash);
+  const targetUrl=directViewerMode&&tab==='viewer'?location.pathname:`#${tab}`;
+  if((directViewerMode&&location.pathname!=='/viewer')||(!directViewerMode&&location.hash!==`#${tab}`)) history.replaceState(null,'',targetUrl);
 }
 function setTheme(theme){document.body.classList.toggle('dark',theme==='dark')}
 function applyDashboardStyle(style){document.body.classList.toggle('compact-dashboard',style==='compact')}
+function applyViewerMode(enabled){document.body.classList.toggle('viewer-mode',!!enabled)}
 function scheduleAutoRefresh(){
   if(state.refreshTimer){ clearInterval(state.refreshTimer); state.refreshTimer=null; }
   const seconds=Math.max(5, Number(state.settings.auto_refresh||30) || 30);
@@ -706,7 +732,7 @@ function applyKpiFilter(filter){state.activeFilter=filter||''; qs('filterStatus'
 function clearFilters(){state.activeFilter=''; qs('searchText').value=''; qs('filterStatus').value=''; qs('filterCategory').value=''; renderDevices(); document.querySelectorAll('.kpi').forEach(el=>el.classList.remove('active'))}
 function getDashboardDevices(){const rows=[...state.devices]; rows.sort((a,b)=>{const score=d=>((d.status==='offline')?100:0)+((d.status==='new')?60:0)+(d.critical?40:0)+(d.pinned?20:0)+((Date.now()/1000-Number(d.last_seen||0)<600)?10:0); return score(b)-score(a)}); return rows.slice(0,6)}
 function getPriorityDevices(){return [...state.devices].filter(d=>d.status==='offline'||d.critical||d.status==='new').sort((a,b)=>{const score=d=>((d.status==='offline')?100:0)+(d.critical?60:0)+((d.status==='new')?40:0)+(d.pinned?10:0); return score(b)-score(a)}).slice(0,8)}
-function dashboardCard(d){const status=String(d.status||'unknown'); const classes=['dashboard-card']; if(['online','offline','new','unstable'].includes(status)) classes.push(status); if(d.pinned||d.critical) classes.push('gold'); const statusText=d.critical?tr('critical'):(d.pinned?tr('pinned'):statusLabel(status)); return `<div class="${classes.join(' ')}"><div class="d-left"><div class="status-pill"><span class="status-dot"></span><span>${escapeHtml(statusText)}</span></div><div class="d-meta"><b>${escapeHtml(tr('lastSeen'))}:</b> ${timeAgo(d.last_seen)}</div><div class="d-actions"><button class="btn small" onclick="pingNow('${d.ip}')">${escapeHtml(tr('ping'))}</button><button class="btn small" onclick="togglePin('${d.ip}')">${escapeHtml(d.pinned?tr('unpin'):tr('pin'))}</button><button class="btn small" onclick="editDevice('${d.ip}')">${escapeHtml((state.settings.language||'he')==='he'?'ערוך':'Edit')}</button></div></div><div class="d-right"><h3 class="d-name"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></h3>${(d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip))?`<div class="d-sub">${escapeHtml(d.subtitle)}</div>`:''}<div class="d-ip">${escapeHtml(d.ip)}</div></div></div>`}
+function dashboardCard(d){const status=String(d.status||'unknown'); const classes=['dashboard-card']; if(['online','offline','new','unstable'].includes(status)) classes.push(status); if(d.pinned||d.critical) classes.push('gold'); const dotClass=(status==='offline'?'offline':status==='unstable'?'unstable':status==='new'?'new':'online'); const statusText=d.critical?tr('critical'):(d.pinned?tr('pinned'):statusLabel(status)); const addBtn=status==='new'?`<button class="btn small green" onclick="acceptDevice('${d.ip}')">${escapeHtml(tr('addShort'))}</button>`:''; return `<div class="${classes.join(' ')}"><div class="d-left"><div class="status-pill"><span class="status-dot ${dotClass}"></span><span>${escapeHtml(statusText)}</span></div><div class="d-meta"><b>${escapeHtml(tr('lastSeen'))}:</b> ${timeAgo(d.last_seen)}</div><div class="d-actions">${addBtn}<button class="btn small" onclick="pingNow('${d.ip}')">${escapeHtml(tr('ping'))}</button><button class="btn small" onclick="togglePin('${d.ip}')">${escapeHtml(d.pinned?tr('unpin'):tr('pin'))}</button><button class="btn small" onclick="editDevice('${d.ip}')">${escapeHtml((state.settings.language||'he')==='he'?'ערוך':'Edit')}</button></div></div><div class="d-right"><h3 class="d-name"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></h3>${(d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip))?`<div class="d-sub">${escapeHtml(d.subtitle)}</div>`:''}<div class="d-ip">${escapeHtml(d.ip)}</div></div></div>`}
 function priorityRow(d){const chips=[]; if(d.status==='offline') chips.push(`<span class="chip offline">${escapeHtml(tr('status_offline'))}</span>`); if(d.critical) chips.push(`<span class="chip critical">${escapeHtml(tr('critical'))}</span>`); if(d.status==='new') chips.push(`<span class="chip new">${escapeHtml(tr('new'))}</span>`); if(d.pinned) chips.push(`<span class="chip">${escapeHtml(tr('pinned'))}</span>`); return `<div class="smart-row"><div class="smart-main"><div class="smart-title"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></div><div class="smart-sub"><span>${escapeHtml(d.ip)}</span>${d.vendor?`<span>${escapeHtml(d.vendor)}</span>`:''}${d.assigned_network?`<span>${escapeHtml(displayNetwork(d.assigned_network))}</span>`:''}</div></div><div class="smart-meta"><div class="badges">${chips.join('')}</div><div class="smart-sub">${escapeHtml(tr('lastSeen'))}: ${timeAgo(d.last_seen)}</div></div></div>`}
 function viewerDeviceRow(d){const chips=[]; if(d.status==='offline') chips.push(`<span class="chip offline">${escapeHtml(tr('status_offline'))}</span>`); if(d.status==='unstable') chips.push(`<span class="chip critical">${escapeHtml(tr('status_unstable'))}</span>`); if(d.status==='new') chips.push(`<span class="chip new">${escapeHtml(tr('new'))}</span>`); if(d.critical) chips.push(`<span class="chip critical">${escapeHtml(tr('critical'))}</span>`); if(d.pinned) chips.push(`<span class="chip">${escapeHtml(tr('pinned'))}</span>`); return `<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</div><div class="smart-sub"><span>${escapeHtml(d.ip)}</span>${d.vendor?`<span>${escapeHtml(d.vendor)}</span>`:''}${d.assigned_network?`<span>${escapeHtml(displayNetwork(d.assigned_network))}</span>`:''}</div></div><div class="smart-meta"><div class="badges">${chips.join('')}</div><div class="smart-sub">${escapeHtml(tr('lastSeen'))}: ${timeAgo(d.last_seen)}</div></div></div>`}
 function viewerEventRow(e){return `<div class="item viewer-event"><div class="item-head"><strong class="event-title">${escapeHtml(e.message||e.event_type||'')}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${escapeHtml(e.ip||'')} • ${fmtTs(e.ts)}</small></div>`}
@@ -889,7 +915,7 @@ async function saveSettings(){
   setTheme(theme); applyDashboardStyle(qs('setStyle').value); showMsg('settingsMessage',`${tr('settingsSaved')} • ${Number(result.reassigned||0)} DEV`); await refreshAll()
 }
 function editDevice(ip){openEditDevice(ip)}
-window.addEventListener('load', async()=>{qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); const hash=(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${hash}"]`); if(btn) switchTab(hash,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
+window.addEventListener('load', async()=>{qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
 </script>
 </body>
 </html>
