@@ -1582,6 +1582,115 @@ def status_payload() -> Dict[str, Any]:
     }
 
 
+def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, Any]:
+    hours = max(1, min(int(hours or 24), 72))
+    buckets = max(6, min(int(buckets or 24), 48))
+    now = now_ts()
+    window_start = now - hours * 3600
+    bucket_seconds = max(1, int((hours * 3600) / buckets))
+    bucket_points = [window_start + (idx * bucket_seconds) for idx in range(buckets)]
+
+    devices = get_devices()
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for device in devices:
+        key = (device.get("category") or "").strip()
+        grouped.setdefault(key, []).append(device)
+
+    history_by_ip: Dict[str, List[Dict[str, Any]]] = {}
+    ips = [device["ip"] for device in devices if device.get("ip")]
+    if ips:
+        placeholders = ",".join("?" for _ in ips)
+        conn = db()
+        try:
+            rows = conn.execute(
+                f"""
+                SELECT ip, ts, old_status, new_status
+                FROM device_history
+                WHERE kind='status' AND ip IN ({placeholders}) AND ts>=?
+                ORDER BY ts DESC
+                """,
+                (*ips, window_start),
+            ).fetchall()
+        finally:
+            conn.close()
+        for row in rows:
+            history_by_ip.setdefault(row["ip"], []).append(
+                {
+                    "ts": int(row["ts"] or 0),
+                    "old_status": row["old_status"] or "unknown",
+                    "new_status": row["new_status"] or "unknown",
+                }
+            )
+
+    def device_status_at(device: Dict[str, Any], at_ts: int) -> str:
+        status = device.get("status") or "unknown"
+        for event in history_by_ip.get(device["ip"], []):
+            if int(event["ts"] or 0) > at_ts:
+                status = event.get("old_status") or status
+            else:
+                break
+        return status or "unknown"
+
+    def aggregate_state(counts: Dict[str, int]) -> str:
+        if counts.get("offline", 0) > 0:
+            return "offline"
+        if counts.get("unstable", 0) > 0:
+            return "unstable"
+        if counts.get("new", 0) > 0:
+            return "new"
+        if counts.get("online", 0) > 0:
+            return "online"
+        return "unknown"
+
+    payload = []
+    for category, category_devices in grouped.items():
+        current_counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
+        for device in category_devices:
+            current_counts[device.get("status") or "unknown"] = current_counts.get(device.get("status") or "unknown", 0) + 1
+
+        series = []
+        for point in bucket_points:
+            counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
+            for device in category_devices:
+                historical_status = device_status_at(device, point)
+                counts[historical_status] = counts.get(historical_status, 0) + 1
+            series.append(
+                {
+                    "ts": point,
+                    "state": aggregate_state(counts),
+                    "counts": counts,
+                }
+            )
+
+        payload.append(
+            {
+                "category": category,
+                "total": len(category_devices),
+                "online": current_counts.get("online", 0),
+                "offline": current_counts.get("offline", 0),
+                "unstable": current_counts.get("unstable", 0),
+                "new": current_counts.get("new", 0),
+                "critical": sum(1 for device in category_devices if device.get("critical")),
+                "pinned": sum(1 for device in category_devices if device.get("pinned")),
+                "state": aggregate_state(current_counts),
+                "devices": [device["ip"] for device in category_devices],
+                "series": series,
+            }
+        )
+
+    def sort_key(item: Dict[str, Any]):
+        severity = {"offline": 0, "unstable": 1, "new": 2, "online": 3, "unknown": 4}
+        return (severity.get(item["state"], 9), -int(item["total"]), str(item["category"]).lower())
+
+    payload.sort(key=sort_key)
+    return {
+        "generated_at": now,
+        "hours": hours,
+        "bucket_seconds": bucket_seconds,
+        "categories": payload,
+    }
+
+
 def ha_summary_payload() -> Dict[str, Any]:
     status = status_payload()
     conn = db()
@@ -1714,6 +1823,12 @@ def logo():
 def api_status():
     ensure_background_workers()
     return status_payload()
+
+
+@app.get("/api/viewer/categories")
+def api_viewer_categories(hours: int = 24, buckets: int = 24):
+    ensure_background_workers()
+    return viewer_categories_payload(hours=hours, buckets=buckets)
 
 
 @app.get("/api/devices")
