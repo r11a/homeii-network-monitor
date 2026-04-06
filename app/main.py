@@ -12,9 +12,11 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import unquote
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, File, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
@@ -1583,12 +1585,21 @@ def status_payload() -> Dict[str, Any]:
 
 
 def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, Any]:
-    hours = max(1, min(int(hours or 24), 72))
-    buckets = max(6, min(int(buckets or 24), 48))
-    now = now_ts()
-    window_start = now - hours * 3600
-    bucket_seconds = max(1, int((hours * 3600) / buckets))
-    bucket_points = [window_start + (idx * bucket_seconds) for idx in range(buckets)]
+    tz_name = str(os.environ.get("TZ") or "Asia/Jerusalem")
+    try:
+        local_tz = ZoneInfo(tz_name)
+    except Exception:
+        local_tz = ZoneInfo("Asia/Jerusalem")
+
+    now = datetime.now(local_tz)
+    day_start_local = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    bucket_starts_local = [day_start_local + timedelta(hours=idx) for idx in range(24)]
+    bucket_points = [int(point.timestamp()) for point in bucket_starts_local]
+    bucket_seconds = 3600
+    window_start = bucket_points[0]
+    window_end = bucket_points[-1] + bucket_seconds
+    hours = 24
+    buckets = 24
 
     devices = get_devices()
     grouped: Dict[str, List[Dict[str, Any]]] = {}
@@ -1606,10 +1617,10 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                 f"""
                 SELECT ip, ts, old_status, new_status
                 FROM device_history
-                WHERE kind='status' AND ip IN ({placeholders}) AND ts>=?
-                ORDER BY ts DESC
+                WHERE kind='status' AND ip IN ({placeholders}) AND ts>=? AND ts<?
+                ORDER BY ts ASC
                 """,
-                (*ips, window_start),
+                (*ips, window_start, window_end),
             ).fetchall()
         finally:
             conn.close()
@@ -1624,7 +1635,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
 
     def device_status_at(device: Dict[str, Any], at_ts: int) -> str:
         status = device.get("status") or "unknown"
-        for event in history_by_ip.get(device["ip"], []):
+        for event in reversed(history_by_ip.get(device["ip"], [])):
             if int(event["ts"] or 0) > at_ts:
                 status = event.get("old_status") or status
             else:
@@ -1649,6 +1660,30 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             return 50.0
         return 0.0
 
+    def hourly_availability(device: Dict[str, Any], hour_start: int, hour_end: int) -> Dict[str, Any]:
+        status = device_status_at(device, hour_start)
+        cursor = hour_start
+        score_seconds = 0.0
+        events_in_hour = [
+            event
+            for event in history_by_ip.get(device["ip"], [])
+            if hour_start <= int(event["ts"] or 0) < hour_end
+        ]
+        for event in events_in_hour:
+            event_ts = int(event["ts"] or 0)
+            if event_ts > cursor:
+                score_seconds += ((event_ts - cursor) * availability_for_status(status)) / 100.0
+            status = event.get("new_status") or status
+            cursor = event_ts
+        if hour_end > cursor:
+            score_seconds += ((hour_end - cursor) * availability_for_status(status)) / 100.0
+        availability_pct = round((score_seconds / max(1, (hour_end - hour_start))) * 100, 1)
+        return {
+            "ts": hour_start,
+            "state": status,
+            "availability_pct": availability_pct,
+        }
+
     device_timelines: Dict[str, Dict[str, Any]] = {}
     summary_series = []
     summary_total = max(1, len(devices))
@@ -1657,16 +1692,9 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         series = []
         total_score = 0.0
         for point in bucket_points:
-            status = device_status_at(device, point)
-            availability_pct = availability_for_status(status)
-            total_score += availability_pct
-            series.append(
-                {
-                    "ts": point,
-                    "state": status,
-                    "availability_pct": availability_pct,
-                }
-            )
+            hour_data = hourly_availability(device, point, point + bucket_seconds)
+            total_score += float(hour_data["availability_pct"])
+            series.append(hour_data)
         device_timelines[device["ip"]] = {
             "ip": device["ip"],
             "category": device.get("category") or "",
@@ -1701,10 +1729,12 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         availability_total = 0.0
         for point in bucket_points:
             counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
+            availability_sum = 0.0
             for device in category_devices:
-                historical_status = device_status_at(device, point)
-                counts[historical_status] = counts.get(historical_status, 0) + 1
-            availability_pct = round((counts.get("online", 0) / max(1, len(category_devices))) * 100, 1)
+                device_point = device_timelines[device["ip"]]["series"][int((point - window_start) / bucket_seconds)]
+                counts[device_point["state"]] = counts.get(device_point["state"], 0) + 1
+                availability_sum += float(device_point["availability_pct"])
+            availability_pct = round(availability_sum / max(1, len(category_devices)), 1)
             availability_total += availability_pct
             series.append(
                 {
