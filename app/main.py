@@ -1664,6 +1664,8 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         status = device_status_at(device, hour_start)
         cursor = hour_start
         score_seconds = 0.0
+        offline_events = 0
+        unstable_events = 0
         events_in_hour = [
             event
             for event in history_by_ip.get(device["ip"], [])
@@ -1674,6 +1676,10 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             if event_ts > cursor:
                 score_seconds += ((event_ts - cursor) * availability_for_status(status)) / 100.0
             status = event.get("new_status") or status
+            if status == "offline":
+                offline_events += 1
+            elif status == "unstable":
+                unstable_events += 1
             cursor = event_ts
         if hour_end > cursor:
             score_seconds += ((hour_end - cursor) * availability_for_status(status)) / 100.0
@@ -1682,6 +1688,8 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             "ts": hour_start,
             "state": status,
             "availability_pct": availability_pct,
+            "offline_events": offline_events,
+            "unstable_events": unstable_events,
         }
 
     device_timelines: Dict[str, Dict[str, Any]] = {}
@@ -1705,17 +1713,23 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
     for point_index, point in enumerate(bucket_points):
         counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
         availability_sum = 0.0
+        offline_events = 0
+        unstable_events = 0
         for device in devices:
             device_point = device_timelines[device["ip"]]["series"][point_index]
             status = device_point["state"]
             counts[status] = counts.get(status, 0) + 1
             availability_sum += float(device_point["availability_pct"])
+            offline_events += int(device_point.get("offline_events") or 0)
+            unstable_events += int(device_point.get("unstable_events") or 0)
         summary_series.append(
             {
                 "ts": point,
                 "state": aggregate_state(counts),
                 "counts": counts,
                 "availability_pct": round(availability_sum / summary_total, 1),
+                "offline_events": offline_events,
+                "unstable_events": unstable_events,
             }
         )
 
@@ -1727,13 +1741,17 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
 
         series = []
         availability_total = 0.0
-        for point in bucket_points:
+        for point_index, point in enumerate(bucket_points):
             counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
             availability_sum = 0.0
+            offline_events = 0
+            unstable_events = 0
             for device in category_devices:
-                device_point = device_timelines[device["ip"]]["series"][int((point - window_start) / bucket_seconds)]
+                device_point = device_timelines[device["ip"]]["series"][point_index]
                 counts[device_point["state"]] = counts.get(device_point["state"], 0) + 1
                 availability_sum += float(device_point["availability_pct"])
+                offline_events += int(device_point.get("offline_events") or 0)
+                unstable_events += int(device_point.get("unstable_events") or 0)
             availability_pct = round(availability_sum / max(1, len(category_devices)), 1)
             availability_total += availability_pct
             series.append(
@@ -1742,6 +1760,8 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                     "state": aggregate_state(counts),
                     "counts": counts,
                     "availability_pct": availability_pct,
+                    "offline_events": offline_events,
+                    "unstable_events": unstable_events,
                 }
             )
 
