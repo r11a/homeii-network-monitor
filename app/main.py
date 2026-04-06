@@ -1689,7 +1689,7 @@ def root():
 
 @app.get("/settings.html")
 def settings_page():
-    return RedirectResponse(url="/#settings")
+    return FileResponse("/app/web/settings.html")
 
 
 @app.get("/viewer")
