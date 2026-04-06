@@ -1,9 +1,306 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=/#settings" />
-  <title>HOMEii Settings 5.0.0</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HOMEii Network Monitor Settings</title>
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#070b15; --bg2:#0c1220; --sidebar:#0d1324; --card:#11192c; --card2:#16213a;
+  --text:#f5f8ff; --muted:#8b9bbd; --line:rgba(148,163,184,.12); --line2:rgba(96,165,250,.30);
+  --blue:#7aa2ff; --green:#4ce1a6; --red:#ff7f96; --orange:#ffb648; --gold:#ffd56f; --cyan:#47d6ff;
+  --shadow:0 22px 54px rgba(0,0,0,.34);
+}
+body.light{
+  color-scheme: light;
+  --bg:#eef4fb; --bg2:#f7fbff; --sidebar:#f8fbff; --card:#ffffff; --card2:#f4f8fe;
+  --text:#18243d; --muted:#667795; --line:rgba(108,131,168,.18); --line2:rgba(59,130,246,.30);
+  --blue:#3268f5; --green:#19b97e; --red:#e35d79; --orange:#ea9d2f; --gold:#d6aa39; --cyan:#18b9d6;
+  --shadow:0 20px 42px rgba(107,132,176,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:Bahnschrift,"Segoe UI Variable","Trebuchet MS",system-ui,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(760px 340px at 100% -10%,rgba(91,140,255,.16),transparent 60%),
+    radial-gradient(620px 280px at -10% 10%,rgba(34,211,238,.12),transparent 60%),
+    linear-gradient(180deg,var(--bg),var(--bg2));
+  overflow:hidden;
+}
+.app{height:100vh;display:grid;grid-template-columns:280px 1fr}
+.sidebar{
+  height:100vh;padding:18px 14px;display:flex;flex-direction:column;gap:16px;
+  border-left:1px solid var(--line);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),
+    linear-gradient(180deg,var(--sidebar),rgba(10,15,28,.88));
+  backdrop-filter:blur(18px);
+}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 6px 10px}
+.brand-title{font-size:20px;font-weight:900;letter-spacing:-.03em}
+.brand-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.logo{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(91,140,255,.35)}
+.logo img{width:100%;height:100%;object-fit:contain}
+.nav{display:grid;gap:8px}
+.nav-btn{
+  width:100%;padding:13px 15px;border-radius:16px;cursor:pointer;text-align:right;color:var(--text);
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.nav-btn.active,.nav-btn:hover{transform:translateY(-1px);border-color:var(--line2);background:linear-gradient(180deg,rgba(91,140,255,.22),rgba(34,211,238,.08));box-shadow:0 10px 20px rgba(2,8,23,.18)}
+.sidebar-footer{margin-top:auto;display:grid;gap:10px}
+.info-card{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.info-card::before{content:'';position:absolute;inset:auto 0 0 0;height:3px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.info-card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.info-card .v{margin-top:8px;font-size:18px;font-weight:900}
+.health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(53,211,153,.65)}
+.main{height:100vh;overflow:auto;padding:20px}
+.top-shell,.panel,.btn,input,select,textarea{
+  border:1px solid var(--line);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01)),
+    linear-gradient(180deg,var(--card),var(--card2));
+  box-shadow:var(--shadow)
+}
+.top-shell,.panel{border-radius:24px}
+.top-shell{padding:18px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;position:relative;overflow:hidden;margin-bottom:16px}
+.top-shell::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.10),transparent 40%,rgba(34,211,238,.08));pointer-events:none}
+.hero{display:grid;gap:8px}
+.hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.045em;font-family:"Arial Nova","Aptos Display","Segoe UI Variable","Trebuchet MS",sans-serif}
+.hero-sub{margin:0;color:var(--muted);font-size:13px}
+.hero-meta{display:flex;gap:10px;flex-wrap:wrap}
+.hero-chip{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);font-size:12px;color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:10px 13px;border-radius:14px;color:var(--text);cursor:pointer;font:inherit}
+.btn.primary{background:linear-gradient(135deg,var(--blue),#355df5);border:none;color:#fff}
+.btn.green{background:linear-gradient(135deg,#1fcf8f,var(--green));border:none;color:#08131e}
+.page{display:none}
+.page.active{display:block}
+.panel{padding:24px}
+.panel-head{margin-bottom:18px}
+.panel-head h2{margin:0;font-size:22px;letter-spacing:-.02em}
+.panel-head p{margin:6px 0 0;font-size:14px;max-width:760px;color:var(--muted)}
+.settings-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.field{display:grid;gap:6px}
+.field label{font-size:12px;color:var(--muted)}
+input,select,textarea{padding:12px 14px;outline:none;width:100%;border-radius:14px;color:var(--text);font:inherit}
+textarea{min-height:120px;resize:vertical}
+.quick-actions{display:flex;gap:8px;flex-wrap:wrap}
+.msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px}
+.msg.show{display:block}
+.msg.ok{background:rgba(78,212,138,.08);border:1px solid rgba(78,212,138,.24)}
+.msg.err{background:rgba(255,107,120,.08);border:1px solid rgba(255,107,120,.24)}
+.network-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0 8px}
+.network-row{display:grid;grid-template-columns:1.2fr 1fr auto;gap:12px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))}
+.network-row .meta{display:flex;flex-direction:column;gap:4px}
+.network-row .alias{font-weight:800}
+.network-row .cidr{color:var(--muted);font-size:13px;direction:ltr;text-align:left}
+.network-row .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.network-row .statline{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.metric{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.meter{margin-top:10px;height:8px;border-radius:999px;overflow:hidden;background:rgba(148,163,184,.14)}
+.meter-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.item{padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))}
+.item-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
+.hidden-input{display:none}
+.empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted);border:1px dashed var(--line)}
+@media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto}}
+</style>
 </head>
-<body></body>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div>
+        <div class="brand-title">HOMEii Network</div>
+        <div class="brand-sub">Monitor <span id="versionText">5.0.0</span> • Settings</div>
+      </div>
+      <div class="logo"><img src="./logo" alt="" onerror="this.style.display='none'; this.parentNode.textContent='H';"></div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn" onclick="location.href='./'" id="btnBackHome">חזרה לתפריט הראשי</button>
+      <button class="nav-btn active settings-nav-btn" data-page="general" onclick="switchPage('general', this)">כללי</button>
+      <button class="nav-btn settings-nav-btn" data-page="networks" onclick="switchPage('networks', this)">רשתות</button>
+      <button class="nav-btn settings-nav-btn" data-page="manual" onclick="switchPage('manual', this)">התקן ידני</button>
+      <button class="nav-btn settings-nav-btn" data-page="appearance" onclick="switchPage('appearance', this)">מראה</button>
+      <button class="nav-btn settings-nav-btn" data-page="language" onclick="switchPage('language', this)">שפה</button>
+      <button class="nav-btn settings-nav-btn" data-page="system" onclick="switchPage('system', this)">מערכת</button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="info-card"><div class="k">Status</div><div class="v" id="sideScanState">—</div></div>
+      <div class="info-card"><div class="k">Networks</div><div class="v" id="sideNetworksCount">—</div></div>
+      <div class="health"><span class="dot"></span><span id="dbPath">DB: /data/homeii/homeii.db</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-shell">
+      <div class="hero">
+        <h1 class="hero-title">HOMEii Network Monitor</h1>
+        <div class="hero-sub">הגדרות מערכת מלאות בעמוד ייעודי, יציב ונקי.</div>
+        <div class="hero-meta">
+          <span class="hero-chip" id="currentClock">—</span>
+          <span class="hero-chip" id="currentDate">—</span>
+          <span class="hero-chip" id="lastRefreshText">—</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="refreshData()">רענון נתונים</button>
+        <button class="btn green" onclick="saveSettings()">שמור הגדרות</button>
+      </div>
+    </div>
+
+    <section class="page active" id="page-general">
+      <div class="panel">
+        <div class="panel-head"><div><h2>כללי</h2><p>הגדרות כלליות של הממשק, גילוי ותצוגת ברירת מחדל.</p></div></div>
+        <div class="settings-form-grid">
+          <div class="field"><label>רענון אוטומטי (שניות)</label><input id="setRefresh" type="number" min="5" step="5"></div>
+          <div class="field"><label>תצוגת ברירת מחדל</label><select id="setView"><option value="table">table</option><option value="grid">grid</option></select></div>
+          <div class="field"><label>סגנון דשבורד</label><select id="setStyle"><option value="advanced">advanced</option><option value="compact">compact</option></select></div>
+          <div class="field"><label>מצב גילוי</label><select id="setDiscoveryMode"><option value="auto_manual">אוטומטי + ידני</option><option value="manual_only">ידני בלבד</option><option value="auto_only">אוטומטי בלבד</option></select></div>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>פרוטוקולי גילוי</label>
+          <div class="quick-actions">
+            <label><input type="checkbox" id="proto_ping"> Ping</label>
+            <label><input type="checkbox" id="proto_arp"> ARP</label>
+            <label><input type="checkbox" id="proto_dns"> DNS</label>
+            <label><input type="checkbox" id="proto_special"> Host</label>
+            <label><input type="checkbox" id="proto_vendor"> Vendor</label>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn primary" onclick="saveSettings()">שמור הגדרות כלליות</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-networks">
+      <div class="panel">
+        <div class="panel-head"><div><h2>רשתות</h2><p>הגדר את כל טווחי הרשת והכינויים שברצונך לסרוק.</p></div></div>
+        <div class="settings-form-grid">
+          <div class="field"><label>טווח רשת (CIDR)</label><input id="networkCidrInput" placeholder="192.168.1.0/24"></div>
+          <div class="field"><label>כינוי רשת</label><input id="networkAliasInput" placeholder="למשל ATSIL"></div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn" onclick="addNetworkDraft()">הוסף רשת</button>
+        </div>
+        <div id="networkManagerList" class="network-summary"></div>
+        <div class="settings-actions">
+          <button class="btn" onclick="saveNetworksAndScan()">שמור והפעל סריקה</button>
+          <button class="btn primary" onclick="saveNetworksOnly()">שמור רשתות</button>
+        </div>
+        <div id="settingsMessage" class="msg"></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-manual">
+      <div class="panel">
+        <div class="panel-head"><div><h2>הוספת התקן ידנית</h2><p>הוסף התקן ידנית אם לא זוהה אוטומטית.</p></div></div>
+        <div class="settings-form-grid">
+          <div class="field"><label>כתובת IP</label><input id="manualIp" placeholder="192.168.1.50"></div>
+          <div class="field"><label>שם</label><input id="manualName" placeholder="למשל שרת ארון"></div>
+          <div class="field"><label>קטגוריה</label><input id="manualCategory" placeholder="למשל שרת / מצלמה / רשת"></div>
+          <div class="field"><label>הערות</label><input id="manualNotes" placeholder="אופציונלי"></div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn green" onclick="addManual()">הוסף התקן</button>
+        </div>
+        <div id="manualMessage" class="msg"></div>
+      </div>
+    </section>
+
+    <section class="page" id="page-appearance">
+      <div class="panel">
+        <div class="panel-head"><div><h2>מראה</h2><p>בחר ערכת נושא, סגנון דשבורד והעדפות תצוגה.</p></div></div>
+        <div class="settings-form-grid">
+          <div class="field"><label>ערכת נושא</label><select id="setTheme"><option value="light">light</option><option value="dark">dark</option></select></div>
+          <div class="field"><label>הבהוב מצבי התקן</label><select id="setStatusAnimation"><option value="blink">blink</option><option value="static">static</option></select></div>
+          <div class="field"><label>תצוגה פעילה</label><div class="chips"><span class="chip" id="appearanceCurrent">ערכת נושא פעילה</span></div></div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn primary" onclick="saveSettings()">שמור מראה</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-language">
+      <div class="panel">
+        <div class="panel-head"><div><h2>שפה</h2><p>בחר שפת ממשק לכל המערכת.</p></div></div>
+        <div class="settings-form-grid">
+          <div class="field"><label>שפה</label><select id="setLanguage"><option value="he">עברית</option><option value="en">English</option></select></div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn primary" onclick="saveSettings()">שמור שפה</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-system">
+      <div class="panel">
+        <div class="panel-head"><div><h2>מערכת</h2><p>מידע מערכת, סטטוס סריקה, ייצוא וייבוא.</p></div></div>
+        <div class="grid-cards">
+          <div class="item"><div class="item-head"><strong>גרסת מערכת</strong></div><small id="sysVersion">—</small></div>
+          <div class="item"><div class="item-head"><strong>מסד נתונים פעיל</strong></div><small id="sysDb">—</small></div>
+          <div class="item"><div class="item-head"><strong>רשתות</strong></div><small id="sysNetworks">—</small></div>
+          <div class="item"><div class="item-head"><strong>מצב סריקה נוכחי</strong></div><small id="sysScanMode">—</small></div>
+          <div class="item"><div class="item-head"><strong>זמן התחלת הסריקה האחרונה</strong></div><small id="sysScanStarted">—</small></div>
+          <div class="item"><div class="item-head"><strong>זמן סיום הסריקה האחרונה</strong></div><small id="sysScanFinished">—</small></div>
+        </div>
+        <div class="settings-actions">
+          <a class="btn" href="./api/export/devices.csv">ייצוא מכשירים</a>
+          <a class="btn" href="./api/export/settings.json">ייצוא הגדרות</a>
+          <button class="btn" onclick="triggerImportDevices()">ייבוא מכשירים</button>
+          <button class="btn" onclick="triggerImportSettings()">ייבוא הגדרות</button>
+          <input class="hidden-input" id="importDevicesInput" type="file" accept=".csv,text/csv" onchange="handleImportDevices(event)">
+          <input class="hidden-input" id="importSettingsInput" type="file" accept=".json,application/json" onchange="handleImportSettings(event)">
+        </div>
+        <div id="systemMessage" class="msg"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const qs=id=>document.getElementById(id);
+const state={settings:{},status:null,networkDrafts:[],dbPath:''};
+function fmtTs(ts){if(!ts)return '—'; try{return new Date(Number(ts)*1000).toLocaleString((state.settings.language||'he')==='he'?'he-IL':'en-US')}catch{return String(ts)}}
+async function api(url,options){const res=await fetch(url,{cache:'no-store',...(options||{})}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
+function showMsg(id,text,ok=true){const el=qs(id); if(!el)return; el.textContent=text; el.className=`msg show ${ok?'ok':'err'}`; clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',3000)}
+function switchPage(page,btn){document.querySelectorAll('.page').forEach(el=>el.classList.remove('active')); qs(`page-${page}`)?.classList.add('active'); document.querySelectorAll('.settings-nav-btn').forEach(el=>el.classList.remove('active')); if(btn) btn.classList.add('active'); document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'})}
+function updateHeaderClock(){const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; const now=new Date(); qs('currentClock').textContent=now.toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit',second:'2-digit'}); qs('currentDate').textContent=now.toLocaleDateString(lang,{weekday:'short',year:'numeric',month:'2-digit',day:'2-digit'})}
+function applyTheme(theme){document.body.classList.toggle('light',theme==='light')}
+function validCidr(value){const v=(value||'').trim(); if(!/^\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}$/.test(v)) return false; const [ip,prefix]=v.split('/'); const octets=ip.split('.').map(Number); return octets.length===4 && octets.every(n=>Number.isInteger(n)&&n>=0&&n<=255) && Number(prefix)>=0 && Number(prefix)<=32;}
+function networkHostCount(cidr){const m=String(cidr||'').trim().match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d{1,2})$/); if(!m) return 0; const prefix=Number(m[5]); const addresses=Math.pow(2,32-prefix); return addresses<=2 ? addresses : Math.max(0, addresses-2);}
+function displayNetwork(cidr){const names=state.status?.network_names||{}; return (names[cidr]||'').trim() || cidr || '—'}
+function getNetworkStat(cidr){return (state.status?.network_stats||[]).find(item=>item.cidr===cidr)||null}
+function renderNetworkManager(){const mount=qs('networkManagerList'); const rows=state.networkDrafts||[]; if(!rows.length){mount.innerHTML='<div class="empty">אין רשתות שמורות כרגע</div>'; return;} mount.innerHTML=rows.map((n,idx)=>`<div class="network-row"><div class="meta"><div class="alias">${(n.alias||'').trim()||displayNetwork(n.cidr)}</div><div class="cidr">${n.cidr}</div><div class="statline"><span class="metric">טווח: ${networkHostCount(n.cidr)}</span><span class="metric">התקנים: ${Number(getNetworkStat(n.cidr)?.devices||0)}</span><span class="metric">מחוברים: ${Number(getNetworkStat(n.cidr)?.online||0)}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.min(100,Math.round(((Number(getNetworkStat(n.cidr)?.devices||0))/(Math.max(1,networkHostCount(n.cidr))))*100))}%"></div></div></div><div class="meta"><small>כינוי</small><strong>${(n.alias||'').trim()||'—'}</strong></div><div class="actions"><button class="btn" onclick="editNetworkDraft(${idx})">ערוך</button><button class="btn" onclick="removeNetworkDraft(${idx})">מחק</button></div></div>`).join('')}
+function addNetworkDraft(){const cidr=(qs('networkCidrInput').value||'').trim(); const alias=(qs('networkAliasInput').value||'').trim(); if(!validCidr(cidr)) return showMsg('settingsMessage','טווח רשת לא תקין',false); const idx=(state.networkDrafts||[]).findIndex(x=>x.cidr===cidr); if(idx>=0) state.networkDrafts[idx].alias=alias; else state.networkDrafts.push({cidr,alias}); qs('networkCidrInput').value=''; qs('networkAliasInput').value=''; renderNetworkManager(); showMsg('settingsMessage','הרשת נוספה לרשימה. לחץ שמור רשתות כדי להחיל אותה')}
+function editNetworkDraft(idx){const item=(state.networkDrafts||[])[idx]; if(!item) return; qs('networkCidrInput').value=item.cidr||''; qs('networkAliasInput').value=item.alias||''; state.networkDrafts.splice(idx,1); renderNetworkManager()}
+function removeNetworkDraft(idx){state.networkDrafts.splice(idx,1); renderNetworkManager()}
+async function saveNetworksOnly(){const names={}; (state.networkDrafts||[]).forEach(item=>{if((item.alias||'').trim()) names[item.cidr]=item.alias.trim()}); const result=await api('./api/save_networks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({networks:(state.networkDrafts||[]).map(item=>item.cidr).filter(Boolean),network_names:names})}); state.networkDrafts=(result.networks||[]).map(n=>({cidr:n,alias:((result.network_names||{})[n]||'').trim()})); showMsg('settingsMessage',`נשמרו ${(result.networks||[]).length} רשתות`); await refreshData()}
+async function saveNetworksAndScan(){await saveNetworksOnly(); await api('./api/scan?mode=manual'); showMsg('settingsMessage','הסריקה הופעלה'); await refreshData()}
+async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('manualMessage','כתובת IP חובה',false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage','ההתקן נוסף'); await refreshData()}
+async function saveSettings(){const protocols=['ping','arp','dns','special','vendor'].filter(p=>qs('proto_'+p)?.checked); const names={}; (state.networkDrafts||[]).forEach(item=>{if((item.alias||'').trim()) names[item.cidr]=item.alias.trim()}); await api('./api/save_settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_refresh:qs('setRefresh').value||30,default_view:qs('setView').value,dashboard_style:qs('setStyle').value,theme:qs('setTheme').value,status_animation:qs('setStatusAnimation').value,language:qs('setLanguage').value,discovery_mode:qs('setDiscoveryMode').value,discovery_protocols:protocols,networks:(state.networkDrafts||[]).map(item=>item.cidr).filter(Boolean),network_names:names})}); applyTheme(qs('setTheme').value); showMsg('settingsMessage','ההגדרות נשמרו'); await refreshData()}
+function triggerImportDevices(){qs('importDevicesInput')?.click()}
+function triggerImportSettings(){qs('importSettingsInput')?.click()}
+async function handleImportDevices(event){const file=event?.target?.files?.[0]; if(!file) return; try{const form=new FormData(); form.append('file',file); const result=await api('./api/import/devices',{method:'POST',body:form}); showMsg('systemMessage',`יובאו ${Number(result.imported||0)} מכשירים`)}catch(err){showMsg('systemMessage',String(err.message||err),false)}finally{event.target.value=''; await refreshData()}}
+async function handleImportSettings(event){const file=event?.target?.files?.[0]; if(!file) return; try{const form=new FormData(); form.append('file',file); const result=await api('./api/import/settings',{method:'POST',body:form}); showMsg('systemMessage',`יובאו ${(result.networks||[]).length} רשתות`)}catch(err){showMsg('systemMessage',String(err.message||err),false)}finally{event.target.value=''; await refreshData()}}
+function scanSummaryText(scan){if(!scan) return 'idle'; const base=scan.running?'running':(scan.last_mode==='idle'?'idle':(scan.last_mode||'idle')); const targets=Number(scan.target_count||0); const networks=Array.isArray(scan.target_networks)?scan.target_networks.length:0; return (targets||networks)?`${base} • ${targets||0} IP • ${networks||0} NET`:base}
+function workerSummaryText(workers){const monitor=workers?.monitor||{}; const critical=workers?.critical_monitor||{}; return `ניטור ${monitor.alive?'רץ':'תקוע'} • קריטי ${critical.alive?'רץ':'תקוע'}`}
+function renderSettingsData(status,settingsData){state.status=status; state.settings=settingsData.settings||{}; state.dbPath=settingsData.db_path||''; qs('versionText').textContent=status.version||'5.0.0'; qs('setRefresh').value=state.settings.auto_refresh||30; qs('setView').value=state.settings.default_view||'table'; qs('setStyle').value=state.settings.dashboard_style||'advanced'; qs('setTheme').value=state.settings.theme||'light'; qs('setStatusAnimation').value=state.settings.status_animation||'blink'; qs('setLanguage').value=state.settings.language||'he'; qs('setDiscoveryMode').value=settingsData.discovery_mode||state.settings.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(settingsData.discovery_protocols||[]).includes(p)}); state.networkDrafts=(settingsData.networks||[]).map(n=>({cidr:n,alias:((settingsData.network_names||{})[n]||'').trim()})); renderNetworkManager(); applyTheme(state.settings.theme||'light'); qs('appearanceCurrent').textContent=`ערכת נושא פעילה: ${state.settings.theme||'light'}`; qs('sideScanState').textContent=workerSummaryText(status.workers||{}); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`; qs('sysVersion').textContent=status.version||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysNetworks').textContent=(settingsData.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysScanMode').textContent=`${scanSummaryText(status.scan)} • ${workerSummaryText(status.workers||{})}`; qs('sysScanStarted').textContent=fmtTs(status.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(status.scan?.last_finished)}
+async function refreshData(){const [status,settingsData]=await Promise.all([api('./api/status'),api('./api/settings')]); renderSettingsData(status,settingsData); const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; qs('lastRefreshText').textContent=`סנכרון אחרון: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock()}
+window.addEventListener('load',async()=>{updateHeaderClock(); window.setInterval(updateHeaderClock,1000); try{await refreshData()}catch(e){console.error(e); alert('טעינת הגדרות נכשלה')}})
+</script>
+</body>
 </html>
