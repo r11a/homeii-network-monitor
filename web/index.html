@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8" />
@@ -200,19 +200,33 @@ body.no-status-pulse .status-dot{animation:none !important}
 .viewer-stat.active{border-color:var(--line2);box-shadow:0 0 0 1px rgba(50,104,245,.18),0 16px 30px rgba(2,8,23,.18)}
 .viewer-stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .viewer-stat .v{margin-top:10px;font-size:30px;font-weight:900}
-.viewer-category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
-.viewer-category-card{padding:16px 18px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018));display:grid;gap:10px;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.viewer-category-card:hover{transform:translateY(-1px);box-shadow:0 16px 28px rgba(2,8,23,.18)}
-.viewer-category-card.active{box-shadow:0 0 0 1px rgba(50,104,245,.24),0 18px 32px rgba(2,8,23,.18)}
-.viewer-category-card.good{border-color:rgba(53,211,153,.34);background:linear-gradient(180deg,rgba(53,211,153,.10),rgba(255,255,255,.02))}
-.viewer-category-card.bad{border-color:rgba(251,113,133,.34);background:linear-gradient(180deg,rgba(251,113,133,.10),rgba(255,255,255,.02))}
-.viewer-category-card.warn{border-color:rgba(245,158,11,.34);background:linear-gradient(180deg,rgba(245,158,11,.10),rgba(255,255,255,.02))}
-.viewer-category-card.fresh{border-color:rgba(91,140,255,.34);background:linear-gradient(180deg,rgba(91,140,255,.10),rgba(255,255,255,.02))}
-.viewer-category-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.viewer-category-name{font-size:18px;font-weight:900}
-.viewer-category-total{font-size:28px;font-weight:900}
-.viewer-category-meta{display:flex;gap:8px;flex-wrap:wrap}
-.viewer-category-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted);background:rgba(255,255,255,.03)}
+.viewer-category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.viewer-category-card{position:relative;overflow:hidden;padding:18px 18px 16px;border-radius:24px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 16px 40px rgba(2,8,23,.22);backdrop-filter:blur(24px) saturate(1.25);display:grid;gap:12px;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.viewer-category-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at top left,rgba(255,255,255,.14),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.05),transparent 52%);pointer-events:none}
+.viewer-category-card::after{content:'';position:absolute;left:18px;right:18px;bottom:0;height:4px;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.24),rgba(255,255,255,.06));opacity:.8}
+.viewer-category-card:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 20px 44px rgba(2,8,23,.24)}
+.viewer-category-card.active{box-shadow:0 0 0 1px rgba(50,104,245,.24),inset 0 1px 0 rgba(255,255,255,.16),0 22px 48px rgba(2,8,23,.26)}
+.viewer-category-card.good{border-color:rgba(53,211,153,.28);background:linear-gradient(180deg,rgba(53,211,153,.12),rgba(255,255,255,.03))}
+.viewer-category-card.good::after{background:linear-gradient(90deg,rgba(53,211,153,.12),rgba(53,211,153,.9),rgba(53,211,153,.12))}
+.viewer-category-card.bad{border-color:rgba(251,113,133,.32);background:linear-gradient(180deg,rgba(251,113,133,.12),rgba(255,255,255,.03))}
+.viewer-category-card.bad::after{background:linear-gradient(90deg,rgba(251,113,133,.12),rgba(251,113,133,.92),rgba(251,113,133,.12))}
+.viewer-category-card.warn{border-color:rgba(245,158,11,.32);background:linear-gradient(180deg,rgba(245,158,11,.12),rgba(255,255,255,.03))}
+.viewer-category-card.warn::after{background:linear-gradient(90deg,rgba(245,158,11,.12),rgba(245,158,11,.92),rgba(245,158,11,.12))}
+.viewer-category-card.fresh{border-color:rgba(91,140,255,.32);background:linear-gradient(180deg,rgba(91,140,255,.12),rgba(255,255,255,.03))}
+.viewer-category-card.fresh::after{background:linear-gradient(90deg,rgba(91,140,255,.12),rgba(91,140,255,.92),rgba(91,140,255,.12))}
+.viewer-category-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:flex-start;position:relative;z-index:1}
+.viewer-category-name{font-size:20px;font-weight:900;line-height:1.05;letter-spacing:-.03em}
+.viewer-category-total{font-size:44px;line-height:.92;font-weight:950;letter-spacing:-.05em;text-shadow:0 6px 20px rgba(2,8,23,.18)}
+.viewer-category-body{display:grid;gap:10px;position:relative;z-index:1}
+.viewer-category-score{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.viewer-category-score strong{font-size:14px;font-weight:800;color:var(--muted)}
+.viewer-category-score span{font-size:28px;font-weight:900;letter-spacing:-.04em}
+.viewer-category-meta{display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1}
+.viewer-category-chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.1);font-size:11px;color:var(--muted);background:rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.viewer-category-chip.bad{color:var(--red);border-color:rgba(251,113,133,.22);background:rgba(251,113,133,.08)}
+.viewer-category-chip.warn{color:var(--orange);border-color:rgba(245,158,11,.22);background:rgba(245,158,11,.08)}
+.viewer-category-chip.good{color:var(--green);border-color:rgba(53,211,153,.2);background:rgba(53,211,153,.08)}
+.viewer-category-chip.fresh{color:var(--blue);border-color:rgba(91,140,255,.22);background:rgba(91,140,255,.08)}
 .viewer-availability{display:grid;gap:10px}
 .viewer-availability-bar{display:grid;grid-template-columns:repeat(24,1fr);gap:4px}
 .viewer-availability-cell{height:14px;border-radius:999px;background:rgba(148,163,184,.18)}
@@ -221,6 +235,12 @@ body.no-status-pulse .status-dot{animation:none !important}
 .viewer-availability-cell.unstable{background:linear-gradient(180deg,rgba(245,158,11,.95),rgba(245,158,11,.38))}
 .viewer-availability-cell.new{background:linear-gradient(180deg,rgba(91,140,255,.95),rgba(91,140,255,.38))}
 .viewer-availability-axis{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted)}
+.availability-strip{display:grid;grid-template-columns:repeat(24,1fr);gap:4px;margin-top:12px;position:relative;z-index:1}
+.availability-square{height:10px;border-radius:999px;background:rgba(148,163,184,.16);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.availability-square.good{background:linear-gradient(180deg,rgba(53,211,153,.95),rgba(53,211,153,.42));border-color:rgba(53,211,153,.24)}
+.availability-square.partial{background:linear-gradient(180deg,rgba(245,158,11,.95),rgba(245,158,11,.42));border-color:rgba(245,158,11,.24)}
+.availability-square.bad{background:linear-gradient(180deg,rgba(251,113,133,.95),rgba(251,113,133,.42));border-color:rgba(251,113,133,.24)}
+.availability-caption{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:10px;font-size:11px;color:var(--muted);position:relative;z-index:1}
 .viewer-readonly{font-size:12px;color:var(--muted)}
 .viewer-event{display:grid;gap:6px}
 .viewer-event .event-title{font-weight:800}
@@ -300,7 +320,7 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08
 .sidebar.settings-mode .main-nav{display:none}
 .sidebar .settings-side-nav{display:none}
 .sidebar.settings-mode .settings-side-nav{display:grid}
-.sidebar.settings-mode .brand-sub::after{content:" • Settings"}
+.sidebar.settings-mode .brand-sub::after{content:" â€¢ Settings"}
 .settings-topnote{margin-bottom:10px;color:var(--muted);font-size:13px}
 body.settings-mode .kpis{display:none;}
 body.settings-mode .top-shell{display:none;}
@@ -468,16 +488,16 @@ body.settings-mode .settings-page .panel{max-width:1320px}
       <button class="nav-btn" data-tab="devices" onclick="switchTab('devices', this)" id="navDevices">Devices</button>
       <button class="nav-btn" data-tab="alerts" onclick="switchTab('alerts', this)" id="navAlerts">Alerts</button>
       <button class="nav-btn" onclick="location.href='./settings.html'" id="navSettings">Settings</button>
-      <a class="nav-btn viewer-admin-link" id="viewerAdminLink" href="./">ממשק מלא</a>
+      <a class="nav-btn viewer-admin-link" id="viewerAdminLink" href="./">×ž×ž×©×§ ×ž×œ×</a>
     </div>
     <div class="nav settings-side-nav">
-      <button class="nav-btn" onclick="backToMainNav()" id="settingsBackBtn">← חזרה</button>
-      <button class="nav-btn active settings-nav-btn" data-settings-page="general" onclick="switchSettingsPage('general', this)" id="sideGeneral">כללי</button>
-      <button class="nav-btn settings-nav-btn" data-settings-page="networks" onclick="switchSettingsPage('networks', this)" id="sideNetworks">רשתות מנוטרות</button>
-      <button class="nav-btn settings-nav-btn" data-settings-page="manual" onclick="switchSettingsPage('manual', this)" id="sideManual">התקן ידני</button>
-      <button class="nav-btn settings-nav-btn" data-settings-page="appearance" onclick="switchSettingsPage('appearance', this)" id="sideAppearance">מראה</button>
-      <button class="nav-btn settings-nav-btn" data-settings-page="language" onclick="switchSettingsPage('language', this)" id="sideLanguage">שפה</button>
-      <button class="nav-btn settings-nav-btn" data-settings-page="system" onclick="switchSettingsPage('system', this)" id="sideSystem">מערכת</button>
+      <button class="nav-btn" onclick="backToMainNav()" id="settingsBackBtn">â† ×—×–×¨×”</button>
+      <button class="nav-btn active settings-nav-btn" data-settings-page="general" onclick="switchSettingsPage('general', this)" id="sideGeneral">×›×œ×œ×™</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="networks" onclick="switchSettingsPage('networks', this)" id="sideNetworks">×¨×©×ª×•×ª ×ž× ×•×˜×¨×•×ª</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="manual" onclick="switchSettingsPage('manual', this)" id="sideManual">×”×ª×§×Ÿ ×™×“× ×™</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="appearance" onclick="switchSettingsPage('appearance', this)" id="sideAppearance">×ž×¨××”</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="language" onclick="switchSettingsPage('language', this)" id="sideLanguage">×©×¤×”</button>
+      <button class="nav-btn settings-nav-btn" data-settings-page="system" onclick="switchSettingsPage('system', this)" id="sideSystem">×ž×¢×¨×›×ª</button>
     </div>
     <div class="sidebar-footer">
       <div class="info-card"><div class="k" id="lblStatus">Status</div><div class="v" id="sideScanState">Idle</div></div>
@@ -491,30 +511,30 @@ body.settings-mode .settings-page .panel{max-width:1320px}
       <div class="top-shell">
         <div class="hero">
           <h1 class="hero-title" id="heroTitle">HOMEii Network Monitor</h1>
-          <div class="hero-sub" id="heroSub">v5.0.0 • מכשירים שדורשים תשומת לב • ניטור בזמן אמת</div>
+          <div class="hero-sub" id="heroSub">v5.0.0 â€¢ ×ž×›×©×™×¨×™× ×©×“×•×¨×©×™× ×ª×©×•×ž×ª ×œ×‘ â€¢ × ×™×˜×•×¨ ×‘×–×ž×Ÿ ××ž×ª</div>
           <div class="hero-meta">
-            <span class="hero-meta-chip"><span class="hero-clock" id="currentClock">—</span></span>
-            <span class="hero-meta-chip"><span class="hero-date" id="currentDate">—</span></span>
-            <span class="hero-meta-chip"><span class="hero-sync" id="lastRefreshText">—</span></span>
+            <span class="hero-meta-chip"><span class="hero-clock" id="currentClock">â€”</span></span>
+            <span class="hero-meta-chip"><span class="hero-date" id="currentDate">â€”</span></span>
+            <span class="hero-meta-chip"><span class="hero-sync" id="lastRefreshText">â€”</span></span>
           </div>
         </div>
         <div class="actionbar">
-          <button class="btn viewer-close" onclick="backToMainNav()" id="btnViewerClose">סגור</button>
-          <button class="btn primary" onclick="runScan()" id="btnScan">סריקה עכשיו</button>
-          <button class="btn green" onclick="acceptAll()" id="btnAcceptAll">אשר את כל החדשים</button>
-          <button class="btn" onclick="manualRefresh()" id="btnRefresh">רענון</button>
+          <button class="btn viewer-close" onclick="backToMainNav()" id="btnViewerClose">×¡×’×•×¨</button>
+          <button class="btn primary" onclick="runScan()" id="btnScan">×¡×¨×™×§×” ×¢×›×©×™×•</button>
+          <button class="btn green" onclick="acceptAll()" id="btnAcceptAll">××©×¨ ××ª ×›×œ ×”×—×“×©×™×</button>
+          <button class="btn" onclick="manualRefresh()" id="btnRefresh">×¨×¢× ×•×Ÿ</button>
         </div>
       </div>
     </div>
 
     <div class="kpis">
-      <div class="kpi primary-alert" data-filter="offline" onclick="applyKpiFilter('offline')"><div class="label" id="kpiOfflineLabel">Offline Devices</div><div class="value offline" id="sOffline">—</div></div>
-      <div class="kpi" data-filter="online" onclick="applyKpiFilter('online')"><div class="label" id="kpiOnlineLabel">Online</div><div class="value online" id="sOnline">—</div></div>
-      <div class="kpi" data-filter="" onclick="applyKpiFilter('')"><div class="label" id="kpiTotalLabel">Total</div><div class="value" id="sTotal">—</div></div>
-      <div class="kpi" data-filter="unstable" onclick="applyKpiFilter('unstable')"><div class="label" id="kpiUnstableLabel">Unstable</div><div class="value alerts" id="sUnstable">—</div></div>
-      <div class="kpi" data-filter="new" onclick="applyKpiFilter('new')"><div class="label" id="kpiNewLabel">New</div><div class="value new" id="sNew">—</div></div>
-      <div class="kpi" data-filter="critical" onclick="applyKpiFilter('critical')"><div class="label" id="kpiCriticalLabel">Critical</div><div class="value alerts" id="sCritical">—</div></div>
-      <div class="kpi" data-filter="pinned" onclick="applyKpiFilter('pinned')"><div class="label" id="kpiPinnedLabel">Pinned</div><div class="value pinned" id="sPinned">—</div></div>
+      <div class="kpi primary-alert" data-filter="offline" onclick="applyKpiFilter('offline')"><div class="label" id="kpiOfflineLabel">Offline Devices</div><div class="value offline" id="sOffline">—</div><div id="kpiStripOffline"></div></div>
+      <div class="kpi" data-filter="online" onclick="applyKpiFilter('online')"><div class="label" id="kpiOnlineLabel">Online</div><div class="value online" id="sOnline">—</div><div id="kpiStripOnline"></div></div>
+      <div class="kpi" data-filter="" onclick="applyKpiFilter('')"><div class="label" id="kpiTotalLabel">Total</div><div class="value" id="sTotal">—</div><div id="kpiStripTotal"></div></div>
+      <div class="kpi" data-filter="unstable" onclick="applyKpiFilter('unstable')"><div class="label" id="kpiUnstableLabel">Unstable</div><div class="value alerts" id="sUnstable">—</div><div id="kpiStripUnstable"></div></div>
+      <div class="kpi" data-filter="new" onclick="applyKpiFilter('new')"><div class="label" id="kpiNewLabel">New</div><div class="value new" id="sNew">—</div><div id="kpiStripNew"></div></div>
+      <div class="kpi" data-filter="critical" onclick="applyKpiFilter('critical')"><div class="label" id="kpiCriticalLabel">Critical</div><div class="value alerts" id="sCritical">—</div><div id="kpiStripCritical"></div></div>
+      <div class="kpi" data-filter="pinned" onclick="applyKpiFilter('pinned')"><div class="label" id="kpiPinnedLabel">Pinned</div><div class="value pinned" id="sPinned">—</div><div id="kpiStripPinned"></div></div>
     </div>
 
     <section id="tab-dashboard" class="section active">
@@ -523,7 +543,7 @@ body.settings-mode .settings-page .panel{max-width:1320px}
         <div class="grid two">
           <div class="grid">
           <div class="panel compact-panel">
-            <div class="panel-head"><div><h2 id="attentionTitle">דורשים טיפול</h2><p id="attentionSub">מנותקים, קריטיים או חדשים שמומלץ לבדוק.</p></div></div>
+            <div class="panel-head"><div><h2 id="attentionTitle">×“×•×¨×©×™× ×˜×™×¤×•×œ</h2><p id="attentionSub">×ž× ×•×ª×§×™×, ×§×¨×™×˜×™×™× ××• ×—×“×©×™× ×©×ž×•×ž×œ×¥ ×œ×‘×“×•×§.</p></div></div>
             <div id="dashboardPriority" class="smart-list compact-scroll short"></div>
           </div>
           <div class="panel compact-panel">
@@ -533,11 +553,11 @@ body.settings-mode .settings-page .panel{max-width:1320px}
           </div>
           <div class="grid">
             <div class="panel compact-panel">
-              <div class="panel-head"><div><h2 id="recentDevicesTitle">מכשירים אחרונים</h2><p id="recentDevicesSub">התקנים פעילים ושינויים אחרונים ברשת.</p></div></div>
+              <div class="panel-head"><div><h2 id="recentDevicesTitle">×ž×›×©×™×¨×™× ××—×¨×•× ×™×</h2><p id="recentDevicesSub">×”×ª×§× ×™× ×¤×¢×™×œ×™× ×•×©×™× ×•×™×™× ××—×¨×•× ×™× ×‘×¨×©×ª.</p></div></div>
               <div id="dashboardDevices" class="dashboard-cards compact-cards"></div>
             </div>
           <div class="panel compact-panel">
-            <div class="panel-head"><div><h2 id="networkSummaryTitle">סיכום רשתות</h2><p id="networkSummarySub">כמות התקנים לפי רשת וסטטוס.</p></div></div>
+            <div class="panel-head"><div><h2 id="networkSummaryTitle">×¡×™×›×•× ×¨×©×ª×•×ª</h2><p id="networkSummarySub">×›×ž×•×ª ×”×ª×§× ×™× ×œ×¤×™ ×¨×©×ª ×•×¡×˜×˜×•×¡.</p></div></div>
             <div id="dashboardNetworks" class="smart-list compact-scroll short"></div>
           </div>
         </div>
@@ -547,22 +567,22 @@ body.settings-mode .settings-page .panel{max-width:1320px}
 
     <section id="tab-devices" class="section">
       <div class="panel">
-        <div class="panel-head"><div><h2 id="devicesTitle">Devices</h2><p id="devicesSub">טבלה קומפקטית עם כל המידע והפעולות בשורה אחת.</p></div></div>
+        <div class="panel-head"><div><h2 id="devicesTitle">Devices</h2><p id="devicesSub">×˜×‘×œ×” ×§×•×ž×¤×§×˜×™×ª ×¢× ×›×œ ×”×ž×™×“×¢ ×•×”×¤×¢×•×œ×•×ª ×‘×©×•×¨×” ××—×ª.</p></div></div>
         <div class="settings-form-grid">
-          <div class="field"><label id="lblSearch">חיפוש</label><input id="searchText" placeholder="שם, IP, hostname, vendor, mac..." oninput="renderDevices()"></div>
-          <div class="field"><label id="lblStatusFilter">סטטוס</label><select id="filterStatus" onchange="renderDevices()"><option value="" id="optAll">הכל</option><option value="online">online</option><option value="offline">offline</option><option value="unstable">unstable</option><option value="new">new</option></select></div>
-          <div class="field"><label id="lblCategoryFilter">קטגוריה</label><select id="filterCategory" onchange="renderDevices()"><option value="">הכל</option></select></div>
-          <div class="field"><label id="lblNetworkFilter">רשת</label><select id="filterNetwork" onchange="renderDevices()"><option value="">הכל</option></select></div>
-          <div class="field"><label id="lblVendorFilter">יצרן</label><select id="filterVendor" onchange="renderDevices()"><option value="">הכל</option></select></div>
-          <div class="field"><label id="lblSortBy">מיון</label><select id="sortBy" onchange="state.sortBy=this.value; state.sortDir=(this.value==='last_seen'?'desc':'asc'); renderDevices()"><option value="name">שם</option><option value="ip">IP</option><option value="status">סטטוס</option><option value="vendor">יצרן</option><option value="last_seen">נראה לאחרונה</option></select></div>
-          <div class="field"><label id="lblView">תצוגה</label><select id="devicesView" onchange="renderDevices()"><option value="table">table</option><option value="grid">grid</option></select></div>
+          <div class="field"><label id="lblSearch">×—×™×¤×•×©</label><input id="searchText" placeholder="×©×, IP, hostname, vendor, mac..." oninput="renderDevices()"></div>
+          <div class="field"><label id="lblStatusFilter">×¡×˜×˜×•×¡</label><select id="filterStatus" onchange="renderDevices()"><option value="" id="optAll">×”×›×œ</option><option value="online">online</option><option value="offline">offline</option><option value="unstable">unstable</option><option value="new">new</option></select></div>
+          <div class="field"><label id="lblCategoryFilter">×§×˜×’×•×¨×™×”</label><select id="filterCategory" onchange="renderDevices()"><option value="">×”×›×œ</option></select></div>
+          <div class="field"><label id="lblNetworkFilter">×¨×©×ª</label><select id="filterNetwork" onchange="renderDevices()"><option value="">×”×›×œ</option></select></div>
+          <div class="field"><label id="lblVendorFilter">×™×¦×¨×Ÿ</label><select id="filterVendor" onchange="renderDevices()"><option value="">×”×›×œ</option></select></div>
+          <div class="field"><label id="lblSortBy">×ž×™×•×Ÿ</label><select id="sortBy" onchange="state.sortBy=this.value; state.sortDir=(this.value==='last_seen'?'desc':'asc'); renderDevices()"><option value="name">×©×</option><option value="ip">IP</option><option value="status">×¡×˜×˜×•×¡</option><option value="vendor">×™×¦×¨×Ÿ</option><option value="last_seen">× ×¨××” ×œ××—×¨×•× ×”</option></select></div>
+          <div class="field"><label id="lblView">×ª×¦×•×’×”</label><select id="devicesView" onchange="renderDevices()"><option value="table">table</option><option value="grid">grid</option></select></div>
         </div>
         <div class="settings-actions">
-          <button class="btn small" onclick="clearFilters()" id="btnClearFilters">נקה סינונים</button>
-          <button class="btn small green" onclick="acceptAll()" id="btnAcceptAll2">אשר את כל החדשים</button>
-          <button class="btn small" onclick="runScan()" id="btnRescan">סריקה מחדש</button>
+          <button class="btn small" onclick="clearFilters()" id="btnClearFilters">× ×§×” ×¡×™× ×•× ×™×</button>
+          <button class="btn small green" onclick="acceptAll()" id="btnAcceptAll2">××©×¨ ××ª ×›×œ ×”×—×“×©×™×</button>
+          <button class="btn small" onclick="runScan()" id="btnRescan">×¡×¨×™×§×” ×ž×—×“×©</button>
         </div>
-        <div class="bulkbar hidden" id="bulkBar"><div><strong id="bulkTitle">פעולות מרובות</strong> • <span id="bulkCount">0</span> <span id="bulkCountLabel">נבחרו</span></div><div class="quick-actions"><button class="btn small" onclick="bulkPin(1)" id="bulkPinBtn">נעץ</button><button class="btn small" onclick="bulkPin(0)" id="bulkUnpinBtn">בטל נעיצה</button><button class="btn small" onclick="bulkCritical(1)" id="bulkCriticalBtn">סמן קריטי</button><button class="btn small" onclick="bulkCritical(0)" id="bulkUncriticalBtn">בטל קריטי</button><button class="btn small red" onclick="bulkDelete()" id="bulkDeleteBtn">מחק מסומנים</button></div></div><div id="deviceMessage" class="msg"></div>
+        <div class="bulkbar hidden" id="bulkBar"><div><strong id="bulkTitle">×¤×¢×•×œ×•×ª ×ž×¨×•×‘×•×ª</strong> â€¢ <span id="bulkCount">0</span> <span id="bulkCountLabel">× ×‘×—×¨×•</span></div><div class="quick-actions"><button class="btn small" onclick="bulkPin(1)" id="bulkPinBtn">× ×¢×¥</button><button class="btn small" onclick="bulkPin(0)" id="bulkUnpinBtn">×‘×˜×œ × ×¢×™×¦×”</button><button class="btn small" onclick="bulkCritical(1)" id="bulkCriticalBtn">×¡×ž×Ÿ ×§×¨×™×˜×™</button><button class="btn small" onclick="bulkCritical(0)" id="bulkUncriticalBtn">×‘×˜×œ ×§×¨×™×˜×™</button><button class="btn small red" onclick="bulkDelete()" id="bulkDeleteBtn">×ž×—×§ ×ž×¡×•×ž× ×™×</button></div></div><div id="deviceMessage" class="msg"></div>
         <div id="devicesMount"></div>
       </div>
     </section>
@@ -574,7 +594,7 @@ body.settings-mode .settings-page .panel{max-width:1320px}
           <div id="viewerSummary" class="viewer-summary"></div>
         </div>
         <div class="panel compact-panel">
-          <div class="panel-head"><div><h2 id="viewerCategoriesTitle">קטגוריות</h2><p id="viewerCategoriesSub">כרטיסים דינמיים לפי כל הקטגוריות המשויכות במערכת.</p></div></div>
+          <div class="panel-head"><div><h2 id="viewerCategoriesTitle">×§×˜×’×•×¨×™×•×ª</h2><p id="viewerCategoriesSub">×›×¨×˜×™×¡×™× ×“×™× ×ž×™×™× ×œ×¤×™ ×›×œ ×”×§×˜×’×•×¨×™×•×ª ×”×ž×©×•×™×›×•×ª ×‘×ž×¢×¨×›×ª.</p></div></div>
           <div id="viewerCategories" class="viewer-category-grid"></div>
         </div>
         <div class="viewer-grid">
@@ -605,25 +625,25 @@ body.settings-mode .settings-page .panel{max-width:1320px}
     </section>
 
     <section id="tab-alerts" class="section">
-      <div class="panel compact-panel"><div class="panel-head"><div><h2 id="alertsTitle">Alerts</h2><p id="alertsSub">Notifications for new, offline, unstable and recovered devices.</p></div></div><div id="alertsSummary" class="viewer-summary" style="margin-bottom:12px"></div><div class="alert-columns"><div><div class="toolbar" style="margin-bottom:12px"><div class="field"><label id="lblAlertSearch">חיפוש בהתראות</label><input id="alertsSearch" class="search-input" placeholder="חיפוש בהתראות" oninput="renderAlerts()"></div><div class="field"><label id="lblAlertSeverity">חומרה</label><select id="alertSeverity" onchange="renderAlerts()"><option value="">הכל</option><option value="info">info</option><option value="medium">medium</option><option value="high">high</option><option value="critical">critical</option></select></div></div><div id="alertsMount" class="alert-list compact-scroll tall"></div></div><div><div class="toolbar" style="margin-bottom:12px"><div class="field"><label id="lblEventSearch">חיפוש באירועים</label><input id="eventsSearch" class="search-input" placeholder="חיפוש באירועים" oninput="renderAlerts()"></div></div><div id="eventsMount" class="event-timeline compact-scroll tall"></div></div></div></div>
+      <div class="panel compact-panel"><div class="panel-head"><div><h2 id="alertsTitle">Alerts</h2><p id="alertsSub">Notifications for new, offline, unstable and recovered devices.</p></div></div><div id="alertsSummary" class="viewer-summary" style="margin-bottom:12px"></div><div class="alert-columns"><div><div class="toolbar" style="margin-bottom:12px"><div class="field"><label id="lblAlertSearch">×—×™×¤×•×© ×‘×”×ª×¨××•×ª</label><input id="alertsSearch" class="search-input" placeholder="×—×™×¤×•×© ×‘×”×ª×¨××•×ª" oninput="renderAlerts()"></div><div class="field"><label id="lblAlertSeverity">×—×•×ž×¨×”</label><select id="alertSeverity" onchange="renderAlerts()"><option value="">×”×›×œ</option><option value="info">info</option><option value="medium">medium</option><option value="high">high</option><option value="critical">critical</option></select></div></div><div id="alertsMount" class="alert-list compact-scroll tall"></div></div><div><div class="toolbar" style="margin-bottom:12px"><div class="field"><label id="lblEventSearch">×—×™×¤×•×© ×‘××™×¨×•×¢×™×</label><input id="eventsSearch" class="search-input" placeholder="×—×™×¤×•×© ×‘××™×¨×•×¢×™×" oninput="renderAlerts()"></div></div><div id="eventsMount" class="event-timeline compact-scroll tall"></div></div></div></div>
       </div>
     </section>
 
     <section id="tab-settings" class="section">
       <div class="settings-shell">
-      <div class="settings-topnote" id="settingsTopNote">הגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.</div><div class="settings-note" id="settingsHelperNote">שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים.</div>
+      <div class="settings-topnote" id="settingsTopNote">×”×’×“×¨×•×ª ×ž×—×•×œ×§×•×ª ×œ×¢×ž×•×“×™× × ×¤×¨×“×™× ×“×¨×š ×ª×¤×¨×™×˜ ×”×¦×“.</div><div class="settings-note" id="settingsHelperNote">×©×ž×•×¨ ×›×œ ××–×•×¨ ×œ××—×¨ ×©×™× ×•×™ ×›×“×™ ×©×”×”×’×“×¨×•×ª ×™×™×©×ž×¨×• ×œ×ž×¡×“ ×”× ×ª×•× ×™×.</div>
 
       <div class="settings-page active" id="settings-page-general">
         <div class="panel">
-          <div class="panel-head"><div><h2 id="settingsGeneralTitle">כללי</h2><p id="settingsGeneralSub">הגדרות כלליות של הממשק ותצוגת ברירת מחדל.</p></div></div>
+          <div class="panel-head"><div><h2 id="settingsGeneralTitle">×›×œ×œ×™</h2><p id="settingsGeneralSub">×”×’×“×¨×•×ª ×›×œ×œ×™×•×ª ×©×œ ×”×ž×ž×©×§ ×•×ª×¦×•×’×ª ×‘×¨×™×¨×ª ×ž×—×“×œ.</p></div></div>
           <div class="settings-form-grid">
-            <div class="field"><label id="lblRefresh">רענון אוטומטי (שניות)</label><input id="setRefresh" type="number" min="5" step="5"></div>
-            <div class="field"><label id="lblDefaultView">תצוגת ברירת מחדל</label><select id="setView"><option value="table">table</option><option value="grid">grid</option></select></div>
-            <div class="field"><label id="lblDashboardStyle">סגנון דשבורד</label><select id="setStyle"><option value="advanced">advanced</option><option value="compact">compact</option></select></div>
-            <div class="field"><label id="lblDiscoveryMode">מצב גילוי</label><select id="setDiscoveryMode"><option value="auto_manual">אוטומטי + ידני</option><option value="manual_only">ידני בלבד</option><option value="auto_only">אוטומטי בלבד</option></select></div>
+            <div class="field"><label id="lblRefresh">×¨×¢× ×•×Ÿ ××•×˜×•×ž×˜×™ (×©× ×™×•×ª)</label><input id="setRefresh" type="number" min="5" step="5"></div>
+            <div class="field"><label id="lblDefaultView">×ª×¦×•×’×ª ×‘×¨×™×¨×ª ×ž×—×“×œ</label><select id="setView"><option value="table">table</option><option value="grid">grid</option></select></div>
+            <div class="field"><label id="lblDashboardStyle">×¡×’× ×•×Ÿ ×“×©×‘×•×¨×“</label><select id="setStyle"><option value="advanced">advanced</option><option value="compact">compact</option></select></div>
+            <div class="field"><label id="lblDiscoveryMode">×ž×¦×‘ ×’×™×œ×•×™</label><select id="setDiscoveryMode"><option value="auto_manual">××•×˜×•×ž×˜×™ + ×™×“× ×™</option><option value="manual_only">×™×“× ×™ ×‘×œ×‘×“</option><option value="auto_only">××•×˜×•×ž×˜×™ ×‘×œ×‘×“</option></select></div>
           </div>
           <div class="field" style="margin-top:10px">
-            <label id="lblProtocols">פרוטוקולי גילוי</label>
+            <label id="lblProtocols">×¤×¨×•×˜×•×§×•×œ×™ ×’×™×œ×•×™</label>
             <div class="quick-actions" id="protocolToggles">
               <label><input type="checkbox" id="proto_ping"> Ping</label>
               <label><input type="checkbox" id="proto_arp"> ARP</label>
@@ -633,28 +653,28 @@ body.settings-mode .settings-page .panel{max-width:1320px}
             </div>
           </div>
           <div class="settings-actions">
-            <button class="btn primary" onclick="saveSettings()" id="btnSaveSettingsGeneral">שמור הגדרות</button>
+            <button class="btn primary" onclick="saveSettings()" id="btnSaveSettingsGeneral">×©×ž×•×¨ ×”×’×“×¨×•×ª</button>
           </div>
         </div>
       </div>
 
       <div class="settings-page" id="settings-page-networks">
         <div class="panel">
-          <div class="panel-head"><div><h2 id="settingsNetworksTitle">רשתות</h2><p id="settingsNetworksSub">הגדר רשתות וכינויים בצורה פשוטה וברורה.</p></div></div>
-          <div class="settings-note" id="networkManagerHint">הוסף טווח רשת וכינוי באותה שורה. ניתן גם לערוך או למחוק לפני השמירה.</div>
+          <div class="panel-head"><div><h2 id="settingsNetworksTitle">×¨×©×ª×•×ª</h2><p id="settingsNetworksSub">×”×’×“×¨ ×¨×©×ª×•×ª ×•×›×™× ×•×™×™× ×‘×¦×•×¨×” ×¤×©×•×˜×” ×•×‘×¨×•×¨×”.</p></div></div>
+          <div class="settings-note" id="networkManagerHint">×”×•×¡×£ ×˜×•×•×— ×¨×©×ª ×•×›×™× ×•×™ ×‘××•×ª×” ×©×•×¨×”. × ×™×ª×Ÿ ×’× ×œ×¢×¨×•×š ××• ×œ×ž×—×•×§ ×œ×¤× ×™ ×”×©×ž×™×¨×”.</div>
           <div class="settings-form-grid">
-            <div class="field"><label id="lblNetworkCidr">טווח רשת (CIDR)</label><input id="networkCidrInput" placeholder="192.168.1.0/24" onkeydown="if(event.key===\'Enter\'){event.preventDefault(); addNetworkDraft();}"></div>
-            <div class="field"><label id="lblNetworkAlias">כינוי רשת</label><input id="networkAliasInput" placeholder="למשל ATSIL" onkeydown="if(event.key===\'Enter\'){event.preventDefault(); addNetworkDraft();}"></div>
+            <div class="field"><label id="lblNetworkCidr">×˜×•×•×— ×¨×©×ª (CIDR)</label><input id="networkCidrInput" placeholder="192.168.1.0/24" onkeydown="if(event.key===\'Enter\'){event.preventDefault(); addNetworkDraft();}"></div>
+            <div class="field"><label id="lblNetworkAlias">×›×™× ×•×™ ×¨×©×ª</label><input id="networkAliasInput" placeholder="×œ×ž×©×œ ATSIL" onkeydown="if(event.key===\'Enter\'){event.preventDefault(); addNetworkDraft();}"></div>
           </div>
           <div class="settings-actions">
-            <button class="btn" onclick="addNetworkDraft()" id="btnAddNetwork">הוסף רשת</button>
+            <button class="btn" onclick="addNetworkDraft()" id="btnAddNetwork">×”×•×¡×£ ×¨×©×ª</button>
           </div>
           <div id="networkManagerList" class="network-summary"></div>
           <textarea id="setNetworks" style="display:none"></textarea>
           <div id="networkNamesEditor" style="display:none"></div>
           <div class="settings-actions">
-            <button class="btn" onclick="saveNetworksAndScan()" id="btnRunNetworkScan">שמור והפעל סריקה</button>
-            <button class="btn primary" onclick="saveNetworksOnly()" id="btnSaveNetworks">שמור רשתות</button>
+            <button class="btn" onclick="saveNetworksAndScan()" id="btnRunNetworkScan">×©×ž×•×¨ ×•×”×¤×¢×œ ×¡×¨×™×§×”</button>
+            <button class="btn primary" onclick="saveNetworksOnly()" id="btnSaveNetworks">×©×ž×•×¨ ×¨×©×ª×•×ª</button>
           </div>
           <div id="settingsMessage" class="msg"></div>
         </div>
@@ -662,15 +682,15 @@ body.settings-mode .settings-page .panel{max-width:1320px}
 
       <div class="settings-page" id="settings-page-manual">
         <div class="panel">
-          <div class="panel-head"><div><h2 id="settingsManualTitle">הוספת התקן ידנית</h2><p id="settingsManualSub">הוסף התקן ידנית אם לא זוהה אוטומטית.</p></div></div>
+          <div class="panel-head"><div><h2 id="settingsManualTitle">×”×•×¡×¤×ª ×”×ª×§×Ÿ ×™×“× ×™×ª</h2><p id="settingsManualSub">×”×•×¡×£ ×”×ª×§×Ÿ ×™×“× ×™×ª ×× ×œ× ×–×•×”×” ××•×˜×•×ž×˜×™×ª.</p></div></div>
           <div class="settings-form-grid">
-            <div class="field"><label id="lblManualIp">כתובת IP</label><input id="manualIp" placeholder="192.168.1.50"></div>
-            <div class="field"><label id="lblManualName">שם</label><input id="manualName" placeholder="למשל שרת ארון"></div>
-            <div class="field"><label id="lblManualCategory">קטגוריה</label><input id="manualCategory" placeholder="למשל שרת / מצלמה / רשת"></div>
-            <div class="field"><label id="lblManualNotes">הערות</label><input id="manualNotes" placeholder="אופציונלי"></div>
+            <div class="field"><label id="lblManualIp">×›×ª×•×‘×ª IP</label><input id="manualIp" placeholder="192.168.1.50"></div>
+            <div class="field"><label id="lblManualName">×©×</label><input id="manualName" placeholder="×œ×ž×©×œ ×©×¨×ª ××¨×•×Ÿ"></div>
+            <div class="field"><label id="lblManualCategory">×§×˜×’×•×¨×™×”</label><input id="manualCategory" placeholder="×œ×ž×©×œ ×©×¨×ª / ×ž×¦×œ×ž×” / ×¨×©×ª"></div>
+            <div class="field"><label id="lblManualNotes">×”×¢×¨×•×ª</label><input id="manualNotes" placeholder="××•×¤×¦×™×•× ×œ×™"></div>
           </div>
           <div class="quick-actions">
-            <button class="btn green" onclick="addManual()" id="btnAddManual">הוסף התקן</button>
+            <button class="btn green" onclick="addManual()" id="btnAddManual">×”×•×¡×£ ×”×ª×§×Ÿ</button>
           </div>
           <div id="manualMessage" class="msg"></div>
         </div>
@@ -678,46 +698,46 @@ body.settings-mode .settings-page .panel{max-width:1320px}
 
       <div class="settings-page" id="settings-page-appearance">
         <div class="panel">
-          <div class="panel-head"><div><h2 id="settingsAppearanceTitle">מראה</h2><p id="settingsAppearanceSub">בחר ערכת נושא והעדפות תצוגה.</p></div></div>
+          <div class="panel-head"><div><h2 id="settingsAppearanceTitle">×ž×¨××”</h2><p id="settingsAppearanceSub">×‘×—×¨ ×¢×¨×›×ª × ×•×©× ×•×”×¢×“×¤×•×ª ×ª×¦×•×’×”.</p></div></div>
           <div class="toolbar">
-            <div class="field"><label id="lblTheme">ערכת נושא</label><select id="setTheme"><option value="light">light</option><option value="dark">dark</option></select></div>
-            <div class="field"><label id="lblStatusAnimation">הבהוב מצבי התקן</label><select id="setStatusAnimation"><option value="blink">blink</option><option value="static">static</option></select></div>
-            <div class="field"><label id="lblAppearancePreview">תצוגה פעילה</label><div class="chips"><span class="chip" id="appearanceCurrent">ערכת נושא פעילה</span></div></div>
+            <div class="field"><label id="lblTheme">×¢×¨×›×ª × ×•×©×</label><select id="setTheme"><option value="light">light</option><option value="dark">dark</option></select></div>
+            <div class="field"><label id="lblStatusAnimation">×”×‘×”×•×‘ ×ž×¦×‘×™ ×”×ª×§×Ÿ</label><select id="setStatusAnimation"><option value="blink">blink</option><option value="static">static</option></select></div>
+            <div class="field"><label id="lblAppearancePreview">×ª×¦×•×’×” ×¤×¢×™×œ×”</label><div class="chips"><span class="chip" id="appearanceCurrent">×¢×¨×›×ª × ×•×©× ×¤×¢×™×œ×”</span></div></div>
           </div>
           <div class="settings-actions">
-            <button class="btn primary" onclick="saveSettings()" id="btnSaveAppearance">שמור מראה</button>
+            <button class="btn primary" onclick="saveSettings()" id="btnSaveAppearance">×©×ž×•×¨ ×ž×¨××”</button>
           </div>
         </div>
       </div>
 
       <div class="settings-page" id="settings-page-language">
         <div class="panel">
-          <div class="panel-head"><div><h2 id="settingsLanguageTitle">שפה</h2><p id="settingsLanguageSub">בחר שפת ממשק לכל המערכת.</p></div></div>
+          <div class="panel-head"><div><h2 id="settingsLanguageTitle">×©×¤×”</h2><p id="settingsLanguageSub">×‘×—×¨ ×©×¤×ª ×ž×ž×©×§ ×œ×›×œ ×”×ž×¢×¨×›×ª.</p></div></div>
           <div class="toolbar">
-            <div class="field"><label id="lblLanguage">שפה</label><select id="setLanguage"><option value="he">עברית</option><option value="en">English</option></select></div>
+            <div class="field"><label id="lblLanguage">×©×¤×”</label><select id="setLanguage"><option value="he">×¢×‘×¨×™×ª</option><option value="en">English</option></select></div>
           </div>
           <div class="settings-actions">
-            <button class="btn primary" onclick="saveSettings()" id="btnSaveSettings">שמור הגדרות</button>
+            <button class="btn primary" onclick="saveSettings()" id="btnSaveSettings">×©×ž×•×¨ ×”×’×“×¨×•×ª</button>
           </div>
         </div>
       </div>
 
       <div class="settings-page" id="settings-page-system">
         <div class="panel">
-          <div class="panel-head"><div><h2 id="settingsSystemTitle">מערכת</h2><p id="settingsSystemSub">מידע מערכת, מסד הנתונים וסטטוס סריקה.</p></div></div>
+          <div class="panel-head"><div><h2 id="settingsSystemTitle">×ž×¢×¨×›×ª</h2><p id="settingsSystemSub">×ž×™×“×¢ ×ž×¢×¨×›×ª, ×ž×¡×“ ×”× ×ª×•× ×™× ×•×¡×˜×˜×•×¡ ×¡×¨×™×§×”.</p></div></div>
           <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-            <div class="item"><div class="item-head"><strong id="sysVersionLabel">גרסת מערכת</strong></div><small id="sysVersion">—</small></div>
-            <div class="item"><div class="item-head"><strong id="sysDbLabel">מסד נתונים פעיל</strong></div><small id="sysDb">—</small></div>
-            <div class="item"><div class="item-head"><strong id="sysNetworksLabel">רשתות</strong></div><small id="sysNetworks">—</small></div>
-            <div class="item"><div class="item-head"><strong id="sysScanModeLabel">מצב סריקה נוכחי</strong></div><small id="sysScanMode">—</small></div>
-            <div class="item"><div class="item-head"><strong id="sysScanStartedLabel">זמן התחלת הסריקה האחרונה</strong></div><small id="sysScanStarted">—</small></div>
-            <div class="item"><div class="item-head"><strong id="sysScanFinishedLabel">זמן סיום הסריקה האחרונה</strong></div><small id="sysScanFinished">—</small></div>
+            <div class="item"><div class="item-head"><strong id="sysVersionLabel">×’×¨×¡×ª ×ž×¢×¨×›×ª</strong></div><small id="sysVersion">â€”</small></div>
+            <div class="item"><div class="item-head"><strong id="sysDbLabel">×ž×¡×“ × ×ª×•× ×™× ×¤×¢×™×œ</strong></div><small id="sysDb">â€”</small></div>
+            <div class="item"><div class="item-head"><strong id="sysNetworksLabel">×¨×©×ª×•×ª</strong></div><small id="sysNetworks">â€”</small></div>
+            <div class="item"><div class="item-head"><strong id="sysScanModeLabel">×ž×¦×‘ ×¡×¨×™×§×” × ×•×›×—×™</strong></div><small id="sysScanMode">â€”</small></div>
+            <div class="item"><div class="item-head"><strong id="sysScanStartedLabel">×–×ž×Ÿ ×”×ª×—×œ×ª ×”×¡×¨×™×§×” ×”××—×¨×•× ×”</strong></div><small id="sysScanStarted">â€”</small></div>
+            <div class="item"><div class="item-head"><strong id="sysScanFinishedLabel">×–×ž×Ÿ ×¡×™×•× ×”×¡×¨×™×§×” ×”××—×¨×•× ×”</strong></div><small id="sysScanFinished">â€”</small></div>
           </div>
           <div class="settings-actions">
-            <a class="btn" href="./api/export/devices.csv" id="btnExportDevices">ייצוא מכשירים</a>
-            <a class="btn" href="./api/export/settings.json" id="btnExportSettings">ייצוא הגדרות</a>
-            <button class="btn" onclick="triggerImportDevices()" id="btnImportDevices">ייבוא מכשירים</button>
-            <button class="btn" onclick="triggerImportSettings()" id="btnImportSettings">ייבוא הגדרות</button>
+            <a class="btn" href="./api/export/devices.csv" id="btnExportDevices">×™×™×¦×•× ×ž×›×©×™×¨×™×</a>
+            <a class="btn" href="./api/export/settings.json" id="btnExportSettings">×™×™×¦×•× ×”×’×“×¨×•×ª</a>
+            <button class="btn" onclick="triggerImportDevices()" id="btnImportDevices">×™×™×‘×•× ×ž×›×©×™×¨×™×</button>
+            <button class="btn" onclick="triggerImportSettings()" id="btnImportSettings">×™×™×‘×•× ×”×’×“×¨×•×ª</button>
             <input class="hidden-input" id="importDevicesInput" type="file" accept=".csv,text/csv" onchange="handleImportDevices(event)">
             <input class="hidden-input" id="importSettingsInput" type="file" accept=".json,application/json" onchange="handleImportSettings(event)">
           </div>
@@ -732,24 +752,24 @@ body.settings-mode .settings-page .panel{max-width:1320px}
     <div class="modal-backdrop" onclick="closeAlertCenter()"></div>
     <div class="modal-card">
       <div class="modal-head">
-        <h3 id="alertCenterTitle">התראות פעילות</h3>
-        <button class="btn small" onclick="closeAlertCenter()" id="alertCenterCloseTop">סגור</button>
+        <h3 id="alertCenterTitle">×”×ª×¨××•×ª ×¤×¢×™×œ×•×ª</h3>
+        <button class="btn small" onclick="closeAlertCenter()" id="alertCenterCloseTop">×¡×’×•×¨</button>
       </div>
       <div id="alertCenterSummary" class="viewer-summary" style="margin-bottom:12px"></div>
       <div class="alert-center-grid">
         <div class="alert-center-section">
-          <h4 id="alertCenterAlertsTitle">התראות פתוחות</h4>
+          <h4 id="alertCenterAlertsTitle">×”×ª×¨××•×ª ×¤×ª×•×—×•×ª</h4>
           <div id="alertCenterList" class="alert-center-list"></div>
         </div>
         <div class="alert-center-section">
-          <h4 id="alertCenterEventsTitle">אירועים אחרונים</h4>
+          <h4 id="alertCenterEventsTitle">××™×¨×•×¢×™× ××—×¨×•× ×™×</h4>
           <div id="alertCenterEvents" class="alert-center-events"></div>
         </div>
       </div>
       <div class="settings-actions">
-        <button class="btn green" onclick="resolveAllOpenAlerts()" id="alertCenterResolveAll">אשר הכל</button>
-        <button class="btn" onclick="closeAlertCenter()" id="alertCenterCancel">בטל</button>
-        <button class="btn" onclick="muteAlertHub()" id="alertCenterMute">השתק</button>
+        <button class="btn green" onclick="resolveAllOpenAlerts()" id="alertCenterResolveAll">××©×¨ ×”×›×œ</button>
+        <button class="btn" onclick="closeAlertCenter()" id="alertCenterCancel">×‘×˜×œ</button>
+        <button class="btn" onclick="muteAlertHub()" id="alertCenterMute">×”×©×ª×§</button>
       </div>
     </div>
   </div>
@@ -758,31 +778,31 @@ body.settings-mode .settings-page .panel{max-width:1320px}
     <div class="modal-backdrop" onclick="closeEditModal()"></div>
     <div class="modal-card">
       <div class="modal-head">
-        <h3 id="editModalTitle">עריכת התקן</h3>
+        <h3 id="editModalTitle">×¢×¨×™×›×ª ×”×ª×§×Ÿ</h3>
       </div>
       <div class="grid two" style="gap:12px">
-        <div class="field"><label id="editNameLabel">שם ההתקן</label><input id="editName"></div>
-        <div class="field"><label id="editCategoryLabel">קטגוריה</label><input id="editCategory"></div>
-        <div class="field"><label id="editNetworkLabel">שיוך לרשת</label><select id="editAssignedNetwork"></select></div>
-        <div class="field"><label id="editFlagsLabel">דגלים</label><div class="quick-actions"><label><input type="checkbox" id="editPinned"> <span id="editPinnedLabel">נעוץ</span></label><label><input type="checkbox" id="editCritical"> <span id="editCriticalLabel">קריטי</span></label></div></div>
+        <div class="field"><label id="editNameLabel">×©× ×”×”×ª×§×Ÿ</label><input id="editName"></div>
+        <div class="field"><label id="editCategoryLabel">×§×˜×’×•×¨×™×”</label><input id="editCategory"></div>
+        <div class="field"><label id="editNetworkLabel">×©×™×•×š ×œ×¨×©×ª</label><select id="editAssignedNetwork"></select></div>
+        <div class="field"><label id="editFlagsLabel">×“×’×œ×™×</label><div class="quick-actions"><label><input type="checkbox" id="editPinned"> <span id="editPinnedLabel">× ×¢×•×¥</span></label><label><input type="checkbox" id="editCritical"> <span id="editCriticalLabel">×§×¨×™×˜×™</span></label></div></div>
       </div>
-      <div class="field" style="margin-top:12px"><label id="editNotesLabel">הערות</label><textarea id="editNotes"></textarea></div>
+      <div class="field" style="margin-top:12px"><label id="editNotesLabel">×”×¢×¨×•×ª</label><textarea id="editNotes"></textarea></div>
       <div class="grid two" style="gap:12px;margin-top:12px">
         <div class="field"><label id="editIpLabel">IP</label><input id="editIp" disabled></div>
         <div class="field"><label id="editMacLabel">MAC</label><input id="editMac" disabled></div>
         <div class="field"><label id="editHostnameLabel">Hostname</label><input id="editHostname" disabled></div>
-        <div class="field"><label id="editVendorLabel">יצרן</label><input id="editVendor" disabled></div>
+        <div class="field"><label id="editVendorLabel">×™×¦×¨×Ÿ</label><input id="editVendor" disabled></div>
       </div>
       <div class="quick-actions" style="margin-top:14px" id="editActionBar">
-        <button class="btn" onclick="pingNow(editState.ip)" id="editPingBtn">פינג</button>
-        <button class="btn" onclick="openInBrowser(editState.ip)" id="editBrowserBtn">פתח בדפדפן</button>
-        <button class="btn" onclick="togglePin(editState.ip)" id="editPinBtn">נעץ</button>
-        <button class="btn" onclick="toggleCritical(editState.ip)" id="editCriticalBtn2">סמן כקריטי</button>
-        <button class="btn red" onclick="removeDevice(editState.ip)" id="editRemoveBtn">הסר</button>
+        <button class="btn" onclick="pingNow(editState.ip)" id="editPingBtn">×¤×™× ×’</button>
+        <button class="btn" onclick="openInBrowser(editState.ip)" id="editBrowserBtn">×¤×ª×— ×‘×“×¤×“×¤×Ÿ</button>
+        <button class="btn" onclick="togglePin(editState.ip)" id="editPinBtn">× ×¢×¥</button>
+        <button class="btn" onclick="toggleCritical(editState.ip)" id="editCriticalBtn2">×¡×ž×Ÿ ×›×§×¨×™×˜×™</button>
+        <button class="btn red" onclick="removeDevice(editState.ip)" id="editRemoveBtn">×”×¡×¨</button>
       </div>
       <div class="quick-actions" style="margin-top:14px">
-        <button class="btn primary" onclick="saveEditDevice()" id="editSaveBtn">שמור</button>
-        <button class="btn" onclick="closeEditModal()" id="editCloseBtn">סגור</button>
+        <button class="btn primary" onclick="saveEditDevice()" id="editSaveBtn">×©×ž×•×¨</button>
+        <button class="btn" onclick="closeEditModal()" id="editCloseBtn">×¡×’×•×¨</button>
       </div>
     </div>
   </div>
@@ -797,23 +817,23 @@ function safeArray(v){ return Array.isArray(v) ? v : [] }
 function setText(id,val){const el=qs(id); if(el) el.textContent=val}
 function setPlaceholder(id,val){const el=qs(id); if(el) el.placeholder=val}
 function setOptText(id,idx,val){const el=qs(id); if(el && el.options && el.options[idx]) el.options[idx].text=val}
-const state={status:null,devices:[],alerts:[],events:[],viewerCategories:[],settings:{},activeFilter:'',viewerFilter:'all',viewerCategoryKey:'',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null,alertMuteSignature:'',alertLastSignature:''};
+const state={status:null,devices:[],alerts:[],events:[],viewerCategories:[],viewerCategoryDevices:{},viewerSummarySeries:[],viewerSummaryAvailability:0,settings:{},activeFilter:'',viewerFilter:'all',viewerCategoryKey:'',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null,alertMuteSignature:'',alertLastSignature:''};
 const normalizedPath=(location.pathname||'').replace(/\/+$/,'');
 const directViewerMode=(normalizedPath.endsWith('/viewer')||normalizedPath.endsWith('/viewer.html'));
 const I18N={
   he:{
-    brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",viewerAdmin:"ממשק מלא",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
-    scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון נתונים",closeViewer:"סגור",alertPanelTitle:"מרכז התראות",alertPanelSub:"יש התראות פתוחות או אירועים קריטיים שדורשים תשומת לב.",mute:"השתק",cancel:"בטל",resolveAll:"אשר הכל",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",unstableDevices:"לא יציבים",critical:"קריטיים",pinned:"נעוצים",
-    dashboardTitle:"מכשירים שדורשים תשומת לב",dashboardSub:"דשבורד חכם עם דגש על מנותקים, קריטיים ושינויים אחרונים.",dashboardJournalSub:"3-5 האירועים החשובים והחדשים ביותר ברשת.",viewerTitle:"Viewer",viewerSub:"תצוגה חיה לקריאה בלבד של מצב הרשת.",viewerReadonly:"לצפייה בלבד",viewerSummaryTitle:"מצב חי",viewerSummarySub:"סיכום מהיר של מצב הרשת ללא פעולות עריכה.",viewerFocusTitle:"תצוגת צפייה",viewerFocusSub:"בחר סיכום למעלה כדי להציג רק את מה שמעניין אותך, בלי לעבור דף.",viewerAttentionTitle:"מנותקים ולא יציבים",viewerAttentionSub:"התקנים שמצריכים תשומת לב מיידית.",viewerEventsTitle:"שינויים חיים",viewerEventsSub:"נפילות, חזרות, חוסר יציבות וגילוי חדש.",viewerNewTitle:"מכשירים חדשים",viewerNewSub:"התקנים שהתגלו וממתינים לבדיקה.",recentDevicesTitle:"מכשירים אחרונים",recentDevicesSub:"התקנים פעילים ושינויים אחרונים ברשת.",networkSummaryTitle:"סיכום רשתות",networkSummarySub:"כמות התקנים לפי רשת וסטטוס.",attentionTitle:"דורשים טיפול",attentionSub:"מנותקים, קריטיים או חדשים שמומלץ לבדוק.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית. לחיצה על שם ההתקן פותחת את כל הפרטים והפעולות.",
-    search:"חיפוש",status:"סטטוס",category:"קטגוריה",networkFilter:"רשת",vendorFilter:"יצרן",sortBy:"מיון",bulkActions:"פעולות מרובות",selected:"נבחרו",bulkPin:"נעץ מסומנים",bulkUnpin:"בטל נעיצה",bulkCritical:"סמן כקריטי",bulkUncritical:"בטל סימון קריטי",bulkDelete:"מחק מסומנים",sortName:"שם",sortIp:"IP",sortStatus:"סטטוס",sortVendor:"יצרן",sortLastSeen:"נראה לאחרונה",networkNames:"שמות רשתות",view:"תצוגה",all:"הכל",clearFilters:"נקה סינונים",rescan:"סריקה מחדש",alertsTitle:"התראות",eventsTitle:"אירועים",openAlerts:"התראות פתוחות",recentEvents:"אירועים אחרונים",
-    general:"כללי",generalSub:"הגדרות כלליות של הממשק ותצוגת ברירת מחדל.",language:"שפה",languageSub:"בחר שפת ממשק לכל המערכת.",theme:"ערכת נושא",autoRefresh:"רענון אוטומטי (שניות)",defaultView:"תצוגת ברירת מחדל",
-    networks:"רשתות",networksSub:"הגדר את כל טווחי הרשת שברצונך לסרוק.",manualDevice:"התקן ידני",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"שם",manualCategory:"קטגוריה",manualNotes:"הערות",addDevice:"הוסף התקן",assignedNetwork:"שיוך לרשת",flags:"דגלים",save:"שמור",close:"סגור",editDeviceTitle:"עריכת התקן",appearancePreview:"תצוגה פעילה",activeTheme:"ערכת נושא פעילה",runScanNow:"שמור והפעל סריקה",
-    appearance:"מראה",appearanceSub:"בחר ערכת נושא והעדפות תצוגה.",statusAnimation:"הבהוב מצבי התקן",blink:"מהבהב",static:"קבוע",dashboardStyle:"סגנון דשבורד",saveSettings:"שמור הגדרות",saveNetworks:"שמור רשתות",exportDevices:"ייצוא מכשירים",exportSettings:"ייצוא הגדרות",importDevices:"ייבוא מכשירים",importSettings:"ייבוא הגדרות",system:"מערכת",systemSub:"מידע מערכת, מסד הנתונים וסטטוס סריקה.",
-    statusText:"סטטוס",networksText:"רשתות",discoveryMode:"מצב גילוי",protocols:"פרוטוקולי גילוי",modeAutoManual:"אוטומטי + ידני",modeManualOnly:"ידני בלבד",modeAutoOnly:"אוטומטי בלבד",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"זיהוי שרת/שער",protoVendor:"זיהוי יצרן",scanStarted:"הסריקה התחילה",deviceAdded:"התקן נוסף",deviceApproved:"ההתקן אושר",allApproved:"כל ההתקנים החדשים אושרו",settingsSaved:"ההגדרות נשמרו",networksSaved:"הרשתות נשמרו",
-    lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"פינג",pin:"נעץ",unpin:"בטל נעיצה",edit:"ערוך",remove:"הסר",accept:"אשר",addShort:"הוסף",criticalMark:"סמן קריטי",criticalUnmark:"בטל קריטי",yes:"כן",manualIp:"כתובת IP",
-    status_online:"מחובר",status_offline:"מנותק",status_unstable:"לא יציב",status_new:"חדש",status_unknown:"לא ידוע",ipRequired:"חובה להזין כתובת IP",running:"רץ",idle:"מוכן",
-    noDevices:"לא נמצאו התקנים בתוצאות הסינון",noAlerts:"אין התראות פתוחות כרגע",noAlertsHint:"התראות נפתחות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",noEvents:"אין אירועים",noDashboardDevices:"אין מכשירים להצגה",noAttentionDevices:"אין התקנים שדורשים טיפול כרגע",noNetworkSummary:"אין נתוני רשת להצגה",noViewerItems:"אין כרגע פריטים להצגה",viewerFilterAll:"כל המכשירים",viewerFilterOnline:"מחוברים",viewerFilterOffline:"מנותקים",viewerFilterNew:"חדשים",viewerFilterUnstable:"לא יציבים",viewerFilterAlerts:"עם התראות פתוחות",alertsSub:"כאן יופיעו התראות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",eventsSub:"כאן יופיעו כל אירועי המערכת והשינויים האחרונים, גם אם אין התראות פתוחות.",resolve:"סגור",nameCol:"שם",ipCol:"IP",statusCol:"סטטוס",categoryCol:"קטגוריה",vendorCol:"יצרן",macCol:"MAC",lastSeenCol:"נראה לאחרונה",actionsCol:"פעולות",importDevicesDone:"ייבוא מכשירים הושלם",importSettingsDone:"ייבוא הגדרות הושלם",importFailed:"הייבוא נכשל",lastSync:"סנכרון אחרון",refreshedNow:"הנתונים רועננו",
-    version:"גרסה",db:"מסד נתונים",scanMode:"מצב סריקה",lastScanStarted:"סריקה אחרונה התחילה",lastScanFinished:"סריקה אחרונה הסתיימה",light:"בהיר",dark:"כהה",table:"טבלה",grid:"כרטיסים",advanced:"מתקדם",compact:"קומפקטי",optional:"אופציונלי",severity:"חומרה",updatedNow:"עודכן",networkCol:"רשת",details:"פרטים",alertSearch:"חיפוש בהתראות",eventSearch:"חיפוש באירועים",systemEvent:"אירוע מערכת",dbHealth:"מצב מסד הנתונים",scanSummary:"סיכום סריקה",productPolish:"ליטוש מוצר",sysVersionLabel:"גרסת מערכת",sysDbLabel:"מסד נתונים פעיל",sysNetworksLabel:"רשתות מנוטרות",sysScanModeLabel:"מצב סריקה נוכחי",sysScanStartedLabel:"זמן התחלת הסריקה האחרונה",sysScanFinishedLabel:"זמן סיום הסריקה האחרונה",networkNamesHint:"אם יש שם רשת, הוא יוצג בממשק במקום ה-CIDR",networkEditorTitle:"שיוך שמות לרשתות",networkManagerHint:"הוסף טווח רשת וכינוי באותה שורה. ניתן גם לערוך או למחוק לפני השמירה.",networkCidr:"טווח רשת (CIDR)",networkAlias:"כינוי רשת",addNetwork:"הוסף רשת",edit:"ערוך",delete:"מחק",saveNetworksOnly:"שמור רשתות",networkEmpty:"עדיין לא הוגדרו רשתות",settingsHelperNote:"שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים",saveAppearance:"שמור מראה"
+    brand:"HOMEii Network",dashboard:"×“×©×‘×•×¨×“",viewer:"×¦×¤×™×™×”",devices:"×ž×›×©×™×¨×™×",alerts:"×”×ª×¨××•×ª",settings:"×”×’×“×¨×•×ª",viewerAdmin:"×ž×ž×©×§ ×ž×œ×",settingsBack:"×—×–×¨×” ×œ×ª×¤×¨×™×˜ ×”×¨××©×™",settingsTopNote:"×”×”×’×“×¨×•×ª ×ž×—×•×œ×§×•×ª ×œ×¢×ž×•×“×™× × ×¤×¨×“×™× ×“×¨×š ×ª×¤×¨×™×˜ ×”×¦×“.",
+    scan:"×¡×¨×™×§×” ×¢×›×©×™×•",acceptAll:"××©×¨ ××ª ×›×œ ×”×—×“×©×™×",refresh:"×¨×¢× ×•×Ÿ × ×ª×•× ×™×",closeViewer:"×¡×’×•×¨",alertPanelTitle:"×ž×¨×›×– ×”×ª×¨××•×ª",alertPanelSub:"×™×© ×”×ª×¨××•×ª ×¤×ª×•×—×•×ª ××• ××™×¨×•×¢×™× ×§×¨×™×˜×™×™× ×©×“×•×¨×©×™× ×ª×©×•×ž×ª ×œ×‘.",mute:"×”×©×ª×§",cancel:"×‘×˜×œ",resolveAll:"××©×¨ ×”×›×œ",offlineDevices:"×ž×›×©×™×¨×™× ×ž× ×•×ª×§×™×",online:"×ž×—×•×‘×¨×™×",total:"×¡×”×´×›",new:"×—×“×©×™×",unstableDevices:"×œ× ×™×¦×™×‘×™×",critical:"×§×¨×™×˜×™×™×",pinned:"× ×¢×•×¦×™×",
+    dashboardTitle:"×ž×›×©×™×¨×™× ×©×“×•×¨×©×™× ×ª×©×•×ž×ª ×œ×‘",dashboardSub:"×“×©×‘×•×¨×“ ×—×›× ×¢× ×“×’×© ×¢×œ ×ž× ×•×ª×§×™×, ×§×¨×™×˜×™×™× ×•×©×™× ×•×™×™× ××—×¨×•× ×™×.",dashboardJournalSub:"3-5 ×”××™×¨×•×¢×™× ×”×—×©×•×‘×™× ×•×”×—×“×©×™× ×‘×™×•×ª×¨ ×‘×¨×©×ª.",viewerTitle:"Viewer",viewerSub:"×ª×¦×•×’×” ×—×™×” ×œ×§×¨×™××” ×‘×œ×‘×“ ×©×œ ×ž×¦×‘ ×”×¨×©×ª.",viewerReadonly:"×œ×¦×¤×™×™×” ×‘×œ×‘×“",viewerSummaryTitle:"×ž×¦×‘ ×—×™",viewerSummarySub:"×¡×™×›×•× ×ž×”×™×¨ ×©×œ ×ž×¦×‘ ×”×¨×©×ª ×œ×œ× ×¤×¢×•×œ×•×ª ×¢×¨×™×›×”.",viewerFocusTitle:"×ª×¦×•×’×ª ×¦×¤×™×™×”",viewerFocusSub:"×‘×—×¨ ×¡×™×›×•× ×œ×ž×¢×œ×” ×›×“×™ ×œ×”×¦×™×’ ×¨×§ ××ª ×ž×” ×©×ž×¢× ×™×™×Ÿ ××•×ª×š, ×‘×œ×™ ×œ×¢×‘×•×¨ ×“×£.",viewerAttentionTitle:"×ž× ×•×ª×§×™× ×•×œ× ×™×¦×™×‘×™×",viewerAttentionSub:"×”×ª×§× ×™× ×©×ž×¦×¨×™×›×™× ×ª×©×•×ž×ª ×œ×‘ ×ž×™×™×“×™×ª.",viewerEventsTitle:"×©×™× ×•×™×™× ×—×™×™×",viewerEventsSub:"× ×¤×™×œ×•×ª, ×—×–×¨×•×ª, ×—×•×¡×¨ ×™×¦×™×‘×•×ª ×•×’×™×œ×•×™ ×—×“×©.",viewerNewTitle:"×ž×›×©×™×¨×™× ×—×“×©×™×",viewerNewSub:"×”×ª×§× ×™× ×©×”×ª×’×œ×• ×•×ž×ž×ª×™× ×™× ×œ×‘×“×™×§×”.",recentDevicesTitle:"×ž×›×©×™×¨×™× ××—×¨×•× ×™×",recentDevicesSub:"×”×ª×§× ×™× ×¤×¢×™×œ×™× ×•×©×™× ×•×™×™× ××—×¨×•× ×™× ×‘×¨×©×ª.",networkSummaryTitle:"×¡×™×›×•× ×¨×©×ª×•×ª",networkSummarySub:"×›×ž×•×ª ×”×ª×§× ×™× ×œ×¤×™ ×¨×©×ª ×•×¡×˜×˜×•×¡.",attentionTitle:"×“×•×¨×©×™× ×˜×™×¤×•×œ",attentionSub:"×ž× ×•×ª×§×™×, ×§×¨×™×˜×™×™× ××• ×—×“×©×™× ×©×ž×•×ž×œ×¥ ×œ×‘×“×•×§.",devicesTitle:"×ž×›×©×™×¨×™×",devicesSub:"×˜×‘×œ×” ×§×•×ž×¤×§×˜×™×ª. ×œ×—×™×¦×” ×¢×œ ×©× ×”×”×ª×§×Ÿ ×¤×•×ª×—×ª ××ª ×›×œ ×”×¤×¨×˜×™× ×•×”×¤×¢×•×œ×•×ª.",
+    search:"×—×™×¤×•×©",status:"×¡×˜×˜×•×¡",category:"×§×˜×’×•×¨×™×”",networkFilter:"×¨×©×ª",vendorFilter:"×™×¦×¨×Ÿ",sortBy:"×ž×™×•×Ÿ",bulkActions:"×¤×¢×•×œ×•×ª ×ž×¨×•×‘×•×ª",selected:"× ×‘×—×¨×•",bulkPin:"× ×¢×¥ ×ž×¡×•×ž× ×™×",bulkUnpin:"×‘×˜×œ × ×¢×™×¦×”",bulkCritical:"×¡×ž×Ÿ ×›×§×¨×™×˜×™",bulkUncritical:"×‘×˜×œ ×¡×™×ž×•×Ÿ ×§×¨×™×˜×™",bulkDelete:"×ž×—×§ ×ž×¡×•×ž× ×™×",sortName:"×©×",sortIp:"IP",sortStatus:"×¡×˜×˜×•×¡",sortVendor:"×™×¦×¨×Ÿ",sortLastSeen:"× ×¨××” ×œ××—×¨×•× ×”",networkNames:"×©×ž×•×ª ×¨×©×ª×•×ª",view:"×ª×¦×•×’×”",all:"×”×›×œ",clearFilters:"× ×§×” ×¡×™× ×•× ×™×",rescan:"×¡×¨×™×§×” ×ž×—×“×©",alertsTitle:"×”×ª×¨××•×ª",eventsTitle:"××™×¨×•×¢×™×",openAlerts:"×”×ª×¨××•×ª ×¤×ª×•×—×•×ª",recentEvents:"××™×¨×•×¢×™× ××—×¨×•× ×™×",
+    general:"×›×œ×œ×™",generalSub:"×”×’×“×¨×•×ª ×›×œ×œ×™×•×ª ×©×œ ×”×ž×ž×©×§ ×•×ª×¦×•×’×ª ×‘×¨×™×¨×ª ×ž×—×“×œ.",language:"×©×¤×”",languageSub:"×‘×—×¨ ×©×¤×ª ×ž×ž×©×§ ×œ×›×œ ×”×ž×¢×¨×›×ª.",theme:"×¢×¨×›×ª × ×•×©×",autoRefresh:"×¨×¢× ×•×Ÿ ××•×˜×•×ž×˜×™ (×©× ×™×•×ª)",defaultView:"×ª×¦×•×’×ª ×‘×¨×™×¨×ª ×ž×—×“×œ",
+    networks:"×¨×©×ª×•×ª",networksSub:"×”×’×“×¨ ××ª ×›×œ ×˜×•×•×—×™ ×”×¨×©×ª ×©×‘×¨×¦×•× ×š ×œ×¡×¨×•×§.",manualDevice:"×”×ª×§×Ÿ ×™×“× ×™",manualDeviceSub:"×”×•×¡×£ ×”×ª×§×Ÿ ×™×“× ×™×ª ×× ×œ× ×–×•×”×” ××•×˜×•×ž×˜×™×ª.",manualName:"×©×",manualCategory:"×§×˜×’×•×¨×™×”",manualNotes:"×”×¢×¨×•×ª",addDevice:"×”×•×¡×£ ×”×ª×§×Ÿ",assignedNetwork:"×©×™×•×š ×œ×¨×©×ª",flags:"×“×’×œ×™×",save:"×©×ž×•×¨",close:"×¡×’×•×¨",editDeviceTitle:"×¢×¨×™×›×ª ×”×ª×§×Ÿ",appearancePreview:"×ª×¦×•×’×” ×¤×¢×™×œ×”",activeTheme:"×¢×¨×›×ª × ×•×©× ×¤×¢×™×œ×”",runScanNow:"×©×ž×•×¨ ×•×”×¤×¢×œ ×¡×¨×™×§×”",
+    appearance:"×ž×¨××”",appearanceSub:"×‘×—×¨ ×¢×¨×›×ª × ×•×©× ×•×”×¢×“×¤×•×ª ×ª×¦×•×’×”.",statusAnimation:"×”×‘×”×•×‘ ×ž×¦×‘×™ ×”×ª×§×Ÿ",blink:"×ž×”×‘×”×‘",static:"×§×‘×•×¢",dashboardStyle:"×¡×’× ×•×Ÿ ×“×©×‘×•×¨×“",saveSettings:"×©×ž×•×¨ ×”×’×“×¨×•×ª",saveNetworks:"×©×ž×•×¨ ×¨×©×ª×•×ª",exportDevices:"×™×™×¦×•× ×ž×›×©×™×¨×™×",exportSettings:"×™×™×¦×•× ×”×’×“×¨×•×ª",importDevices:"×™×™×‘×•× ×ž×›×©×™×¨×™×",importSettings:"×™×™×‘×•× ×”×’×“×¨×•×ª",system:"×ž×¢×¨×›×ª",systemSub:"×ž×™×“×¢ ×ž×¢×¨×›×ª, ×ž×¡×“ ×”× ×ª×•× ×™× ×•×¡×˜×˜×•×¡ ×¡×¨×™×§×”.",
+    statusText:"×¡×˜×˜×•×¡",networksText:"×¨×©×ª×•×ª",discoveryMode:"×ž×¦×‘ ×’×™×œ×•×™",protocols:"×¤×¨×•×˜×•×§×•×œ×™ ×’×™×œ×•×™",modeAutoManual:"××•×˜×•×ž×˜×™ + ×™×“× ×™",modeManualOnly:"×™×“× ×™ ×‘×œ×‘×“",modeAutoOnly:"××•×˜×•×ž×˜×™ ×‘×œ×‘×“",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"×–×™×”×•×™ ×©×¨×ª/×©×¢×¨",protoVendor:"×–×™×”×•×™ ×™×¦×¨×Ÿ",scanStarted:"×”×¡×¨×™×§×” ×”×ª×—×™×œ×”",deviceAdded:"×”×ª×§×Ÿ × ×•×¡×£",deviceApproved:"×”×”×ª×§×Ÿ ××•×©×¨",allApproved:"×›×œ ×”×”×ª×§× ×™× ×”×—×“×©×™× ××•×©×¨×•",settingsSaved:"×”×”×’×“×¨×•×ª × ×©×ž×¨×•",networksSaved:"×”×¨×©×ª×•×ª × ×©×ž×¨×•",
+    lastSeen:"× ×¨××” ×œ××—×¨×•× ×”",known:"×ž×•×›×¨",pending:"×ž×ž×ª×™×Ÿ",ping:"×¤×™× ×’",pin:"× ×¢×¥",unpin:"×‘×˜×œ × ×¢×™×¦×”",edit:"×¢×¨×•×š",remove:"×”×¡×¨",accept:"××©×¨",addShort:"×”×•×¡×£",criticalMark:"×¡×ž×Ÿ ×§×¨×™×˜×™",criticalUnmark:"×‘×˜×œ ×§×¨×™×˜×™",yes:"×›×Ÿ",manualIp:"×›×ª×•×‘×ª IP",
+    status_online:"×ž×—×•×‘×¨",status_offline:"×ž× ×•×ª×§",status_unstable:"×œ× ×™×¦×™×‘",status_new:"×—×“×©",status_unknown:"×œ× ×™×“×•×¢",ipRequired:"×—×•×‘×” ×œ×”×–×™×Ÿ ×›×ª×•×‘×ª IP",running:"×¨×¥",idle:"×ž×•×›×Ÿ",
+    noDevices:"×œ× × ×ž×¦××• ×”×ª×§× ×™× ×‘×ª×•×¦××•×ª ×”×¡×™× ×•×Ÿ",noAlerts:"××™×Ÿ ×”×ª×¨××•×ª ×¤×ª×•×—×•×ª ×›×¨×’×¢",noAlertsHint:"×”×ª×¨××•×ª × ×¤×ª×—×•×ª ×¢×œ ×ž×›×©×™×¨ ×—×“×©, ×ž×›×©×™×¨ ×©× ×¤×œ, ×ž×›×©×™×¨ ×©×—×–×¨ ××• ×ž×›×©×™×¨ ×œ× ×™×¦×™×‘.",noEvents:"××™×Ÿ ××™×¨×•×¢×™×",noDashboardDevices:"××™×Ÿ ×ž×›×©×™×¨×™× ×œ×”×¦×’×”",noAttentionDevices:"××™×Ÿ ×”×ª×§× ×™× ×©×“×•×¨×©×™× ×˜×™×¤×•×œ ×›×¨×’×¢",noNetworkSummary:"××™×Ÿ × ×ª×•× ×™ ×¨×©×ª ×œ×”×¦×’×”",noViewerItems:"××™×Ÿ ×›×¨×’×¢ ×¤×¨×™×˜×™× ×œ×”×¦×’×”",viewerFilterAll:"×›×œ ×”×ž×›×©×™×¨×™×",viewerFilterOnline:"×ž×—×•×‘×¨×™×",viewerFilterOffline:"×ž× ×•×ª×§×™×",viewerFilterNew:"×—×“×©×™×",viewerFilterUnstable:"×œ× ×™×¦×™×‘×™×",viewerFilterAlerts:"×¢× ×”×ª×¨××•×ª ×¤×ª×•×—×•×ª",alertsSub:"×›××Ÿ ×™×•×¤×™×¢×• ×”×ª×¨××•×ª ×¢×œ ×ž×›×©×™×¨ ×—×“×©, ×ž×›×©×™×¨ ×©× ×¤×œ, ×ž×›×©×™×¨ ×©×—×–×¨ ××• ×ž×›×©×™×¨ ×œ× ×™×¦×™×‘.",eventsSub:"×›××Ÿ ×™×•×¤×™×¢×• ×›×œ ××™×¨×•×¢×™ ×”×ž×¢×¨×›×ª ×•×”×©×™× ×•×™×™× ×”××—×¨×•× ×™×, ×’× ×× ××™×Ÿ ×”×ª×¨××•×ª ×¤×ª×•×—×•×ª.",resolve:"×¡×’×•×¨",nameCol:"×©×",ipCol:"IP",statusCol:"×¡×˜×˜×•×¡",categoryCol:"×§×˜×’×•×¨×™×”",vendorCol:"×™×¦×¨×Ÿ",macCol:"MAC",lastSeenCol:"× ×¨××” ×œ××—×¨×•× ×”",actionsCol:"×¤×¢×•×œ×•×ª",importDevicesDone:"×™×™×‘×•× ×ž×›×©×™×¨×™× ×”×•×©×œ×",importSettingsDone:"×™×™×‘×•× ×”×’×“×¨×•×ª ×”×•×©×œ×",importFailed:"×”×™×™×‘×•× × ×›×©×œ",lastSync:"×¡× ×›×¨×•×Ÿ ××—×¨×•×Ÿ",refreshedNow:"×”× ×ª×•× ×™× ×¨×•×¢× × ×•",
+    version:"×’×¨×¡×”",db:"×ž×¡×“ × ×ª×•× ×™×",scanMode:"×ž×¦×‘ ×¡×¨×™×§×”",lastScanStarted:"×¡×¨×™×§×” ××—×¨×•× ×” ×”×ª×—×™×œ×”",lastScanFinished:"×¡×¨×™×§×” ××—×¨×•× ×” ×”×¡×ª×™×™×ž×”",light:"×‘×”×™×¨",dark:"×›×”×”",table:"×˜×‘×œ×”",grid:"×›×¨×˜×™×¡×™×",advanced:"×ž×ª×§×“×",compact:"×§×•×ž×¤×§×˜×™",optional:"××•×¤×¦×™×•× ×œ×™",severity:"×—×•×ž×¨×”",updatedNow:"×¢×•×“×›×Ÿ",networkCol:"×¨×©×ª",details:"×¤×¨×˜×™×",alertSearch:"×—×™×¤×•×© ×‘×”×ª×¨××•×ª",eventSearch:"×—×™×¤×•×© ×‘××™×¨×•×¢×™×",systemEvent:"××™×¨×•×¢ ×ž×¢×¨×›×ª",dbHealth:"×ž×¦×‘ ×ž×¡×“ ×”× ×ª×•× ×™×",scanSummary:"×¡×™×›×•× ×¡×¨×™×§×”",productPolish:"×œ×™×˜×•×© ×ž×•×¦×¨",sysVersionLabel:"×’×¨×¡×ª ×ž×¢×¨×›×ª",sysDbLabel:"×ž×¡×“ × ×ª×•× ×™× ×¤×¢×™×œ",sysNetworksLabel:"×¨×©×ª×•×ª ×ž× ×•×˜×¨×•×ª",sysScanModeLabel:"×ž×¦×‘ ×¡×¨×™×§×” × ×•×›×—×™",sysScanStartedLabel:"×–×ž×Ÿ ×”×ª×—×œ×ª ×”×¡×¨×™×§×” ×”××—×¨×•× ×”",sysScanFinishedLabel:"×–×ž×Ÿ ×¡×™×•× ×”×¡×¨×™×§×” ×”××—×¨×•× ×”",networkNamesHint:"×× ×™×© ×©× ×¨×©×ª, ×”×•× ×™×•×¦×’ ×‘×ž×ž×©×§ ×‘×ž×§×•× ×”-CIDR",networkEditorTitle:"×©×™×•×š ×©×ž×•×ª ×œ×¨×©×ª×•×ª",networkManagerHint:"×”×•×¡×£ ×˜×•×•×— ×¨×©×ª ×•×›×™× ×•×™ ×‘××•×ª×” ×©×•×¨×”. × ×™×ª×Ÿ ×’× ×œ×¢×¨×•×š ××• ×œ×ž×—×•×§ ×œ×¤× ×™ ×”×©×ž×™×¨×”.",networkCidr:"×˜×•×•×— ×¨×©×ª (CIDR)",networkAlias:"×›×™× ×•×™ ×¨×©×ª",addNetwork:"×”×•×¡×£ ×¨×©×ª",edit:"×¢×¨×•×š",delete:"×ž×—×§",saveNetworksOnly:"×©×ž×•×¨ ×¨×©×ª×•×ª",networkEmpty:"×¢×“×™×™×Ÿ ×œ× ×”×•×’×“×¨×• ×¨×©×ª×•×ª",settingsHelperNote:"×©×ž×•×¨ ×›×œ ××–×•×¨ ×œ××—×¨ ×©×™× ×•×™ ×›×“×™ ×©×”×”×’×“×¨×•×ª ×™×™×©×ž×¨×• ×œ×ž×¡×“ ×”× ×ª×•× ×™×",saveAppearance:"×©×ž×•×¨ ×ž×¨××”"
   },
   en:{
     brand:"HOMEii Network",dashboard:"Dashboard",viewer:"Viewer",devices:"Devices",alerts:"Alerts",settings:"Settings",viewerAdmin:"Full app",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
@@ -833,8 +853,8 @@ const I18N={
 function tr(key){const lang=(state.settings.language||'he');return (I18N[lang]&&I18N[lang][key])||I18N.he[key]||key}
 function statusLabel(status){const map={online:'status_online',offline:'status_offline',unstable:'status_unstable',new:'status_new',unknown:'status_unknown'}; return tr(map[status]||'status_unknown')}
 function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
-function fmtTs(ts){if(!ts)return '—'; try{return new Date(Number(ts)*1000).toLocaleString((state.settings.language||'he')==='he'?'he-IL':'en-US')}catch{return String(ts)}}
-function timeAgo(ts){if(!ts)return '—'; const now=Math.floor(Date.now()/1000); const d=Math.max(0,now-Number(ts)); const he=(state.settings.language||'he')==='he'; if(d<60)return `${d} ${he?'שניות':'sec'}`; if(d<3600)return `${Math.floor(d/60)} ${he?'דקות':'min'}`; if(d<86400)return `${Math.floor(d/3600)} ${he?'שעות':'hours'}`; return `${Math.floor(d/86400)} ${he?'ימים':'days'}`}
+function fmtTs(ts){if(!ts)return 'â€”'; try{return new Date(Number(ts)*1000).toLocaleString((state.settings.language||'he')==='he'?'he-IL':'en-US')}catch{return String(ts)}}
+function timeAgo(ts){if(!ts)return 'â€”'; const now=Math.floor(Date.now()/1000); const d=Math.max(0,now-Number(ts)); const he=(state.settings.language||'he')==='he'; if(d<60)return `${d} ${he?'×©× ×™×•×ª':'sec'}`; if(d<3600)return `${Math.floor(d/60)} ${he?'×“×§×•×ª':'min'}`; if(d<86400)return `${Math.floor(d/3600)} ${he?'×©×¢×•×ª':'hours'}`; return `${Math.floor(d/86400)} ${he?'×™×ž×™×':'days'}`}
 async function api(url,options){const res=await fetch(url,{cache:'no-store',...(options||{})}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
 function switchTab(tab,btn){
   document.querySelectorAll('.section').forEach(el=>{el.classList.remove('active'); el.style.display='none';});
@@ -890,7 +910,7 @@ function updateHeaderClock(){
 async function manualRefresh(){
   await refreshAll();
   const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US';
-  const sync=qs('lastRefreshText'); if(sync) sync.textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)} • ${tr('refreshedNow')}`;
+  const sync=qs('lastRefreshText'); if(sync) sync.textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)} â€¢ ${tr('refreshedNow')}`;
 }
 function openAlertCenter(){qs('alertCenterModal')?.classList.remove('hidden')}
 function closeAlertCenter(){qs('alertCenterModal')?.classList.add('hidden')}
@@ -973,10 +993,10 @@ function applyTranslations(){
   setText('btnScan',tr('scan')); setText('btnAcceptAll',tr('acceptAll')); setText('btnRefresh',tr('refresh')); setText('btnViewerClose',tr('closeViewer'));
   setText('kpiOfflineLabel',tr('offlineDevices')); setText('kpiOnlineLabel',tr('online')); setText('kpiTotalLabel',tr('total')); setText('kpiUnstableLabel',tr('unstableDevices')); setText('kpiNewLabel',tr('new')); setText('kpiCriticalLabel',tr('critical')); setText('kpiPinnedLabel',tr('pinned'));
   setText('attentionTitle',tr('attentionTitle')); setText('attentionSub',tr('attentionSub')); setText('recentDevicesTitle',tr('recentDevicesTitle')); setText('recentDevicesSub',tr('recentDevicesSub')); setText('networkSummaryTitle',tr('networkSummaryTitle')); setText('networkSummarySub',tr('networkSummarySub')); setText('alertsOpenTitle',tr('openAlerts')); setText('eventsRecentTitle',tr('recentEvents'));
-  setText('dashboardPulseTitle',(state.settings.language||'he')==='he'?'דופק הרשת':'Network Pulse'); setText('dashboardPulseSub',(state.settings.language||'he')==='he'?'מגמת שינויים אחרונה והרכב מצב המכשירים.':'Recent changes and live network composition.');
-  setText('viewerTitle',tr('viewerTitle')); setText('viewerSub',tr('viewerSub')); setText('viewerReadonly',tr('viewerReadonly')); setText('viewerFocusTitle',tr('viewerFocusTitle')); setText('viewerFocusSub',tr('viewerFocusSub')); setText('viewerAttentionTitle',tr('viewerAttentionTitle')); setText('viewerAttentionSub',tr('viewerAttentionSub')); setText('viewerEventsTitle',tr('viewerEventsTitle')); setText('viewerEventsSub',tr('viewerEventsSub')); setText('viewerNewTitle',tr('viewerNewTitle')); setText('viewerNewSub',tr('viewerNewSub')); setText('viewerCategoriesTitle',localText('קטגוריות','Categories')); setText('viewerCategoriesSub',localText('כרטיסים דינמיים לפי כל הקטגוריות המשויכות במערכת.','Dynamic cards for every category currently assigned in the system.'));
+  setText('dashboardPulseTitle',(state.settings.language||'he')==='he'?'×“×•×¤×§ ×”×¨×©×ª':'Network Pulse'); setText('dashboardPulseSub',(state.settings.language||'he')==='he'?'×ž×’×ž×ª ×©×™× ×•×™×™× ××—×¨×•× ×” ×•×”×¨×›×‘ ×ž×¦×‘ ×”×ž×›×©×™×¨×™×.':'Recent changes and live network composition.');
+  setText('viewerTitle',tr('viewerTitle')); setText('viewerSub',tr('viewerSub')); setText('viewerReadonly',tr('viewerReadonly')); setText('viewerFocusTitle',tr('viewerFocusTitle')); setText('viewerFocusSub',tr('viewerFocusSub')); setText('viewerAttentionTitle',tr('viewerAttentionTitle')); setText('viewerAttentionSub',tr('viewerAttentionSub')); setText('viewerEventsTitle',tr('viewerEventsTitle')); setText('viewerEventsSub',tr('viewerEventsSub')); setText('viewerNewTitle',tr('viewerNewTitle')); setText('viewerNewSub',tr('viewerNewSub')); setText('viewerCategoriesTitle',localText('×§×˜×’×•×¨×™×•×ª','Categories')); setText('viewerCategoriesSub',localText('×›×¨×˜×™×¡×™× ×“×™× ×ž×™×™× ×œ×¤×™ ×›×œ ×”×§×˜×’×•×¨×™×•×ª ×”×ž×©×•×™×›×•×ª ×‘×ž×¢×¨×›×ª.','Dynamic cards for every category currently assigned in the system.'));
   setText('devicesTitle',tr('devicesTitle')); setText('devicesSub',tr('devicesSub'));
-  setText('lblSearch',tr('search')); setPlaceholder('searchText',(state.settings.language||'he')==='he'?'שם, IP, hostname, vendor, mac...':'Name, IP, hostname, vendor, mac...');
+  setText('lblSearch',tr('search')); setPlaceholder('searchText',(state.settings.language||'he')==='he'?'×©×, IP, hostname, vendor, mac...':'Name, IP, hostname, vendor, mac...');
   setText('lblStatusFilter',tr('status')); setText('lblCategoryFilter',tr('category')); setText('lblNetworkFilter',tr('networkFilter')); setText('lblVendorFilter',tr('vendorFilter')); setText('lblSortBy',tr('sortBy')); setText('lblView',tr('view'));
   setOptText('filterStatus',0,tr('all')); setOptText('filterStatus',1,tr('status_online')); setOptText('filterStatus',2,tr('status_offline')); setOptText('filterStatus',3,tr('status_unstable')); setOptText('filterStatus',4,tr('status_new'));
   setOptText('devicesView',0,tr('table')); setOptText('devicesView',1,tr('grid')); setOptText('sortBy',0,tr('sortName')); setOptText('sortBy',1,tr('sortIp')); setOptText('sortBy',2,tr('sortStatus')); setOptText('sortBy',3,tr('sortVendor')); setOptText('sortBy',4,tr('sortLastSeen'));
@@ -988,14 +1008,14 @@ function applyTranslations(){
   setText('btnSaveSettingsGeneral',tr('saveSettings'));
   setText('settingsNetworksTitle',tr('networks')); setText('settingsNetworksSub',tr('networksSub')); setText('networkManagerHint',tr('networkManagerHint')); setText('lblNetworkCidr',tr('networkCidr')); setText('lblNetworkAlias',tr('networkAlias')); setText('btnAddNetwork',tr('addNetwork')); setText('btnRunNetworkScan',tr('runScanNow')); setText('btnSaveNetworks',tr('saveNetworksOnly'));
   setText('settingsManualTitle',tr('manualDevice')); setText('settingsManualSub',tr('manualDeviceSub')); setText('lblManualIp',tr('manualIp')); setText('lblManualName',tr('manualName')); setText('lblManualCategory',tr('manualCategory')); setText('lblManualNotes',tr('manualNotes')); setText('btnAddManual',tr('addDevice')); setText('btnSaveAppearance',tr('saveAppearance'));
-  setPlaceholder('manualName',(state.settings.language||'he')==='he'?'למשל שרת ארון':'e.g. Rack Server'); setPlaceholder('manualCategory',(state.settings.language||'he')==='he'?'למשל שרת / מצלמה / רשת':'e.g. server / camera / network'); setPlaceholder('manualNotes',tr('optional'));
+  setPlaceholder('manualName',(state.settings.language||'he')==='he'?'×œ×ž×©×œ ×©×¨×ª ××¨×•×Ÿ':'e.g. Rack Server'); setPlaceholder('manualCategory',(state.settings.language||'he')==='he'?'×œ×ž×©×œ ×©×¨×ª / ×ž×¦×œ×ž×” / ×¨×©×ª':'e.g. server / camera / network'); setPlaceholder('manualNotes',tr('optional'));
   setText('settingsAppearanceTitle',tr('appearance')); setText('settingsAppearanceSub',tr('appearanceSub')); setText('lblTheme',tr('theme')); setText('lblStatusAnimation',tr('statusAnimation')); setText('lblAppearancePreview',tr('appearancePreview')); setText('appearanceCurrent',tr('activeTheme')); setOptText('setTheme',0,tr('light')); setOptText('setTheme',1,tr('dark')); setOptText('setStatusAnimation',0,tr('blink')); setOptText('setStatusAnimation',1,tr('static'));
   setText('settingsLanguageTitle',tr('language')); setText('settingsLanguageSub',tr('languageSub')); setText('lblLanguage',tr('language')); setText('btnSaveSettings',tr('saveSettings'));
   setText('settingsSystemTitle',tr('system')); setText('settingsSystemSub',tr('systemSub'));
   setText('btnExportDevices',tr('exportDevices')); setText('btnExportSettings',tr('exportSettings')); setText('btnImportDevices',tr('importDevices')); setText('btnImportSettings',tr('importSettings'));
   setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel'));
   setText('alertCenterTitle',tr('alertPanelTitle')); setText('alertCenterCloseTop',tr('closeViewer')); setText('alertCenterResolveAll',tr('resolveAll')); setText('alertCenterCancel',tr('cancel')); setText('alertCenterMute',tr('mute'));
-  setText('alertCenterAlertsTitle',(state.settings.language||'he')==='he'?'התראות פתוחות':'Open alerts'); setText('alertCenterEventsTitle',(state.settings.language||'he')==='he'?'אירועים אחרונים':'Recent events');
+  setText('alertCenterAlertsTitle',(state.settings.language||'he')==='he'?'×”×ª×¨××•×ª ×¤×ª×•×—×•×ª':'Open alerts'); setText('alertCenterEventsTitle',(state.settings.language||'he')==='he'?'××™×¨×•×¢×™× ××—×¨×•× ×™×':'Recent events');
   setText('lblStatus',tr('statusText')); setText('lblNetworks',tr('networksText'));
 }
 function deviceStatusBadge(status){const cls=['online','offline','unstable','new'].includes(status)?status:'new'; return `<span class="badge ${cls}">${escapeHtml(statusLabel(status||'unknown'))}</span>`}
@@ -1022,7 +1042,7 @@ function viewerDevicesForFilter(){
   }).slice(0,18);
 }
 function viewerCategoryKey(category){ return (category||'').trim() || '__uncategorized__'; }
-function viewerCategoryLabel(category){ return (category||'').trim() || localText('ללא קטגוריה','Uncategorized'); }
+function viewerCategoryLabel(category){ return (category||'').trim() || localText('×œ×œ× ×§×˜×’×•×¨×™×”','Uncategorized'); }
 function findViewerCategory(){
   if(!state.viewerCategoryKey) return null;
   return (state.viewerCategories||[]).find(item=>viewerCategoryKey(item.category)===state.viewerCategoryKey) || null;
@@ -1045,30 +1065,63 @@ function viewerCategoryStateClass(category){
   if(category.state==='new') return 'fresh';
   return 'good';
 }
+function availabilitySquareClass(point){
+  const pct=Number(point?.availability_pct ?? 0);
+  if(pct >= 99.9) return 'good';
+  if(pct > 0) return 'partial';
+  return 'bad';
+}
+function availabilityStrip(series, captionText=''){
+  const points=Array.isArray(series)?series:[];
+  if(!points.length) return '';
+  return `<div class="availability-strip">${points.map(point=>`<span class="availability-square ${availabilitySquareClass(point)}" title="${escapeHtml(fmtTs(point.ts))} â€¢ ${Math.round(Number(point.availability_pct||0))}%"></span>`).join('')}</div>${captionText?`<div class="availability-caption"><span>${escapeHtml(localText('×œ×¤× ×™ 24 ×©×¢×•×ª','24h ago'))}</span><span>${escapeHtml(captionText)}</span><span>${escapeHtml(localText('×¢×›×©×™×•','Now'))}</span></div>`:''}`;
+}
+function deviceTimeline(device){
+  return state.viewerCategoryDevices?.[device.ip]?.series || [];
+}
+function deviceAvailabilityPct(device){
+  return Number(state.viewerCategoryDevices?.[device.ip]?.availability_24h || 0);
+}
+function renderKpiAvailabilityStrips(){
+  const strip = availabilityStrip(state.viewerSummarySeries || [], `${Math.round(Number(state.viewerSummaryAvailability || 0))}%`);
+  ['Offline','Online','Total','Unstable','New','Critical','Pinned'].forEach(name=>{
+    const el=qs(`kpiStrip${name}`);
+    if(el) el.innerHTML=strip;
+  });
+}
 function renderViewerCategories(){
   const mount=qs('viewerCategories');
   if(!mount) return;
   const categories=state.viewerCategories||[];
   if(!categories.length){
-    mount.innerHTML=`<div class="empty">${escapeHtml(localText('אין קטגוריות להצגה','No categories to show'))}</div>`;
+    mount.innerHTML=`<div class="empty">${escapeHtml(localText('××™×Ÿ ×§×˜×’×•×¨×™×•×ª ×œ×”×¦×’×”','No categories to show'))}</div>`;
     return;
   }
   mount.innerHTML=categories.map(category=>{
     const key=viewerCategoryKey(category.category);
     const active=state.viewerCategoryKey===key;
+    const availability=Math.round(Number(category.availability_24h||0));
     return `<button class="viewer-category-card ${viewerCategoryStateClass(category)} ${active?'active':''}" onclick="setViewerCategory(decodeURIComponent('${encodeURIComponent(key)}'))">
       <div class="viewer-category-top">
         <div>
           <div class="viewer-category-name">${escapeHtml(viewerCategoryLabel(category.category))}</div>
-          <div class="viewer-category-meta">
-            <span class="viewer-category-chip">${escapeHtml(localText('התקנים','Devices'))}: ${Number(category.total||0)}</span>
-            <span class="viewer-category-chip" style="color:var(--green)">${escapeHtml(localText('זמינים','Available'))}: ${Number(category.online||0)}</span>
-            ${Number(category.offline||0)?`<span class="viewer-category-chip" style="color:var(--red)">${escapeHtml(localText('נפלו','Down'))}: ${Number(category.offline||0)}</span>`:''}
-            ${Number(category.unstable||0)?`<span class="viewer-category-chip" style="color:var(--orange)">${escapeHtml(localText('לא יציבים','Unstable'))}: ${Number(category.unstable||0)}</span>`:''}
-          </div>
         </div>
         <div class="viewer-category-total" style="color:${category.state==='offline'?'var(--red)':category.state==='unstable'?'var(--orange)':category.state==='new'?'var(--blue)':'var(--green)'}">${Number(category.total||0)}</div>
       </div>
+      <div class="viewer-category-body">
+        <div class="viewer-category-score">
+          <strong>${escapeHtml(localText('זמינות 24 השעות האחרונות','24h availability'))}</strong>
+          <span>${availability}%</span>
+        </div>
+        <div class="viewer-category-meta">
+          <span class="viewer-category-chip">${escapeHtml(localText('סה״כ','Total'))}: ${Number(category.total||0)}</span>
+          <span class="viewer-category-chip good">${escapeHtml(localText('זמינים','Available'))}: ${Number(category.online||0)}</span>
+          ${Number(category.offline||0)?`<span class="viewer-category-chip bad">${escapeHtml(localText('לא זמינים','Down'))}: ${Number(category.offline||0)}</span>`:''}
+          ${Number(category.unstable||0)?`<span class="viewer-category-chip warn">${escapeHtml(localText('לא יציבים','Unstable'))}: ${Number(category.unstable||0)}</span>`:''}
+          ${Number(category.new||0)?`<span class="viewer-category-chip fresh">${escapeHtml(localText('חדשים','New'))}: ${Number(category.new||0)}</span>`:''}
+        </div>
+      </div>
+      ${availabilityStrip(category.series || [], `${availability}%`)}
     </button>`;
   }).join('');
 }
@@ -1077,7 +1130,7 @@ function renderViewerCategoryDetail(){
   if(!mount) return;
   const category=findViewerCategory();
   if(!category){
-    mount.innerHTML=`<div class="empty">${escapeHtml(localText('בחר קטגוריה כדי לראות זמינות ל־24 שעות ואת ההתקנים המשויכים.','Pick a category to see 24-hour availability and its devices.'))}</div>`;
+    mount.innerHTML=`<div class="empty">${escapeHtml(localText('×‘×—×¨ ×§×˜×’×•×¨×™×” ×›×“×™ ×œ×¨××•×ª ×–×ž×™× ×•×ª ×œÖ¾24 ×©×¢×•×ª ×•××ª ×”×”×ª×§× ×™× ×”×ž×©×•×™×›×™×.','Pick a category to see 24-hour availability and its devices.'))}</div>`;
     return;
   }
   const series=Array.isArray(category.series)?category.series:[];
@@ -1085,40 +1138,34 @@ function renderViewerCategoryDetail(){
     <div class="viewer-focus-head" style="margin-bottom:0">
       <div>
         <h3 style="margin:0">${escapeHtml(viewerCategoryLabel(category.category))}</h3>
-        <p style="margin:6px 0 0;color:var(--muted);font-size:13px">${escapeHtml(localText('פס זמינות ב־24 השעות האחרונות וההתקנים בקטגוריה זו.','Availability strip for the last 24 hours and the devices in this category.'))}</p>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:13px">${escapeHtml(localText('×¤×¡ ×–×ž×™× ×•×ª ×‘Ö¾24 ×”×©×¢×•×ª ×”××—×¨×•× ×•×ª ×•×”×”×ª×§× ×™× ×‘×§×˜×’×•×¨×™×” ×–×•.','Availability strip for the last 24 hours and the devices in this category.'))}</p>
       </div>
-      <div class="viewer-filter-tag">${escapeHtml(localText('24 שעות','24h'))}</div>
+      <div class="viewer-filter-tag">${escapeHtml(`${Math.round(Number(category.availability_24h||0))}%`)}</div>
     </div>
-    <div class="viewer-availability-bar">
-      ${series.map(point=>`<span class="viewer-availability-cell ${escapeHtml(point.state||'unknown')}" title="${escapeHtml(fmtTs(point.ts))}"></span>`).join('')}
-    </div>
-    <div class="viewer-availability-axis">
-      <span>${escapeHtml(localText('לפני 24 שעות','24h ago'))}</span>
-      <span>${escapeHtml(localText('עכשיו','Now'))}</span>
-    </div>`;
+    ${availabilityStrip(series, `${Math.round(Number(category.availability_24h||0))}%`)}`;
 }
 function populateCategories(devices){const sel=qs('filterCategory'); const current=sel.value; const cats=Array.from(new Set(devices.map(d=>(d.category||'').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'he')); sel.innerHTML=`<option value="">${escapeHtml(tr('all'))}</option>`+cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join(''); sel.value=current}
 function applyKpiFilter(filter){if(document.body.classList.contains('viewer-mode')) return; state.activeFilter=filter||''; qs('filterStatus').value=['online','offline','unstable','new'].includes(filter)?filter:''; renderDevices(); document.querySelectorAll('.kpi').forEach(el=>el.classList.toggle('active',(el.dataset.filter||'')===state.activeFilter)); const btn=document.querySelector('.nav-btn[data-tab="devices"]'); switchTab('devices',btn)}
 function clearFilters(){state.activeFilter=''; qs('searchText').value=''; qs('filterStatus').value=''; qs('filterCategory').value=''; renderDevices(); document.querySelectorAll('.kpi').forEach(el=>el.classList.remove('active'))}
 function getDashboardDevices(){const rows=[...state.devices]; rows.sort((a,b)=>{const score=d=>((d.status==='offline')?100:0)+((d.status==='new')?60:0)+(d.critical?40:0)+(d.pinned?20:0)+((Date.now()/1000-Number(d.last_seen||0)<600)?10:0); return score(b)-score(a)}); return rows.slice(0,6)}
 function getPriorityDevices(){return [...state.devices].filter(d=>d.status==='offline'||d.critical||d.status==='new').sort((a,b)=>{const score=d=>((d.status==='offline')?100:0)+(d.critical?60:0)+((d.status==='new')?40:0)+(d.pinned?10:0); return score(b)-score(a)}).slice(0,8)}
-function dashboardCard(d){const status=String(d.status||'unknown'); const classes=['dashboard-card']; if(['online','offline','new','unstable'].includes(status)) classes.push(status); if(d.pinned||d.critical) classes.push('gold'); const dotClass=(status==='offline'?'offline':status==='unstable'?'unstable':status==='new'?'new':'online'); const statusText=d.critical?tr('critical'):(d.pinned?tr('pinned'):statusLabel(status)); const addBtn=status==='new'?`<button class="btn small green" onclick="acceptDevice('${d.ip}')">${escapeHtml(tr('addShort'))}</button>`:''; return `<div class="${classes.join(' ')}"><div class="d-left"><div class="status-pill"><span class="status-dot ${dotClass}"></span><span>${escapeHtml(statusText)}</span></div><div class="d-meta"><b>${escapeHtml(tr('lastSeen'))}:</b> ${timeAgo(d.last_seen)}</div><div class="d-actions">${addBtn}<button class="btn small" onclick="pingNow('${d.ip}')">${escapeHtml(tr('ping'))}</button><button class="btn small" onclick="togglePin('${d.ip}')">${escapeHtml(d.pinned?tr('unpin'):tr('pin'))}</button><button class="btn small" onclick="editDevice('${d.ip}')">${escapeHtml((state.settings.language||'he')==='he'?'ערוך':'Edit')}</button></div></div><div class="d-right"><h3 class="d-name"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></h3>${(d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip))?`<div class="d-sub">${escapeHtml(d.subtitle)}</div>`:''}<div class="d-ip">${escapeHtml(d.ip)}</div></div></div>`}
-function priorityRow(d){const chips=[]; if(d.status==='offline') chips.push(`<span class="chip offline">${escapeHtml(tr('status_offline'))}</span>`); if(d.critical) chips.push(`<span class="chip critical">${escapeHtml(tr('critical'))}</span>`); if(d.status==='new') chips.push(`<span class="chip new">${escapeHtml(tr('new'))}</span>`); if(d.pinned) chips.push(`<span class="chip">${escapeHtml(tr('pinned'))}</span>`); return `<div class="smart-row"><div class="smart-main"><div class="smart-title"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></div><div class="smart-sub"><span>${escapeHtml(d.ip)}</span>${d.vendor?`<span>${escapeHtml(d.vendor)}</span>`:''}${d.assigned_network?`<span>${escapeHtml(displayNetwork(d.assigned_network))}</span>`:''}</div></div><div class="smart-meta"><div class="badges">${chips.join('')}</div><div class="smart-sub">${escapeHtml(tr('lastSeen'))}: ${timeAgo(d.last_seen)}</div></div></div>`}
-function viewerDeviceRow(d){const chips=[]; if(d.status==='offline') chips.push(`<span class="chip offline">${escapeHtml(tr('status_offline'))}</span>`); if(d.status==='unstable') chips.push(`<span class="chip critical">${escapeHtml(tr('status_unstable'))}</span>`); if(d.status==='new') chips.push(`<span class="chip new">${escapeHtml(tr('new'))}</span>`); if(d.critical) chips.push(`<span class="chip critical">${escapeHtml(tr('critical'))}</span>`); if(d.pinned) chips.push(`<span class="chip">${escapeHtml(tr('pinned'))}</span>`); return `<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</div><div class="smart-sub"><span>${escapeHtml(d.ip)}</span>${d.vendor?`<span>${escapeHtml(d.vendor)}</span>`:''}${d.assigned_network?`<span>${escapeHtml(displayNetwork(d.assigned_network))}</span>`:''}</div></div><div class="smart-meta"><div class="badges">${chips.join('')}</div><div class="smart-sub">${escapeHtml(tr('lastSeen'))}: ${timeAgo(d.last_seen)}</div></div></div>`}
-function viewerEventRow(e){return `<div class="item viewer-event"><div class="item-head"><strong class="event-title">${escapeHtml(e.message||e.event_type||'')}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${escapeHtml(e.ip||'')} • ${fmtTs(e.ts)}</small></div>`}
-function networkSummaryRows(){const rows=(state.status?.network_stats||[]).map(item=>({label:item.label||displayNetwork(item.cidr||''),cidr:item.cidr||'',total:Number(item.devices||0),online:Number(item.online||0),offline:Number(item.offline||0),critical:Number(item.critical||0),hosts:Number(item.hosts||0),utilization:(Number(item.hosts||0)>0?Math.min(100,Math.round((Number(item.devices||0)/Number(item.hosts||0))*100)):0)})); const unassigned=(state.devices||[]).filter(d=>!(d.assigned_network||'')).length; if(unassigned){rows.push({label:'—',cidr:'',total:unassigned,online:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.status==='online').length,offline:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.status==='offline').length,critical:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.critical).length,hosts:0,utilization:0});} return rows.sort((a,b)=>b.total-a.total).slice(0,8)}
+function dashboardCard(d){const status=String(d.status||'unknown'); const classes=['dashboard-card']; if(['online','offline','new','unstable'].includes(status)) classes.push(status); if(d.pinned||d.critical) classes.push('gold'); const dotClass=(status==='offline'?'offline':status==='unstable'?'unstable':status==='new'?'new':'online'); const statusText=d.critical?tr('critical'):(d.pinned?tr('pinned'):statusLabel(status)); const availability=Math.round(deviceAvailabilityPct(d)); const addBtn=status==='new'?`<button class="btn small green" onclick="acceptDevice('${d.ip}')">${escapeHtml(tr('addShort'))}</button>`:''; return `<div class="${classes.join(' ')}"><div class="d-left"><div class="status-pill"><span class="status-dot ${dotClass}"></span><span>${escapeHtml(statusText)}</span></div><div class="d-meta"><b>${escapeHtml(tr('lastSeen'))}:</b> ${timeAgo(d.last_seen)}</div><div class="viewer-category-meta"><span class="viewer-category-chip">${escapeHtml(localText('זמינות 24ש','24h availability'))}: ${availability}%</span></div><div class="d-actions">${addBtn}<button class="btn small" onclick="pingNow('${d.ip}')">${escapeHtml(tr('ping'))}</button><button class="btn small" onclick="togglePin('${d.ip}')">${escapeHtml(d.pinned?tr('unpin'):tr('pin'))}</button><button class="btn small" onclick="editDevice('${d.ip}')">${escapeHtml((state.settings.language||'he')==='he'?'×¢×¨×•×š':'Edit')}</button></div></div><div class="d-right"><h3 class="d-name"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></h3>${(d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip))?`<div class="d-sub">${escapeHtml(d.subtitle)}</div>`:''}<div class="d-ip">${escapeHtml(d.ip)}</div></div>${availabilityStrip(deviceTimeline(d), `${availability}%`)}</div>`}
+function priorityRow(d){const chips=[]; const availability=Math.round(deviceAvailabilityPct(d)); if(d.status==='offline') chips.push(`<span class="chip offline">${escapeHtml(tr('status_offline'))}</span>`); if(d.critical) chips.push(`<span class="chip critical">${escapeHtml(tr('critical'))}</span>`); if(d.status==='new') chips.push(`<span class="chip new">${escapeHtml(tr('new'))}</span>`); if(d.pinned) chips.push(`<span class="chip">${escapeHtml(tr('pinned'))}</span>`); chips.push(`<span class="chip online">${escapeHtml(localText('זמינות 24ש','24h'))}: ${availability}%</span>`); return `<div class="smart-row"><div class="smart-main"><div class="smart-title"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></div><div class="smart-sub"><span>${escapeHtml(d.ip)}</span>${d.vendor?`<span>${escapeHtml(d.vendor)}</span>`:''}${d.assigned_network?`<span>${escapeHtml(displayNetwork(d.assigned_network))}</span>`:''}</div>${availabilityStrip(deviceTimeline(d), `${availability}%`)}</div><div class="smart-meta"><div class="badges">${chips.join('')}</div><div class="smart-sub">${escapeHtml(tr('lastSeen'))}: ${timeAgo(d.last_seen)}</div></div></div>`}
+function viewerDeviceRow(d){const chips=[]; const availability=Math.round(deviceAvailabilityPct(d)); if(d.status==='offline') chips.push(`<span class="chip offline">${escapeHtml(tr('status_offline'))}</span>`); if(d.status==='unstable') chips.push(`<span class="chip critical">${escapeHtml(tr('status_unstable'))}</span>`); if(d.status==='new') chips.push(`<span class="chip new">${escapeHtml(tr('new'))}</span>`); if(d.critical) chips.push(`<span class="chip critical">${escapeHtml(tr('critical'))}</span>`); if(d.pinned) chips.push(`<span class="chip">${escapeHtml(tr('pinned'))}</span>`); chips.push(`<span class="chip online">${escapeHtml(localText('זמינות 24ש','24h'))}: ${availability}%</span>`); return `<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</div><div class="smart-sub"><span>${escapeHtml(d.ip)}</span>${d.vendor?`<span>${escapeHtml(d.vendor)}</span>`:''}${d.assigned_network?`<span>${escapeHtml(displayNetwork(d.assigned_network))}</span>`:''}</div>${availabilityStrip(deviceTimeline(d), `${availability}%`)}</div><div class="smart-meta"><div class="badges">${chips.join('')}</div><div class="smart-sub">${escapeHtml(tr('lastSeen'))}: ${timeAgo(d.last_seen)}</div></div></div>`}
+function viewerEventRow(e){return `<div class="item viewer-event"><div class="item-head"><strong class="event-title">${escapeHtml(e.message||e.event_type||'')}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${escapeHtml(e.ip||'')} â€¢ ${fmtTs(e.ts)}</small></div>`}
+function networkSummaryRows(){const rows=(state.status?.network_stats||[]).map(item=>({label:item.label||displayNetwork(item.cidr||''),cidr:item.cidr||'',total:Number(item.devices||0),online:Number(item.online||0),offline:Number(item.offline||0),critical:Number(item.critical||0),hosts:Number(item.hosts||0),utilization:(Number(item.hosts||0)>0?Math.min(100,Math.round((Number(item.devices||0)/Number(item.hosts||0))*100)):0)})); const unassigned=(state.devices||[]).filter(d=>!(d.assigned_network||'')).length; if(unassigned){rows.push({label:'â€”',cidr:'',total:unassigned,online:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.status==='online').length,offline:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.status==='offline').length,critical:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.critical).length,hosts:0,utilization:0});} return rows.sort((a,b)=>b.total-a.total).slice(0,8)}
 
-function displayNetwork(cidr){const names=state.status?.network_names||{}; return (names[cidr]||'').trim() || cidr || '—'}
+function displayNetwork(cidr){const names=state.status?.network_names||{}; return (names[cidr]||'').trim() || cidr || 'â€”'}
 function networkHostCount(cidr){const match=String(cidr||'').trim().match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d{1,2})$/); if(!match) return 0; const prefix=Number(match[5]); if(prefix<0||prefix>32) return 0; const addresses=Math.pow(2,32-prefix); return addresses<=2 ? addresses : Math.max(0, addresses-2);}
 function getNetworkStat(cidr){return (state.status?.network_stats||[]).find(item=>item.cidr===cidr)||null}
-function scanSummaryText(scan){if(!scan) return tr('idle'); const base=scan.running?tr('running'):(scan.last_mode==='idle'?tr('idle'):(scan.last_mode||'idle')); const targets=Number(scan.target_count||0); const networks=Array.isArray(scan.target_networks)?scan.target_networks.length:0; if(targets||networks){ return `${base} • ${targets||0} IP • ${networks||0} NET`; } return base; }
+function scanSummaryText(scan){if(!scan) return tr('idle'); const base=scan.running?tr('running'):(scan.last_mode==='idle'?tr('idle'):(scan.last_mode||'idle')); const targets=Number(scan.target_count||0); const networks=Array.isArray(scan.target_networks)?scan.target_networks.length:0; if(targets||networks){ return `${base} â€¢ ${targets||0} IP â€¢ ${networks||0} NET`; } return base; }
 function workerSummaryText(workers){
   const monitor=workers?.monitor||{};
   const critical=workers?.critical_monitor||{};
   const he=(state.settings.language||'he')==='he';
-  const monitorState=monitor.alive?(he?'רץ':'alive'):(he?'תקוע':'stopped');
-  const criticalState=critical.alive?(he?'רץ':'alive'):(he?'תקוע':'stopped');
-  return he ? `ניטור ${monitorState} • קריטי ${criticalState}` : `Monitor ${monitorState} • Critical ${criticalState}`;
+  const monitorState=monitor.alive?(he?'×¨×¥':'alive'):(he?'×ª×§×•×¢':'stopped');
+  const criticalState=critical.alive?(he?'×¨×¥':'alive'):(he?'×ª×§×•×¢':'stopped');
+  return he ? `× ×™×˜×•×¨ ${monitorState} â€¢ ×§×¨×™×˜×™ ${criticalState}` : `Monitor ${monitorState} â€¢ Critical ${criticalState}`;
 }
 function populateNetworks(devices){const sel=qs('filterNetwork'); if(!sel) return; const current=sel.value; const base=(state.status?.networks||[]); const assigned=(devices||[]).map(d=>d.assigned_network||'').filter(Boolean); const nets=[...new Set([...base,...assigned])]; sel.innerHTML=`<option value="">${escapeHtml(tr('all'))}</option>`+nets.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); if(nets.includes(current)) sel.value=current; }
 function populateVendors(devices){const sel=qs('filterVendor'); if(!sel) return; const current=sel.value; const vals=[...new Set((devices||[]).map(d=>(d.vendor||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,(state.settings.language||'he')==='he'?'he':'en')); sel.innerHTML=`<option value="">${escapeHtml(tr('all'))}</option>`+vals.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join(''); if(vals.includes(current)) sel.value=current; }
@@ -1156,19 +1203,19 @@ function renderNetworkManager(){
         <div class="alias">${escapeHtml((n.alias||'').trim() || displayNetwork(n.cidr))}</div>
         <div class="cidr">${escapeHtml(n.cidr)}</div>
         <div class="statline">
-          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${networkHostCount(n.cidr)}</span>
-          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'התקנים':'Devices')}: ${Number(getNetworkStat(n.cidr)?.devices||0)}</span>
-          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'מחוברים':'Online')}: ${Number(getNetworkStat(n.cidr)?.online||0)}</span>
+          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'×˜×•×•×—':'Range')}: ${networkHostCount(n.cidr)}</span>
+          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'×”×ª×§× ×™×':'Devices')}: ${Number(getNetworkStat(n.cidr)?.devices||0)}</span>
+          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'×ž×—×•×‘×¨×™×':'Online')}: ${Number(getNetworkStat(n.cidr)?.online||0)}</span>
         </div>
         <div class="meter"><div class="meter-fill" style="width:${Math.min(100, Math.round(((Number(getNetworkStat(n.cidr)?.devices||0))/(Math.max(1,networkHostCount(n.cidr))))*100))}%"></div></div>
       </div>
       <div class="meta">
-        <small>${escapeHtml((state.settings.language||'he')==='he'?'כינוי':'Alias')}</small>
-        <strong>${escapeHtml((n.alias||'').trim() || '—')}</strong>
+        <small>${escapeHtml((state.settings.language||'he')==='he'?'×›×™× ×•×™':'Alias')}</small>
+        <strong>${escapeHtml((n.alias||'').trim() || 'â€”')}</strong>
       </div>
       <div class="actions">
-        <button class="btn small" onclick="editNetworkDraft(${idx})">${escapeHtml((state.settings.language||'he')==='he'?'ערוך':'Edit')}</button>
-        <button class="btn small red" onclick="removeNetworkDraft(${idx})">${escapeHtml((state.settings.language||'he')==='he'?'מחק':'Delete')}</button>
+        <button class="btn small" onclick="editNetworkDraft(${idx})">${escapeHtml((state.settings.language||'he')==='he'?'×¢×¨×•×š':'Edit')}</button>
+        <button class="btn small red" onclick="removeNetworkDraft(${idx})">${escapeHtml((state.settings.language||'he')==='he'?'×ž×—×§':'Delete')}</button>
       </div>
     </div>`).join('');
   syncNetworkDraftsToHidden();
@@ -1178,7 +1225,7 @@ function addNetworkDraft(){
   const cidr = (qs('networkCidrInput')?.value||'').trim();
   const alias = (qs('networkAliasInput')?.value||'').trim();
   if(!validCidr(cidr)){
-    showMsg('settingsMessage',(state.settings.language||'he')==='he'?'טווח רשת לא תקין':'Invalid network CIDR', false);
+    showMsg('settingsMessage',(state.settings.language||'he')==='he'?'×˜×•×•×— ×¨×©×ª ×œ× ×ª×§×™×Ÿ':'Invalid network CIDR', false);
     return;
   }
   const idx = (state.networkDrafts||[]).findIndex(x=>x.cidr===cidr);
@@ -1190,7 +1237,7 @@ function addNetworkDraft(){
   if(qs('networkCidrInput')) qs('networkCidrInput').value='';
   if(qs('networkAliasInput')) qs('networkAliasInput').value='';
   renderNetworkManager();
-  showMsg('settingsMessage',(state.settings.language||'he')==='he'?'הרשת נוספה לרשימה. לחץ שמור רשתות כדי להחיל אותה':'Network added to list. Click Save networks to apply it');
+  showMsg('settingsMessage',(state.settings.language||'he')==='he'?'×”×¨×©×ª × ×•×¡×¤×” ×œ×¨×©×™×ž×”. ×œ×—×¥ ×©×ž×•×¨ ×¨×©×ª×•×ª ×›×“×™ ×œ×”×—×™×œ ××•×ª×”':'Network added to list. Click Save networks to apply it');
 }
 
 function editNetworkDraft(idx){
@@ -1209,7 +1256,7 @@ function removeNetworkDraft(idx){
 
 function renderNetworkNamesEditor(networks,names){ /* handled by renderNetworkManager */ }
 const editState={ip:''};
-function openEditDevice(ip){const d=(state.devices||[]).find(x=>x.ip===ip); if(!d) return; editState.ip=ip; qs('editName').value=d.name||d.display_name||''; qs('editCategory').value=d.category||''; qs('editNotes').value=d.notes||''; qs('editPinned').checked=!!d.pinned; qs('editCritical').checked=!!d.critical; qs('editIp').value=d.ip||''; qs('editMac').value=d.mac||''; qs('editHostname').value=d.hostname||''; qs('editVendor').value=d.vendor||''; const networks=(state.status?.networks||[]); qs('editAssignedNetwork').innerHTML=`<option value="">—</option>`+networks.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); qs('editAssignedNetwork').value=d.assigned_network||''; qs('editPinBtn').textContent=tr(d.pinned?'unpin':'pin'); qs('editCriticalBtn2').textContent=tr(d.critical?'criticalUnmark':'criticalMark'); qs('editModal').classList.remove('hidden')}
+function openEditDevice(ip){const d=(state.devices||[]).find(x=>x.ip===ip); if(!d) return; editState.ip=ip; qs('editName').value=d.name||d.display_name||''; qs('editCategory').value=d.category||''; qs('editNotes').value=d.notes||''; qs('editPinned').checked=!!d.pinned; qs('editCritical').checked=!!d.critical; qs('editIp').value=d.ip||''; qs('editMac').value=d.mac||''; qs('editHostname').value=d.hostname||''; qs('editVendor').value=d.vendor||''; const networks=(state.status?.networks||[]); qs('editAssignedNetwork').innerHTML=`<option value="">â€”</option>`+networks.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); qs('editAssignedNetwork').value=d.assigned_network||''; qs('editPinBtn').textContent=tr(d.pinned?'unpin':'pin'); qs('editCriticalBtn2').textContent=tr(d.critical?'criticalUnmark':'criticalMark'); qs('editModal').classList.remove('hidden')}
 function closeEditModal(){qs('editModal').classList.add('hidden')}
 async function saveEditDevice(){if(!editState.ip) return; await api(`./api/update?ip=${encodeURIComponent(editState.ip)}&name=${encodeURIComponent(qs('editName').value)}&category=${encodeURIComponent(qs('editCategory').value)}&notes=${encodeURIComponent(qs('editNotes').value)}&assigned_network=${encodeURIComponent(qs('editAssignedNetwork').value)}&pinned=${qs('editPinned').checked?1:0}&critical=${qs('editCritical').checked?1:0}`); closeEditModal(); showMsg('deviceMessage',tr('settingsSaved')); await refreshAll()}
 
@@ -1221,7 +1268,7 @@ function setSort(field){
 }
 function sortIndicator(field){
   if(state.sortBy!==field) return '';
-  return `<span class="sort-ind">${state.sortDir==='asc' ? '▲' : '▼'}</span>`;
+  return `<span class="sort-ind">${state.sortDir==='asc' ? 'â–²' : 'â–¼'}</span>`;
 }
 function filteredDevices(){const text=(qs('searchText').value||'').trim().toLowerCase(); const status=qs('filterStatus').value; const cat=qs('filterCategory').value; const net=qs('filterNetwork').value; const vendor=qs('filterVendor')?qs('filterVendor').value:''; const sortBy=qs('sortBy')?qs('sortBy').value:'name'; let items=[...state.devices].filter(d=>{const hay=`${d.display_name||''} ${d.name||''} ${d.ip||''} ${d.hostname||''} ${d.vendor||''} ${d.category||''} ${d.mac||''} ${d.notes||''}`.toLowerCase(); if(text&&!hay.includes(text)) return false; const eff=status||state.activeFilter; if(eff==='critical' && !d.critical) return false; if(eff==='pinned' && !d.pinned) return false; if(['online','offline','unstable','new'].includes(eff) && d.status!==eff) return false; if(cat&&d.category!==cat) return false; if(net&&(d.assigned_network||'')!==net) return false; if(vendor&&(d.vendor||'')!==vendor) return false; return true;});
   const cmpText=(a,b)=>String(a||'').localeCompare(String(b||''),(state.settings.language||'he')==='he'?'he':'en');
@@ -1234,12 +1281,12 @@ async function bulkPin(value){if(!state.selectedIps.size) return; await api(`./a
 async function bulkCritical(value){if(!state.selectedIps.size) return; await api(`./api/bulk_update?ips=${encodeURIComponent([...state.selectedIps].join(','))}&critical=${value}`); state.selectedIps.clear(); showMsg('deviceMessage',tr('settingsSaved')); await refreshAll()}
 async function bulkDelete(){if(!state.selectedIps.size) return; await api(`./api/bulk_delete?ips=${encodeURIComponent([...state.selectedIps].join(','))}`); state.selectedIps.clear(); showMsg('deviceMessage',tr('settingsSaved')); await refreshAll()}
 function rowActions(d){return `<div class="row-mini-actions"><button class="btn small" onclick="openEditDevice('${d.ip}')">${escapeHtml(tr('details'))}</button></div>`}
-function renderDevices(){const devices=filteredDevices(); const view=(qs('devicesView').value||state.settings.default_view||'table'); const mount=qs('devicesMount'); if(!devices.length){mount.innerHTML=`<div class="empty">${escapeHtml(tr('noDevices'))}</div>`; updateBulkBar(); return;} if(view==='grid'){mount.innerHTML=`<div class="dashboard-cards" style="margin-top:14px">${devices.map(dashboardCard).join('')}</div>`; updateBulkBar(); return;} const allChecked=devices.length && devices.every(d=>state.selectedIps.has(d.ip)); mount.innerHTML=`<div class="tablewrap" style="margin-top:14px"><table><thead><tr><th><input type="checkbox" class="row-check" ${allChecked?'checked':''} onchange="toggleSelectAll(this.checked)"></th><th class="sortable" onclick="setSort('name')">${escapeHtml(tr('nameCol'))}${sortIndicator('name')}</th><th class="sortable" onclick="setSort('ip')">${escapeHtml(tr('ipCol'))}${sortIndicator('ip')}</th><th class="sortable" onclick="setSort('status')">${escapeHtml(tr('statusCol'))}${sortIndicator('status')}</th><th>${escapeHtml(tr('categoryCol'))}</th><th>${escapeHtml(tr('networkCol'))}</th><th class="sortable" onclick="setSort('vendor')">${escapeHtml(tr('vendorCol'))}${sortIndicator('vendor')}</th><th>${escapeHtml(tr('macCol'))}</th><th class="sortable" onclick="setSort('last_seen')">${escapeHtml(tr('lastSeenCol'))}${sortIndicator('last_seen')}</th><th>${escapeHtml(tr('actionsCol'))}</th></tr></thead><tbody>${devices.map(d=>`<tr><td><input type="checkbox" class="row-check" ${state.selectedIps.has(d.ip)?'checked':''} onchange="toggleSelected('${d.ip}',this.checked)"></td><td><div class="name-cell"><div class="name-main"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button>${d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip)?`<div class="subtext">${escapeHtml(d.subtitle)}</div>`:''}<div class="name-subrow">${d.pinned?`<span class="mini">${escapeHtml(tr('pinned'))}</span>`:''}${d.critical?`<span class="mini">${escapeHtml(tr('critical'))}</span>`:''}</div></div></div></td><td>${escapeHtml(d.ip)}</td><td><div class="status-actions">${deviceStatusBadge(d.status)}${d.approved?`<span class="mini">${escapeHtml(tr('known'))}</span>`:`<span class="mini">${escapeHtml(tr('pending'))}</span>`}</div></td><td>${escapeHtml(d.category||'—')}</td><td>${escapeHtml(displayNetwork(d.assigned_network||''))}</td><td>${escapeHtml(d.vendor||'—')}</td><td>${escapeHtml(d.mac||'—')}</td><td>${timeAgo(d.last_seen)}</td><td><div class="actions">${rowActions(d)}</div></td></tr>`).join('')}</tbody></table></div>`; updateBulkBar();}
-function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().toLowerCase(); const sev=(qs('alertSeverity')?.value||'').trim().toLowerCase(); const eventText=(qs('eventsSearch')?.value||'').trim().toLowerCase(); const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||''); const alerts=(state.alerts||[]).filter(a=>{const hay=`${a.title||''} ${a.message||''} ${a.ip||''}`.toLowerCase(); if(alertText&&!hay.includes(alertText)) return false; if(sev&&String(a.severity||'').toLowerCase()!==sev) return false; return true;}); const events=(state.events||[]).filter(e=>{const hay=`${e.message||''} ${e.ip||''} ${e.event_type||''}`.toLowerCase(); if(eventText&&!hay.includes(eventText)) return false; return true;}); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const newAlerts=openAlerts.filter(a=>a.title===`New device detected`).length; const offlineAlerts=openAlerts.filter(a=>a.title===`Device offline`).length; const unstableAlerts=openAlerts.filter(a=>a.title===`Device unstable`).length; qs('alertsSummary').innerHTML=`<div class="viewer-stat"><div class="k">${escapeHtml(tr('openAlerts'))}</div><div class="v" style="color:var(--gold)">${openAlerts.length}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('new'))}</div><div class="v" style="color:var(--blue)">${newAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_offline'))}</div><div class="v" style="color:var(--red)">${offlineAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_unstable'))}</div><div class="v" style="color:var(--orange)">${unstableAlerts}</div></div>`; const emptyAlerts=`<div class="empty"><div>${escapeHtml(tr('noAlerts'))}</div><div style="margin-top:8px">${escapeHtml(tr('noAlertsHint'))}</div></div>`; const alertHtml=alerts.length?alerts.map(a=>`<div class="item"><div class="item-head"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span>${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><small>${link(a.ip,a.ip||'')} • ${fmtTs(a.created_at)}</small><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`).join(''):emptyAlerts; const eventHtml=events.length?events.map(e=>`<div class="item"><div class="item-head"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${link(e.ip,e.ip||'')} • ${fmtTs(e.ts)}</small></div>`).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`; qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml}
+function renderDevices(){const devices=filteredDevices(); const view=(qs('devicesView').value||state.settings.default_view||'table'); const mount=qs('devicesMount'); if(!devices.length){mount.innerHTML=`<div class="empty">${escapeHtml(tr('noDevices'))}</div>`; updateBulkBar(); return;} if(view==='grid'){mount.innerHTML=`<div class="dashboard-cards" style="margin-top:14px">${devices.map(dashboardCard).join('')}</div>`; updateBulkBar(); return;} const allChecked=devices.length && devices.every(d=>state.selectedIps.has(d.ip)); mount.innerHTML=`<div class="tablewrap" style="margin-top:14px"><table><thead><tr><th><input type="checkbox" class="row-check" ${allChecked?'checked':''} onchange="toggleSelectAll(this.checked)"></th><th class="sortable" onclick="setSort('name')">${escapeHtml(tr('nameCol'))}${sortIndicator('name')}</th><th class="sortable" onclick="setSort('ip')">${escapeHtml(tr('ipCol'))}${sortIndicator('ip')}</th><th class="sortable" onclick="setSort('status')">${escapeHtml(tr('statusCol'))}${sortIndicator('status')}</th><th>${escapeHtml(tr('categoryCol'))}</th><th>${escapeHtml(tr('networkCol'))}</th><th class="sortable" onclick="setSort('vendor')">${escapeHtml(tr('vendorCol'))}${sortIndicator('vendor')}</th><th>${escapeHtml(tr('macCol'))}</th><th class="sortable" onclick="setSort('last_seen')">${escapeHtml(tr('lastSeenCol'))}${sortIndicator('last_seen')}</th><th>${escapeHtml(tr('actionsCol'))}</th></tr></thead><tbody>${devices.map(d=>`<tr><td><input type="checkbox" class="row-check" ${state.selectedIps.has(d.ip)?'checked':''} onchange="toggleSelected('${d.ip}',this.checked)"></td><td><div class="name-cell"><div class="name-main"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button>${d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip)?`<div class="subtext">${escapeHtml(d.subtitle)}</div>`:''}<div class="name-subrow">${d.pinned?`<span class="mini">${escapeHtml(tr('pinned'))}</span>`:''}${d.critical?`<span class="mini">${escapeHtml(tr('critical'))}</span>`:''}</div></div></div></td><td>${escapeHtml(d.ip)}</td><td><div class="status-actions">${deviceStatusBadge(d.status)}${d.approved?`<span class="mini">${escapeHtml(tr('known'))}</span>`:`<span class="mini">${escapeHtml(tr('pending'))}</span>`}</div></td><td>${escapeHtml(d.category||'â€”')}</td><td>${escapeHtml(displayNetwork(d.assigned_network||''))}</td><td>${escapeHtml(d.vendor||'â€”')}</td><td>${escapeHtml(d.mac||'â€”')}</td><td>${timeAgo(d.last_seen)}</td><td><div class="actions">${rowActions(d)}</div></td></tr>`).join('')}</tbody></table></div>`; updateBulkBar();}
+function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().toLowerCase(); const sev=(qs('alertSeverity')?.value||'').trim().toLowerCase(); const eventText=(qs('eventsSearch')?.value||'').trim().toLowerCase(); const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||''); const alerts=(state.alerts||[]).filter(a=>{const hay=`${a.title||''} ${a.message||''} ${a.ip||''}`.toLowerCase(); if(alertText&&!hay.includes(alertText)) return false; if(sev&&String(a.severity||'').toLowerCase()!==sev) return false; return true;}); const events=(state.events||[]).filter(e=>{const hay=`${e.message||''} ${e.ip||''} ${e.event_type||''}`.toLowerCase(); if(eventText&&!hay.includes(eventText)) return false; return true;}); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const newAlerts=openAlerts.filter(a=>a.title===`New device detected`).length; const offlineAlerts=openAlerts.filter(a=>a.title===`Device offline`).length; const unstableAlerts=openAlerts.filter(a=>a.title===`Device unstable`).length; qs('alertsSummary').innerHTML=`<div class="viewer-stat"><div class="k">${escapeHtml(tr('openAlerts'))}</div><div class="v" style="color:var(--gold)">${openAlerts.length}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('new'))}</div><div class="v" style="color:var(--blue)">${newAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_offline'))}</div><div class="v" style="color:var(--red)">${offlineAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_unstable'))}</div><div class="v" style="color:var(--orange)">${unstableAlerts}</div></div>`; const emptyAlerts=`<div class="empty"><div>${escapeHtml(tr('noAlerts'))}</div><div style="margin-top:8px">${escapeHtml(tr('noAlertsHint'))}</div></div>`; const alertHtml=alerts.length?alerts.map(a=>`<div class="item"><div class="item-head"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span>${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><small>${link(a.ip,a.ip||'')} â€¢ ${fmtTs(a.created_at)}</small><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`).join(''):emptyAlerts; const eventHtml=events.length?events.map(e=>`<div class="item"><div class="item-head"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${link(e.ip,e.ip||'')} â€¢ ${fmtTs(e.ts)}</small></div>`).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`; qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml}
 function renderViewer(){const online=(state.devices||[]).filter(d=>d.status==='online'); const offline=(state.devices||[]).filter(d=>d.status==='offline'); const unstable=(state.devices||[]).filter(d=>d.status==='unstable'); const newcomers=(state.devices||[]).filter(d=>d.status==='new'); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const liveEvents=(state.events||[]).filter(e=>['device_offline','device_online','device_unstable','device_stable','new_device'].includes(e.event_type||'')).slice(0,10); const viewerStats=[{key:'all',label:tr('viewerFilterAll'),value:(state.devices||[]).length,color:'var(--text)'},{key:'online',label:tr('viewerFilterOnline'),value:online.length,color:'var(--green)'},{key:'offline',label:tr('viewerFilterOffline'),value:offline.length,color:'var(--red)'},{key:'new',label:tr('viewerFilterNew'),value:newcomers.length,color:'var(--blue)'},{key:'unstable',label:tr('viewerFilterUnstable'),value:unstable.length,color:'var(--orange)'},{key:'alerts',label:tr('viewerFilterAlerts'),value:openAlerts.length,color:'var(--gold)'}]; qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div></button>`).join(''); const focusDevices=viewerDevicesForFilter(); qs('viewerFilterTag').textContent=viewerFilterLabel(state.viewerFilter); qs('viewerDevices').innerHTML=focusDevices.length?focusDevices.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; const attention=[...offline,...unstable].sort((a,b)=>Number(b.last_seen||0)-Number(a.last_seen||0)).slice(0,12); qs('viewerAttention').innerHTML=attention.length?attention.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerEvents').innerHTML=liveEvents.length?liveEvents.map(viewerEventRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerNew').innerHTML=newcomers.length?newcomers.slice(0,12).map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`}
-function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
-function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setStatusAnimation').value=st.settings?.status_animation||'blink'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(`${scanSummaryText(st.scan)} • ${workerSummaryText(st.workers||state.status?.workers||{})}`)}
-async function refreshAll(){const [status,devices,alerts,events,settings,viewerCategories]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings'),api('./api/viewer/categories')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.viewerCategories=viewerCategories.categories||[]; state.dbPath=settings.db_path||''; if(state.viewerCategoryKey && !(state.viewerCategories||[]).some(item=>viewerCategoryKey(item.category)===state.viewerCategoryKey)){ state.viewerCategoryKey=''; } applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); if(document.body.classList.contains('settings-mode')){ const activeBtn=document.querySelector('.settings-nav-btn.active'); ensureSettingsVisibility((activeBtn&&activeBtn.dataset.settingsPage)||'general'); } if(qs('versionText')) qs('versionText').textContent=status.version||'5.0.0'; if(qs('heroSub')) qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardSub')}`; if(qs('sTotal')) qs('sTotal').textContent=status.total??0; if(qs('sOnline')) qs('sOnline').textContent=status.online??0; if(qs('sOffline')) qs('sOffline').textContent=status.offline??0; if(qs('sUnstable')) qs('sUnstable').textContent=status.unstable??0; if(qs('sNew')) qs('sNew').textContent=status.new??0; if(qs('sCritical')) qs('sCritical').textContent=status.critical??0; if(qs('sPinned')) qs('sPinned').textContent=status.pinned??0; if(qs('sideScanState')) qs('sideScanState').textContent=workerSummaryText(status.workers||{}); if(qs('sideNetworksCount')) qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; if(qs('lastRefreshText')) qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); if(qs('dbPath')) qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
+function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'×˜×•×•×—':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'× ×™×¦×•×œ':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
+function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setStatusAnimation').value=st.settings?.status_animation||'blink'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'â€”'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(`${scanSummaryText(st.scan)} â€¢ ${workerSummaryText(st.workers||state.status?.workers||{})}`)}
+async function refreshAll(){const [status,devices,alerts,events,settings,viewerCategories]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings'),api('./api/viewer/categories')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.viewerCategories=viewerCategories.categories||[]; state.viewerCategoryDevices=viewerCategories.devices||{}; state.viewerSummarySeries=(viewerCategories.summary&&viewerCategories.summary.series)||[]; state.viewerSummaryAvailability=Number((viewerCategories.summary&&viewerCategories.summary.availability_24h)||0); state.dbPath=settings.db_path||''; if(state.viewerCategoryKey && !(state.viewerCategories||[]).some(item=>viewerCategoryKey(item.category)===state.viewerCategoryKey)){ state.viewerCategoryKey=''; } applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); if(qs('sTotal')) qs('sTotal').textContent=status.total??0; if(qs('sOnline')) qs('sOnline').textContent=status.online??0; if(qs('sOffline')) qs('sOffline').textContent=status.offline??0; if(qs('sUnstable')) qs('sUnstable').textContent=status.unstable??0; if(qs('sNew')) qs('sNew').textContent=status.new??0; if(qs('sCritical')) qs('sCritical').textContent=status.critical??0; if(qs('sPinned')) qs('sPinned').textContent=status.pinned??0; renderKpiAvailabilityStrips(); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); if(document.body.classList.contains('settings-mode')){ const activeBtn=document.querySelector('.settings-nav-btn.active'); ensureSettingsVisibility((activeBtn&&activeBtn.dataset.settingsPage)||'general'); } if(qs('versionText')) qs('versionText').textContent=status.version||'5.0.0'; if(qs('heroSub')) qs('heroSub').textContent=`v${status.version||'5.0.0'} â€¢ ${tr('dashboardSub')}`; if(qs('sideScanState')) qs('sideScanState').textContent=workerSummaryText(status.workers||{}); if(qs('sideNetworksCount')) qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; if(qs('lastRefreshText')) qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); if(qs('dbPath')) qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
 async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
 async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage',tr('deviceAdded')); await refreshAll()}
 async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
@@ -1266,7 +1313,7 @@ async function saveNetworksOnly(){
   renderNetworkManager();
   const hosts=(result.network_stats||[]).reduce((sum,item)=>sum+Number(item.hosts||0),0);
   const reassigned=Number(result.reassigned||0);
-  showMsg('settingsMessage',`${tr('networksSaved')} • ${(result.networks||[]).length} NET • ${hosts} IP • ${reassigned} DEV`);
+  showMsg('settingsMessage',`${tr('networksSaved')} â€¢ ${(result.networks||[]).length} NET â€¢ ${hosts} IP â€¢ ${reassigned} DEV`);
   await refreshAll();
 }
 async function saveNetworksAndScan(){await saveNetworksOnly(); await runScan();}
@@ -1291,7 +1338,7 @@ async function saveSettings(){
       network_names:names
     })
   });
-  setTheme(theme); applyStatusAnimation(statusAnimation); applyDashboardStyle(qs('setStyle').value); showMsg('settingsMessage',`${tr('settingsSaved')} • ${Number(result.reassigned||0)} DEV`); await refreshAll()
+  setTheme(theme); applyStatusAnimation(statusAnimation); applyDashboardStyle(qs('setStyle').value); showMsg('settingsMessage',`${tr('settingsSaved')} â€¢ ${Number(result.reassigned||0)} DEV`); await refreshAll()
 }
 function triggerImportDevices(){qs('importDevicesInput')?.click()}
 function triggerImportSettings(){qs('importSettingsInput')?.click()}
@@ -1302,10 +1349,10 @@ async function handleImportDevices(event){
     const form=new FormData();
     form.append('file',file);
     const result=await api('./api/import/devices',{method:'POST',body:form});
-    showMsg('systemMessage',`${tr('importDevicesDone')} • ${Number(result.imported||0)} DEV`);
+    showMsg('systemMessage',`${tr('importDevicesDone')} â€¢ ${Number(result.imported||0)} DEV`);
     await refreshAll();
   }catch(err){
-    showMsg('systemMessage',`${tr('importFailed')} • ${err.message||err}`,false);
+    showMsg('systemMessage',`${tr('importFailed')} â€¢ ${err.message||err}`,false);
   }finally{
     event.target.value='';
   }
@@ -1317,10 +1364,10 @@ async function handleImportSettings(event){
     const form=new FormData();
     form.append('file',file);
     const result=await api('./api/import/settings',{method:'POST',body:form});
-    showMsg('systemMessage',`${tr('importSettingsDone')} • ${Number((result.networks||[]).length)} NET`);
+    showMsg('systemMessage',`${tr('importSettingsDone')} â€¢ ${Number((result.networks||[]).length)} NET`);
     await refreshAll();
   }catch(err){
-    showMsg('systemMessage',`${tr('importFailed')} • ${err.message||err}`,false);
+    showMsg('systemMessage',`${tr('importFailed')} â€¢ ${err.message||err}`,false);
   }finally{
     event.target.value='';
   }
@@ -1331,7 +1378,7 @@ function relevantStatusEvents(){return (state.events||[]).filter(e=>['device_off
 function bucketStatusEvents(minutes=60,buckets=12){
   const now=Math.floor(Date.now()/1000);
   const span=Math.max(1,Math.floor((minutes*60)/buckets));
-  const rows=Array.from({length:buckets},(_,i)=>({label:i===0?localText(`-${minutes}ד`,`-${minutes}m`):(i===buckets-1?localText('עכשיו','now'):''),offline:0,unstable:0,new:0,online:0,total:0}));
+  const rows=Array.from({length:buckets},(_,i)=>({label:i===0?localText(`-${minutes}×“`,`-${minutes}m`):(i===buckets-1?localText('×¢×›×©×™×•','now'):''),offline:0,unstable:0,new:0,online:0,total:0}));
   relevantStatusEvents().forEach(e=>{const age=now-Number(e.ts||0); if(age<0||age>minutes*60) return; const idx=Math.min(buckets-1, Math.max(0, buckets-1-Math.floor(age/span))); const kind=(e.event_type==='device_offline'?'offline':e.event_type==='device_unstable'?'unstable':e.event_type==='new_device'?'new':'online'); rows[idx][kind]+=1; rows[idx].total+=1;});
   return rows;
 }
@@ -1340,19 +1387,19 @@ function stackedStatusBar(devices){
   const counts={online:0,offline:0,unstable:0,new:0};
   (devices||[]).forEach(d=>{if(counts[d.status]!==undefined) counts[d.status]+=1;});
   const parts=[['offline','var(--red)'],['unstable','var(--orange)'],['new','var(--blue)'],['online','var(--green)']];
-  return `<div class="viz-card"><h3>${escapeHtml(localText('פיזור מצבים','State mix'))}</h3><p>${escapeHtml(localText('כמה מכשירים נמצאים בכל מצב כרגע.','How many devices are in each state right now.'))}</p><div class="viz-stack">${parts.map(([key,color])=>`<span style="width:${(counts[key]/total)*100}%;background:${color}"></span>`).join('')}</div><div class="viz-legend">${parts.map(([key,color])=>`<div class="viz-legend-row"><div><span class="viz-dot" style="background:${color}"></span><strong>${escapeHtml(statusLabel(key))}</strong></div><span>${counts[key]}</span></div>`).join('')}</div></div>`;
+  return `<div class="viz-card"><h3>${escapeHtml(localText('×¤×™×–×•×¨ ×ž×¦×‘×™×','State mix'))}</h3><p>${escapeHtml(localText('×›×ž×” ×ž×›×©×™×¨×™× × ×ž×¦××™× ×‘×›×œ ×ž×¦×‘ ×›×¨×’×¢.','How many devices are in each state right now.'))}</p><div class="viz-stack">${parts.map(([key,color])=>`<span style="width:${(counts[key]/total)*100}%;background:${color}"></span>`).join('')}</div><div class="viz-legend">${parts.map(([key,color])=>`<div class="viz-legend-row"><div><span class="viz-dot" style="background:${color}"></span><strong>${escapeHtml(statusLabel(key))}</strong></div><span>${counts[key]}</span></div>`).join('')}</div></div>`;
 }
 function eventBarsCard(){
   const buckets=bucketStatusEvents(60,12);
   const max=Math.max(1,...buckets.map(b=>b.total));
-  return `<div class="viz-card"><h3>${escapeHtml(localText('קצב שינויים','Change rate'))}</h3><p>${escapeHtml(localText('אירועי מצב בשעה האחרונה.','Status events in the last hour.'))}</p><div class="viz-bars">${buckets.map(b=>`<div class="viz-bar-col" title="${escapeHtml(String(b.total))}"><div class="viz-bar ${b.offline?'offline':(b.unstable?'unstable':(b.new?'new':'online'))}" style="height:${Math.max(4,Math.round((b.total/max)*96))}px"></div><div class="viz-bar-label">${escapeHtml(b.label)}</div></div>`).join('')}</div></div>`;
+  return `<div class="viz-card"><h3>${escapeHtml(localText('×§×¦×‘ ×©×™× ×•×™×™×','Change rate'))}</h3><p>${escapeHtml(localText('××™×¨×•×¢×™ ×ž×¦×‘ ×‘×©×¢×” ×”××—×¨×•× ×”.','Status events in the last hour.'))}</p><div class="viz-bars">${buckets.map(b=>`<div class="viz-bar-col" title="${escapeHtml(String(b.total))}"><div class="viz-bar ${b.offline?'offline':(b.unstable?'unstable':(b.new?'new':'online'))}" style="height:${Math.max(4,Math.round((b.total/max)*96))}px"></div><div class="viz-bar-label">${escapeHtml(b.label)}</div></div>`).join('')}</div></div>`;
 }
 function alertSeverityCard(alerts){
   const counts={high:0,medium:0,info:0,critical:0};
   (alerts||[]).forEach(a=>{const sev=String(a.severity||'info').toLowerCase(); if(counts[sev]!==undefined) counts[sev]+=1; else counts.info+=1;});
   const total=Math.max(1,(alerts||[]).length);
   const parts=[['critical','#f43f5e'],['high','var(--red)'],['medium','var(--orange)'],['info','var(--blue)']];
-  return `<div class="viz-card"><h3>${escapeHtml(localText('חומרת התראות','Alert severity'))}</h3><p>${escapeHtml(localText('איך ההתראות הפתוחות מתחלקות לפי חומרה.','How open alerts are distributed by severity.'))}</p><div class="viz-stack">${parts.map(([key,color])=>`<span style="width:${(counts[key]/total)*100}%;background:${color}"></span>`).join('')}</div><div class="viz-legend">${parts.map(([key,color])=>`<div class="viz-legend-row"><div><span class="viz-dot" style="background:${color}"></span><strong>${escapeHtml(key)}</strong></div><span>${counts[key]}</span></div>`).join('')}</div></div>`;
+  return `<div class="viz-card"><h3>${escapeHtml(localText('×—×•×ž×¨×ª ×”×ª×¨××•×ª','Alert severity'))}</h3><p>${escapeHtml(localText('××™×š ×”×”×ª×¨××•×ª ×”×¤×ª×•×—×•×ª ×ž×ª×—×œ×§×•×ª ×œ×¤×™ ×—×•×ž×¨×”.','How open alerts are distributed by severity.'))}</p><div class="viz-stack">${parts.map(([key,color])=>`<span style="width:${(counts[key]/total)*100}%;background:${color}"></span>`).join('')}</div><div class="viz-legend">${parts.map(([key,color])=>`<div class="viz-legend-row"><div><span class="viz-dot" style="background:${color}"></span><strong>${escapeHtml(key)}</strong></div><span>${counts[key]}</span></div>`).join('')}</div></div>`;
 }
 function renderAlertHub(){
   const openAlerts=(state.alerts||[]).filter(a=>a.status==='open');
@@ -1380,16 +1427,16 @@ function renderAlertHub(){
   }
   const hub=qs('dashboardAlertHub');
   if(hub){
-    hub.innerHTML=`<button class="alert-hub ${openAlerts.length?'':'alert-hub-calm'} ${blinking?'blinking':''}" onclick="openAlertHub()" style="width:100%;font:inherit;color:inherit;text-align:inherit"><div class="alert-hub-main"><div class="alert-hub-title">${escapeHtml(tr('alertPanelTitle'))}</div><div class="alert-hub-sub">${escapeHtml(openAlerts.length?localText('יש אירועים פתוחים שדורשים תשומת לב','Open items need attention'):tr('noAlerts'))}</div></div><div class="alert-hub-count"><strong style="color:${criticalAlerts.length?'var(--red)':'var(--gold)'}">${openAlerts.length}</strong>${criticalAlerts.length?`<span class="alert-hub-critical">${escapeHtml(localText(`${criticalAlerts.length} קריטיות`,`Critical: ${criticalAlerts.length}`))}</span>`:''}</div></button>`;
+    hub.innerHTML=`<button class="alert-hub ${openAlerts.length?'':'alert-hub-calm'} ${blinking?'blinking':''}" onclick="openAlertHub()" style="width:100%;font:inherit;color:inherit;text-align:inherit"><div class="alert-hub-main"><div class="alert-hub-title">${escapeHtml(tr('alertPanelTitle'))}</div><div class="alert-hub-sub">${escapeHtml(openAlerts.length?localText('×™×© ××™×¨×•×¢×™× ×¤×ª×•×—×™× ×©×“×•×¨×©×™× ×ª×©×•×ž×ª ×œ×‘','Open items need attention'):tr('noAlerts'))}</div></div><div class="alert-hub-count"><strong style="color:${criticalAlerts.length?'var(--red)':'var(--gold)'}">${openAlerts.length}</strong>${criticalAlerts.length?`<span class="alert-hub-critical">${escapeHtml(localText(`${criticalAlerts.length} ×§×¨×™×˜×™×•×ª`,`Critical: ${criticalAlerts.length}`))}</span>`:''}</div></button>`;
   }
 }
 function alertCardV2(a,link){return `<div class="alert-item ${escapeHtml(String(a.severity||'info').toLowerCase())}"><div class="alert-item-top"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span class="alert-severity">${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><div class="alert-meta"><span>${link(a.ip,a.ip||'')}</span><span>${fmtTs(a.created_at)}</span></div><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`}
-function eventLineV2(e,link){return `<div class="event-line"><div class="event-pill">${escapeHtml(e.level||'info')}</div><div class="event-body"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><small>${link(e.ip,e.ip||'')} • ${fmtTs(e.ts)}</small></div></div>`}
+function eventLineV2(e,link){return `<div class="event-line"><div class="event-pill">${escapeHtml(e.level||'info')}</div><div class="event-body"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><small>${link(e.ip,e.ip||'')} â€¢ ${fmtTs(e.ts)}</small></div></div>`}
 renderDashboard=function(){
   const items=getDashboardDevices().slice(0,4); const priority=getPriorityDevices().slice(0,5); const nets=networkSummaryRows().slice(0,4);
   qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`;
   qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`;
-  qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`;
+  qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'×˜×•×•×—':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'× ×™×¦×•×œ':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`;
   const pulse=qs('dashboardPulse'); if(pulse) pulse.innerHTML=`${stackedStatusBar(state.devices||[])}${eventBarsCard()}`;
   renderAlertHub();
 }
@@ -1409,7 +1456,7 @@ renderViewer=function(){
     {key:'unstable',label:tr('viewerFilterUnstable'),value:unstable.length,color:'var(--orange)'},
     {key:'alerts',label:tr('viewerFilterAlerts'),value:openAlerts.length,color:'var(--gold)'}
   ];
-  qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div></button>`).join('');
+  qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div>${availabilityStrip(state.viewerSummarySeries || [], `${Math.round(Number(state.viewerSummaryAvailability || 0))}%`)}</button>`).join('');
   renderViewerCategories();
   if(!findViewerCategory() && (state.viewerCategories||[]).length){
     state.viewerCategoryKey=viewerCategoryKey(state.viewerCategories[0].category);
@@ -1445,7 +1492,9 @@ renderAlerts=function(){
   const eventHtml=events.length?events.map(e=>eventLineV2(e,link)).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`;
   qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml;
 }
-window.addEventListener('load', async()=>{mountSettingsStandalone(); qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); updateHeaderClock(); window.setInterval(updateHeaderClock,1000); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
+window.addEventListener('load', async()=>{mountSettingsStandalone(); qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); updateHeaderClock(); window.setInterval(updateHeaderClock,1000); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'×˜×¢×™× ×ª HOMEii Network Monitor × ×›×©×œ×”':'Failed to load HOMEii Network Monitor')}})
 </script>
 </body>
 </html>
+
+
