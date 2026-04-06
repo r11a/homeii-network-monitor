@@ -514,7 +514,7 @@ function statusLabel(status){const map={online:'status_online',offline:'status_o
 function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function fmtTs(ts){if(!ts)return '—'; try{return new Date(Number(ts)*1000).toLocaleString((state.settings.language||'he')==='he'?'he-IL':'en-US')}catch{return String(ts)}}
 function timeAgo(ts){if(!ts)return '—'; const now=Math.floor(Date.now()/1000); const d=Math.max(0,now-Number(ts)); if(d<60)return `${d}s`; if(d<3600)return `${Math.floor(d/60)}m`; if(d<86400)return `${Math.floor(d/3600)}h`; return `${Math.floor(d/86400)}d`}
-async function api(url){const res=await fetch(url,{cache:'no-store'}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
+async function api(url,options){const res=await fetch(url,{cache:'no-store',...(options||{})}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
 function switchTab(tab,btn){
   document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.main-nav .nav-btn').forEach(el=>el.classList.remove('active'));
@@ -728,10 +728,16 @@ async function acceptAll(){await api('./api/accept_all'); showMsg('deviceMessage
 async function resolveAlert(id){await api(`./api/resolve_alert/${id}`); await refreshAll()}
 async function saveNetworksOnly(){
   syncNetworkDraftsToHidden();
-  const networks=encodeURIComponent((qs('setNetworks').value||'').trim());
   const names={};
   (state.networkDrafts||[]).forEach(item=>{ if((item.alias||'').trim()) names[item.cidr]=item.alias.trim() });
-  const result=await api(`./api/save_networks?networks=${networks}&network_names=${encodeURIComponent(JSON.stringify(names))}`);
+  const result=await api('./api/save_networks',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      networks:(state.networkDrafts||[]).map(item=>item.cidr).filter(Boolean),
+      network_names:names
+    })
+  });
   state.networkDrafts=(result.networks||[]).map(n=>({cidr:n, alias:((result.network_names||{})[n]||'').trim()}));
   renderNetworkManager();
   const hosts=(result.network_stats||[]).reduce((sum,item)=>sum+Number(item.hosts||0),0);
@@ -743,10 +749,23 @@ async function saveNetworksAndScan(){await saveNetworksOnly(); await runScan();}
 async function saveSettings(){
   const theme=qs('setTheme').value; const language=qs('setLanguage').value;
   syncNetworkDraftsToHidden();
-  const networks=encodeURIComponent((qs('setNetworks').value||'').trim());
   const names={}; (state.networkDrafts||[]).forEach(item=>{ if((item.alias||'').trim()) names[item.cidr]=item.alias.trim() });
   const protocols=['ping','arp','dns','special','vendor'].filter(p=>qs('proto_'+p)?.checked);
-  const result=await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value||30}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&language=${language}&discovery_mode=${qs('setDiscoveryMode').value}&discovery_protocols=${encodeURIComponent(protocols.join(','))}&networks=${networks}&network_names=${encodeURIComponent(JSON.stringify(names))}`);
+  const result=await api('./api/save_settings',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      auto_refresh:qs('setRefresh').value||30,
+      default_view:qs('setView').value,
+      dashboard_style:qs('setStyle').value,
+      theme,
+      language,
+      discovery_mode:qs('setDiscoveryMode').value,
+      discovery_protocols:protocols,
+      networks:(state.networkDrafts||[]).map(item=>item.cidr).filter(Boolean),
+      network_names:names
+    })
+  });
   setTheme(theme); applyDashboardStyle(qs('setStyle').value); showMsg('settingsMessage',`${tr('settingsSaved')} • ${Number(result.reassigned||0)} DEV`); await refreshAll()
 }
 function editDevice(ip){openEditDevice(ip)}
