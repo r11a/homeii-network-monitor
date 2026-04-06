@@ -90,19 +90,20 @@ body.dark{
   box-shadow:var(--shadow)
 }
 .top-shell,.hero,.actionbar,.panel,.toolbar,.tablewrap{border-radius:22px}
-.top-shell{padding:18px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;position:relative;overflow:hidden}
+.top-shell{padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;position:relative;overflow:hidden}
 .top-shell::before,.hero::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.12),transparent 35%,rgba(34,211,238,.10));pointer-events:none}
-.hero{padding:0;display:grid;gap:4px;position:relative;overflow:visible;border:0;background:transparent;box-shadow:none}
+.hero{padding:0;display:grid;gap:8px;position:relative;overflow:visible;border:0;background:transparent;box-shadow:none}
 .hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.04em}
-.hero-sub{margin-top:6px;color:var(--muted);font-size:13px}
-.heroRight{display:grid;gap:4px;justify-items:end;text-align:left}
-.hero-clock{font-size:32px;font-weight:900;letter-spacing:-.04em;line-height:1}
-.hero-date{font-size:13px;color:var(--muted)}
-.hero-sync{font-size:12px;color:var(--muted)}
+.hero-sub{margin:0;color:var(--muted);font-size:13px}
+.hero-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hero-meta-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:12px;color:var(--muted)}
+.hero-clock{font-size:14px;font-weight:900;color:var(--text)}
+.hero-date,.hero-sync{font-size:12px;color:var(--muted)}
 .actionbar{padding:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;border:0;background:transparent;box-shadow:none}
-.actionbar .btn{padding:9px 12px;font-size:13px}
-.actionbar .btn.primary,.actionbar .btn.green{padding-inline:16px}
+.actionbar .btn{padding:8px 11px;font-size:12px;border-radius:12px}
+.actionbar .btn.primary,.actionbar .btn.green{padding-inline:14px}
 .header-status{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.viewer-close{display:none}
 .btn,input,select,textarea{
   border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);font:inherit
 }
@@ -283,6 +284,8 @@ body.settings-mode .kpis{display:none;}
 body.settings-mode .top-shell{display:none;}
 body.settings-mode .main{padding-top:24px;}
 body.settings-mode .hero-sub{display:none;}
+body.settings-mode #tab-settings{display:block !important}
+body.settings-mode .section:not(#tab-settings){display:none !important}
 
 
 .settings-page .panel{padding:24px}
@@ -369,15 +372,24 @@ body.viewer-mode #tab-dashboard,
 body.viewer-mode #tab-devices,
 body.viewer-mode #tab-alerts,
 body.viewer-mode #tab-settings{display:none !important}
-body.viewer-mode .main-nav{display:grid;grid-template-columns:1fr}
-body.viewer-mode .main-nav .nav-btn:not([data-tab="viewer"]):not(.viewer-admin-link){display:none}
-body.viewer-mode .top{display:block}
-body.viewer-mode .top-shell{grid-template-columns:1fr}
+body.viewer-mode .app{grid-template-columns:1fr}
+body.viewer-mode .sidebar{display:none}
+body.viewer-mode .main{padding:18px 20px}
+body.viewer-mode .top{display:block;margin-bottom:10px}
+body.viewer-mode .top-shell{grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:10px 14px;border-radius:18px}
 body.viewer-mode .hero{padding:0}
-body.viewer-mode .hero-sub{display:block}
-body.viewer-mode .sidebar{gap:18px}
+body.viewer-mode .hero-title{font-size:24px}
+body.viewer-mode .hero-sub{display:block;font-size:12px}
+body.viewer-mode .hero-meta{gap:8px}
+body.viewer-mode .hero-meta-chip{padding:6px 10px;font-size:11px}
+body.viewer-mode #tab-viewer{display:block !important}
+body.viewer-mode .viewer-close{display:inline-flex}
 .viewer-admin-link{display:none;text-decoration:none}
-body.viewer-mode .viewer-admin-link{display:block}
+
+@keyframes hubBlink{
+  0%,100%{box-shadow:0 0 0 1px rgba(251,113,133,.2),0 18px 36px rgba(127,29,29,.14)}
+  50%{box-shadow:0 0 0 2px rgba(251,113,133,.44),0 20px 40px rgba(127,29,29,.24)}
+}
 
 @keyframes pulseStatus{
   0%{transform:scale(.92);opacity:.68;box-shadow:0 0 0 0 rgba(255,255,255,0)}
@@ -388,10 +400,31 @@ body.viewer-mode .viewer-admin-link{display:block}
 .modal.hidden{display:none}.modal{position:fixed;inset:0;z-index:2000}.modal-backdrop{position:absolute;inset:0;background:rgba(5,10,20,.45);backdrop-filter:blur(4px)}.modal-card{position:relative;max-width:760px;margin:8vh auto;background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:20px 22px;z-index:2}.modal-card input,.modal-card select,.modal-card textarea{background:var(--bg);color:var(--text);border:1px solid var(--line2)}.modal-card label,.modal-card small,.modal-card .muted{color:var(--muted)}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px}.msg.show{display:block}.msg.ok{background:rgba(78,212,138,.08);border-color:rgba(78,212,138,.24)}.msg.err{background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.24)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
 .empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted)}
-@media (max-width:1320px){.kpis{grid-template-columns:repeat(4,1fr)} .grid.two{grid-template-columns:1fr}.journal-strip{grid-template-columns:repeat(3,minmax(220px,1fr))}}
+.dashboard-flow{display:grid;gap:14px}
+.alert-hub{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;padding:18px 20px;border-radius:24px;border:1px solid rgba(53,211,153,.18);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));position:relative;overflow:hidden;text-align:right}
+.alert-hub::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at top right,rgba(91,140,255,.12),transparent 34%),linear-gradient(90deg,rgba(255,255,255,.02),transparent)}
+.alert-hub.blinking{border-color:rgba(251,113,133,.66);animation:hubBlink 1.15s ease-in-out infinite}
+.alert-hub-main{display:grid;gap:6px;min-width:0}
+.alert-hub-title{font-size:20px;font-weight:900}
+.alert-hub-sub{font-size:13px;color:var(--muted)}
+.alert-hub-count{display:grid;justify-items:end;gap:8px}
+.alert-hub-count strong{font-size:44px;line-height:1;font-weight:900}
+.alert-hub-critical{padding:8px 12px;border-radius:999px;border:1px solid rgba(251,113,133,.34);color:var(--red);background:rgba(251,113,133,.08);font-size:12px;font-weight:800}
+.alert-hub-calm{border-color:rgba(53,211,153,.22)}
+.alert-center-list,.alert-center-events{display:grid;gap:10px;max-height:30vh;overflow:auto;padding-inline-end:4px}
+.alert-center-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.alert-center-section h4{margin:0 0 10px;font-size:14px;font-weight:900}
+.settings-shell{display:grid;gap:16px;align-content:start}
+body.settings-mode #tab-settings{display:grid !important;gap:16px;align-content:start;min-height:calc(100vh - 40px)}
+body.settings-mode .settings-page{display:none !important}
+body.settings-mode .settings-page.active{display:block !important}
+body.settings-mode .main{padding:18px 20px}
+body.settings-mode .settings-topnote,body.settings-mode .settings-note{max-width:980px}
+body.settings-mode .settings-page .panel{max-width:1320px}
+@media (max-width:1320px){.kpis{grid-template-columns:repeat(4,1fr)} .grid.two{grid-template-columns:1fr}.alert-hub{grid-template-columns:1fr auto}}
 @media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto;overflow:visible}.toolbar{grid-template-columns:1fr 1fr} .dashboard-card{grid-template-columns:1fr;direction:rtl}.d-actions{flex-wrap:wrap}}
-@media (max-width:980px){.viewer-grid,.alert-columns,.top-shell{grid-template-columns:1fr}.heroRight{justify-items:start;text-align:right}.actionbar{justify-content:flex-start}.journal-strip{grid-template-columns:repeat(2,minmax(220px,1fr))}}
-@media (max-width:760px){.kpis,.toolbar,.dashboard-cards,.viewer-summary{grid-template-columns:1fr}.journal-strip{grid-template-columns:1fr}}
+@media (max-width:980px){.viewer-grid,.alert-columns,.top-shell,.alert-center-grid{grid-template-columns:1fr}.actionbar{justify-content:flex-start}.alert-hub{grid-template-columns:1fr}}
+@media (max-width:760px){.kpis,.toolbar,.dashboard-cards,.viewer-summary{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -431,22 +464,20 @@ body.viewer-mode .viewer-admin-link{display:block}
   <main class="main">
     <div class="top">
       <div class="top-shell">
-        <div class="heroRight">
-          <div class="hero-clock" id="currentClock">—</div>
-          <div class="hero-date" id="currentDate">—</div>
-          <div class="hero-sync" id="lastRefreshText">—</div>
-        </div>
         <div class="hero">
           <h1 class="hero-title" id="heroTitle">HOMEii Network Monitor</h1>
           <div class="hero-sub" id="heroSub">v5.0.0 • מכשירים שדורשים תשומת לב • ניטור בזמן אמת</div>
+          <div class="hero-meta">
+            <span class="hero-meta-chip"><span class="hero-clock" id="currentClock">—</span></span>
+            <span class="hero-meta-chip"><span class="hero-date" id="currentDate">—</span></span>
+            <span class="hero-meta-chip"><span class="hero-sync" id="lastRefreshText">—</span></span>
+          </div>
         </div>
         <div class="actionbar">
+          <button class="btn viewer-close" onclick="backToMainNav()" id="btnViewerClose">סגור</button>
           <button class="btn primary" onclick="runScan()" id="btnScan">סריקה עכשיו</button>
           <button class="btn green" onclick="acceptAll()" id="btnAcceptAll">אשר את כל החדשים</button>
           <button class="btn" onclick="manualRefresh()" id="btnRefresh">רענון</button>
-          <div class="header-status">
-            <span class="scanState" id="scanState">סטטוס סריקה: —</span>
-          </div>
         </div>
       </div>
     </div>
@@ -463,10 +494,7 @@ body.viewer-mode .viewer-admin-link{display:block}
 
     <section id="tab-dashboard" class="section active">
       <div class="dashboard-flow">
-        <div class="panel compact-panel">
-          <div class="panel-head"><div><h2 id="eventsRecentTitle">Recent events</h2><p id="dashboardJournalSub">3-5 האירועים החשובים והחדשים ביותר ברשת.</p></div></div>
-          <div id="dashboardJournal" class="journal-strip"></div>
-        </div>
+        <div id="dashboardAlertHub"></div>
         <div class="grid two">
           <div class="grid">
           <div class="panel compact-panel">
@@ -552,6 +580,7 @@ body.viewer-mode .viewer-admin-link{display:block}
     </section>
 
     <section id="tab-settings" class="section">
+      <div class="settings-shell">
       <div class="settings-topnote" id="settingsTopNote">הגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.</div><div class="settings-note" id="settingsHelperNote">שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים.</div>
 
       <div class="settings-page active" id="settings-page-general">
@@ -665,7 +694,34 @@ body.viewer-mode .viewer-admin-link{display:block}
           <div id="systemMessage" class="msg"></div>
         </div>
       </div>
+      </div>
     </section>
+  
+  <div id="alertCenterModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeAlertCenter()"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="alertCenterTitle">התראות פעילות</h3>
+        <button class="btn small" onclick="closeAlertCenter()" id="alertCenterCloseTop">סגור</button>
+      </div>
+      <div id="alertCenterSummary" class="viewer-summary" style="margin-bottom:12px"></div>
+      <div class="alert-center-grid">
+        <div class="alert-center-section">
+          <h4 id="alertCenterAlertsTitle">התראות פתוחות</h4>
+          <div id="alertCenterList" class="alert-center-list"></div>
+        </div>
+        <div class="alert-center-section">
+          <h4 id="alertCenterEventsTitle">אירועים אחרונים</h4>
+          <div id="alertCenterEvents" class="alert-center-events"></div>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button class="btn green" onclick="resolveAllOpenAlerts()" id="alertCenterResolveAll">אשר הכל</button>
+        <button class="btn" onclick="closeAlertCenter()" id="alertCenterCancel">בטל</button>
+        <button class="btn" onclick="muteAlertHub()" id="alertCenterMute">השתק</button>
+      </div>
+    </div>
+  </div>
   
   <div id="editModal" class="modal hidden">
     <div class="modal-backdrop" onclick="closeEditModal()"></div>
@@ -710,13 +766,13 @@ function safeArray(v){ return Array.isArray(v) ? v : [] }
 function setText(id,val){const el=qs(id); if(el) el.textContent=val}
 function setPlaceholder(id,val){const el=qs(id); if(el) el.placeholder=val}
 function setOptText(id,idx,val){const el=qs(id); if(el && el.options && el.options[idx]) el.options[idx].text=val}
-const state={status:null,devices:[],alerts:[],events:[],settings:{},activeFilter:'',viewerFilter:'all',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null};
+const state={status:null,devices:[],alerts:[],events:[],settings:{},activeFilter:'',viewerFilter:'all',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null,alertMuteSignature:'',alertLastSignature:''};
 const normalizedPath=(location.pathname||'').replace(/\/+$/,'');
 const directViewerMode=(normalizedPath.endsWith('/viewer')||normalizedPath.endsWith('/viewer.html'));
 const I18N={
   he:{
     brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",viewerAdmin:"ממשק מלא",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
-    scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון נתונים",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",unstableDevices:"לא יציבים",critical:"קריטיים",pinned:"נעוצים",
+    scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון נתונים",closeViewer:"סגור",alertPanelTitle:"מרכז התראות",alertPanelSub:"יש התראות פתוחות או אירועים קריטיים שדורשים תשומת לב.",mute:"השתק",cancel:"בטל",resolveAll:"אשר הכל",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",unstableDevices:"לא יציבים",critical:"קריטיים",pinned:"נעוצים",
     dashboardTitle:"מכשירים שדורשים תשומת לב",dashboardSub:"דשבורד חכם עם דגש על מנותקים, קריטיים ושינויים אחרונים.",dashboardJournalSub:"3-5 האירועים החשובים והחדשים ביותר ברשת.",viewerTitle:"Viewer",viewerSub:"תצוגה חיה לקריאה בלבד של מצב הרשת.",viewerReadonly:"לצפייה בלבד",viewerSummaryTitle:"מצב חי",viewerSummarySub:"סיכום מהיר של מצב הרשת ללא פעולות עריכה.",viewerFocusTitle:"תצוגת צפייה",viewerFocusSub:"בחר סיכום למעלה כדי להציג רק את מה שמעניין אותך, בלי לעבור דף.",viewerAttentionTitle:"מנותקים ולא יציבים",viewerAttentionSub:"התקנים שמצריכים תשומת לב מיידית.",viewerEventsTitle:"שינויים חיים",viewerEventsSub:"נפילות, חזרות, חוסר יציבות וגילוי חדש.",viewerNewTitle:"מכשירים חדשים",viewerNewSub:"התקנים שהתגלו וממתינים לבדיקה.",recentDevicesTitle:"מכשירים אחרונים",recentDevicesSub:"התקנים פעילים ושינויים אחרונים ברשת.",networkSummaryTitle:"סיכום רשתות",networkSummarySub:"כמות התקנים לפי רשת וסטטוס.",attentionTitle:"דורשים טיפול",attentionSub:"מנותקים, קריטיים או חדשים שמומלץ לבדוק.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית. לחיצה על שם ההתקן פותחת את כל הפרטים והפעולות.",
     search:"חיפוש",status:"סטטוס",category:"קטגוריה",networkFilter:"רשת",vendorFilter:"יצרן",sortBy:"מיון",bulkActions:"פעולות מרובות",selected:"נבחרו",bulkPin:"נעץ מסומנים",bulkUnpin:"בטל נעיצה",bulkCritical:"סמן כקריטי",bulkUncritical:"בטל סימון קריטי",bulkDelete:"מחק מסומנים",sortName:"שם",sortIp:"IP",sortStatus:"סטטוס",sortVendor:"יצרן",sortLastSeen:"נראה לאחרונה",networkNames:"שמות רשתות",view:"תצוגה",all:"הכל",clearFilters:"נקה סינונים",rescan:"סריקה מחדש",alertsTitle:"התראות",eventsTitle:"אירועים",openAlerts:"התראות פתוחות",recentEvents:"אירועים אחרונים",
     general:"כללי",generalSub:"הגדרות כלליות של הממשק ותצוגת ברירת מחדל.",language:"שפה",languageSub:"בחר שפת ממשק לכל המערכת.",theme:"ערכת נושא",autoRefresh:"רענון אוטומטי (שניות)",defaultView:"תצוגת ברירת מחדל",
@@ -730,7 +786,7 @@ const I18N={
   },
   en:{
     brand:"HOMEii Network",dashboard:"Dashboard",viewer:"Viewer",devices:"Devices",alerts:"Alerts",settings:"Settings",viewerAdmin:"Full app",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
-    scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh data",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",unstableDevices:"Unstable",critical:"Critical",pinned:"Pinned",
+    scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh data",closeViewer:"Close",alertPanelTitle:"Alert center",alertPanelSub:"Open alerts or critical events need attention.",mute:"Mute",cancel:"Cancel",resolveAll:"Resolve all",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",unstableDevices:"Unstable",critical:"Critical",pinned:"Pinned",
     dashboardTitle:"Devices needing attention",dashboardSub:"Smart dashboard focused on offline, critical and recent changes.",dashboardJournalSub:"The 3-5 most important and recent network events.",viewerTitle:"Viewer",viewerSub:"Read-only live overview of the network state.",viewerReadonly:"Read only",viewerSummaryTitle:"Live overview",viewerSummarySub:"Quick status summary without edit actions.",viewerFocusTitle:"Watch panel",viewerFocusSub:"Use the summary cards to filter what you watch without leaving this page.",viewerAttentionTitle:"Offline and unstable",viewerAttentionSub:"Devices that need immediate attention.",viewerEventsTitle:"Live changes",viewerEventsSub:"Down, back online, unstable and new-device activity.",viewerNewTitle:"New devices",viewerNewSub:"Recently discovered devices waiting for review.",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",devicesTitle:"Devices",devicesSub:"Compact table. Click the device name to open full details and actions.",
     search:"Search",status:"Status",category:"Category",networkFilter:"Network",vendorFilter:"Vendor",sortBy:"Sort by",bulkActions:"Bulk actions",selected:"selected",bulkPin:"Pin selected",bulkUnpin:"Unpin selected",bulkCritical:"Mark critical",bulkUncritical:"Unmark critical",bulkDelete:"Delete selected",sortName:"Name",sortIp:"IP",sortStatus:"Status",sortVendor:"Vendor",sortLastSeen:"Last seen",networkNames:"Network Names",view:"View",all:"All",clearFilters:"Clear filters",rescan:"Rescan",alertsTitle:"Alerts",eventsTitle:"Events",openAlerts:"Open alerts",recentEvents:"Recent events",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",
     general:"General",generalSub:"General interface settings and default view.",language:"Language",languageSub:"Choose the interface language for the whole system.",theme:"Theme",autoRefresh:"Auto refresh (seconds)",defaultView:"Default view",
@@ -750,18 +806,23 @@ function fmtTs(ts){if(!ts)return '—'; try{return new Date(Number(ts)*1000).toL
 function timeAgo(ts){if(!ts)return '—'; const now=Math.floor(Date.now()/1000); const d=Math.max(0,now-Number(ts)); const he=(state.settings.language||'he')==='he'; if(d<60)return `${d} ${he?'שניות':'sec'}`; if(d<3600)return `${Math.floor(d/60)} ${he?'דקות':'min'}`; if(d<86400)return `${Math.floor(d/3600)} ${he?'שעות':'hours'}`; return `${Math.floor(d/86400)} ${he?'ימים':'days'}`}
 async function api(url,options){const res=await fetch(url,{cache:'no-store',...(options||{})}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
 function switchTab(tab,btn){
-  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(el=>{el.classList.remove('active'); el.style.display='none';});
   document.querySelectorAll('.main-nav .nav-btn').forEach(el=>el.classList.remove('active'));
-  const target=qs(`tab-${tab}`); if(target) target.classList.add('active');
+  const target=qs(`tab-${tab}`); if(target){ target.classList.add('active'); target.style.display='block'; }
   if(btn) btn.classList.add('active');
   const settingsMode = tab === 'settings';
   applyViewerMode(tab === 'viewer');
+  if(tab !== 'viewer') document.body.classList.remove('viewer-mode');
   setSidebarMode(settingsMode);
   document.body.classList.toggle('settings-mode', settingsMode);
   if(settingsMode){
+    const settingsSection=qs('tab-settings');
+    if(settingsSection) settingsSection.style.display='grid';
     const activeSettingsBtn=document.querySelector('.settings-nav-btn.active') || document.querySelector('.settings-nav-btn[data-settings-page="general"]');
     const page=(activeSettingsBtn && activeSettingsBtn.dataset.settingsPage) || 'general';
     switchSettingsPage(page, activeSettingsBtn);
+  }else{
+    document.querySelectorAll('.settings-page').forEach(el=>el.style.display='');
   }
   const targetUrl=directViewerMode&&tab==='viewer'?location.pathname:`#${tab}`;
   if((directViewerMode&&location.pathname!==targetUrl)||(!directViewerMode&&location.hash!==`#${tab}`)) history.replaceState(null,'',targetUrl);
@@ -788,6 +849,26 @@ async function manualRefresh(){
   const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US';
   const sync=qs('lastRefreshText'); if(sync) sync.textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)} • ${tr('refreshedNow')}`;
 }
+function openAlertCenter(){qs('alertCenterModal')?.classList.remove('hidden')}
+function closeAlertCenter(){qs('alertCenterModal')?.classList.add('hidden')}
+function openAlertHub(){openAlertCenter()}
+function currentAlertSignature(){
+  return (state.alerts||[]).filter(a=>a.status==='open').map(a=>`${a.id}:${a.updated_at||a.created_at||0}`).join('|');
+}
+function muteAlertHub(){
+  state.alertMuteSignature=currentAlertSignature();
+  closeAlertCenter();
+  renderDashboard();
+}
+async function resolveAllOpenAlerts(){
+  const open=(state.alerts||[]).filter(a=>a.status==='open');
+  for(const alert of open){
+    await api(`./api/resolve_alert/${alert.id}`);
+  }
+  state.alertMuteSignature='';
+  await refreshAll();
+  closeAlertCenter();
+}
 function setSidebarMode(settingsMode){
   const sb=document.querySelector('.sidebar');
   if(sb) sb.classList.toggle('settings-mode', !!settingsMode);
@@ -798,9 +879,9 @@ function backToMainNav(){
   switchTab('dashboard', document.querySelector('.main-nav .nav-btn[data-tab="dashboard"]'));
 }
 function switchSettingsPage(page, btn){
-  document.querySelectorAll('.settings-page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.settings-page').forEach(el=>{el.classList.remove('active'); el.style.display='none';});
   const target=qs(`settings-page-${page}`);
-  if(target) target.classList.add('active');
+  if(target){ target.classList.add('active'); target.style.display='block'; }
   document.querySelectorAll('.settings-nav-btn').forEach(el=>el.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'});
@@ -811,11 +892,10 @@ function applyTranslations(){
   setText('navDashboard',tr('dashboard')); setText('navViewer',tr('viewer')); setText('navDevices',tr('devices')); setText('navAlerts',tr('alerts')); setText('navSettings',tr('settings')); setText('viewerAdminLink',tr('viewerAdmin'));
   setText('settingsBackBtn',tr('settingsBack')); setText('sideGeneral',tr('general')); setText('sideNetworks',tr('networks')); setText('sideManual',tr('manualDevice')); setText('sideAppearance',tr('appearance')); setText('sideLanguage',tr('language')); setText('sideSystem',tr('system'));
   setText('settingsTopNote',tr('settingsTopNote')); setText('settingsHelperNote',tr('settingsHelperNote'));
-  setText('btnScan',tr('scan')); setText('btnAcceptAll',tr('acceptAll')); setText('btnRefresh',tr('refresh'));
+  setText('btnScan',tr('scan')); setText('btnAcceptAll',tr('acceptAll')); setText('btnRefresh',tr('refresh')); setText('btnViewerClose',tr('closeViewer'));
   setText('kpiOfflineLabel',tr('offlineDevices')); setText('kpiOnlineLabel',tr('online')); setText('kpiTotalLabel',tr('total')); setText('kpiUnstableLabel',tr('unstableDevices')); setText('kpiNewLabel',tr('new')); setText('kpiCriticalLabel',tr('critical')); setText('kpiPinnedLabel',tr('pinned'));
   setText('attentionTitle',tr('attentionTitle')); setText('attentionSub',tr('attentionSub')); setText('recentDevicesTitle',tr('recentDevicesTitle')); setText('recentDevicesSub',tr('recentDevicesSub')); setText('networkSummaryTitle',tr('networkSummaryTitle')); setText('networkSummarySub',tr('networkSummarySub')); setText('alertsOpenTitle',tr('openAlerts')); setText('eventsRecentTitle',tr('recentEvents'));
   setText('dashboardPulseTitle',(state.settings.language||'he')==='he'?'דופק הרשת':'Network Pulse'); setText('dashboardPulseSub',(state.settings.language||'he')==='he'?'מגמת שינויים אחרונה והרכב מצב המכשירים.':'Recent changes and live network composition.');
-  setText('dashboardJournalSub',tr('dashboardJournalSub'));
   setText('viewerTitle',tr('viewerTitle')); setText('viewerSub',tr('viewerSub')); setText('viewerReadonly',tr('viewerReadonly')); setText('viewerFocusTitle',tr('viewerFocusTitle')); setText('viewerFocusSub',tr('viewerFocusSub')); setText('viewerAttentionTitle',tr('viewerAttentionTitle')); setText('viewerAttentionSub',tr('viewerAttentionSub')); setText('viewerEventsTitle',tr('viewerEventsTitle')); setText('viewerEventsSub',tr('viewerEventsSub')); setText('viewerNewTitle',tr('viewerNewTitle')); setText('viewerNewSub',tr('viewerNewSub'));
   setText('devicesTitle',tr('devicesTitle')); setText('devicesSub',tr('devicesSub'));
   setText('lblSearch',tr('search')); setPlaceholder('searchText',(state.settings.language||'he')==='he'?'שם, IP, hostname, vendor, mac...':'Name, IP, hostname, vendor, mac...');
@@ -836,6 +916,8 @@ function applyTranslations(){
   setText('settingsSystemTitle',tr('system')); setText('settingsSystemSub',tr('systemSub'));
   setText('btnExportDevices',tr('exportDevices')); setText('btnExportSettings',tr('exportSettings')); setText('btnImportDevices',tr('importDevices')); setText('btnImportSettings',tr('importSettings'));
   setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel'));
+  setText('alertCenterTitle',tr('alertPanelTitle')); setText('alertCenterCloseTop',tr('closeViewer')); setText('alertCenterResolveAll',tr('resolveAll')); setText('alertCenterCancel',tr('cancel')); setText('alertCenterMute',tr('mute'));
+  setText('alertCenterAlertsTitle',(state.settings.language||'he')==='he'?'התראות פתוחות':'Open alerts'); setText('alertCenterEventsTitle',(state.settings.language||'he')==='he'?'אירועים אחרונים':'Recent events');
   setText('lblStatus',tr('statusText')); setText('lblNetworks',tr('networksText'));
 }
 function deviceStatusBadge(status){const cls=['online','offline','unstable','new'].includes(status)?status:'new'; return `<span class="badge ${cls}">${escapeHtml(statusLabel(status||'unknown'))}</span>`}
@@ -999,11 +1081,11 @@ async function bulkCritical(value){if(!state.selectedIps.size) return; await api
 async function bulkDelete(){if(!state.selectedIps.size) return; await api(`./api/bulk_delete?ips=${encodeURIComponent([...state.selectedIps].join(','))}`); state.selectedIps.clear(); showMsg('deviceMessage',tr('settingsSaved')); await refreshAll()}
 function rowActions(d){return `<div class="row-mini-actions"><button class="btn small" onclick="openEditDevice('${d.ip}')">${escapeHtml(tr('details'))}</button></div>`}
 function renderDevices(){const devices=filteredDevices(); const view=(qs('devicesView').value||state.settings.default_view||'table'); const mount=qs('devicesMount'); if(!devices.length){mount.innerHTML=`<div class="empty">${escapeHtml(tr('noDevices'))}</div>`; updateBulkBar(); return;} if(view==='grid'){mount.innerHTML=`<div class="dashboard-cards" style="margin-top:14px">${devices.map(dashboardCard).join('')}</div>`; updateBulkBar(); return;} const allChecked=devices.length && devices.every(d=>state.selectedIps.has(d.ip)); mount.innerHTML=`<div class="tablewrap" style="margin-top:14px"><table><thead><tr><th><input type="checkbox" class="row-check" ${allChecked?'checked':''} onchange="toggleSelectAll(this.checked)"></th><th class="sortable" onclick="setSort('name')">${escapeHtml(tr('nameCol'))}${sortIndicator('name')}</th><th class="sortable" onclick="setSort('ip')">${escapeHtml(tr('ipCol'))}${sortIndicator('ip')}</th><th class="sortable" onclick="setSort('status')">${escapeHtml(tr('statusCol'))}${sortIndicator('status')}</th><th>${escapeHtml(tr('categoryCol'))}</th><th>${escapeHtml(tr('networkCol'))}</th><th class="sortable" onclick="setSort('vendor')">${escapeHtml(tr('vendorCol'))}${sortIndicator('vendor')}</th><th>${escapeHtml(tr('macCol'))}</th><th class="sortable" onclick="setSort('last_seen')">${escapeHtml(tr('lastSeenCol'))}${sortIndicator('last_seen')}</th><th>${escapeHtml(tr('actionsCol'))}</th></tr></thead><tbody>${devices.map(d=>`<tr><td><input type="checkbox" class="row-check" ${state.selectedIps.has(d.ip)?'checked':''} onchange="toggleSelected('${d.ip}',this.checked)"></td><td><div class="name-cell"><div class="name-main"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button>${d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip)?`<div class="subtext">${escapeHtml(d.subtitle)}</div>`:''}<div class="name-subrow">${d.pinned?`<span class="mini">${escapeHtml(tr('pinned'))}</span>`:''}${d.critical?`<span class="mini">${escapeHtml(tr('critical'))}</span>`:''}</div></div></div></td><td>${escapeHtml(d.ip)}</td><td><div class="status-actions">${deviceStatusBadge(d.status)}${d.approved?`<span class="mini">${escapeHtml(tr('known'))}</span>`:`<span class="mini">${escapeHtml(tr('pending'))}</span>`}</div></td><td>${escapeHtml(d.category||'—')}</td><td>${escapeHtml(displayNetwork(d.assigned_network||''))}</td><td>${escapeHtml(d.vendor||'—')}</td><td>${escapeHtml(d.mac||'—')}</td><td>${timeAgo(d.last_seen)}</td><td><div class="actions">${rowActions(d)}</div></td></tr>`).join('')}</tbody></table></div>`; updateBulkBar();}
-function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().toLowerCase(); const sev=(qs('alertSeverity')?.value||'').trim().toLowerCase(); const eventText=(qs('eventsSearch')?.value||'').trim().toLowerCase(); const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||''); const alerts=(state.alerts||[]).filter(a=>{const hay=`${a.title||''} ${a.message||''} ${a.ip||''}`.toLowerCase(); if(alertText&&!hay.includes(alertText)) return false; if(sev&&String(a.severity||'').toLowerCase()!==sev) return false; return true;}); const events=(state.events||[]).filter(e=>{const hay=`${e.message||''} ${e.ip||''} ${e.event_type||''}`.toLowerCase(); if(eventText&&!hay.includes(eventText)) return false; return true;}); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const newAlerts=openAlerts.filter(a=>a.title===`New device detected`).length; const offlineAlerts=openAlerts.filter(a=>a.title===`Device offline`).length; const unstableAlerts=openAlerts.filter(a=>a.title===`Device unstable`).length; qs('alertsSummary').innerHTML=`<div class="viewer-stat"><div class="k">${escapeHtml(tr('openAlerts'))}</div><div class="v" style="color:var(--gold)">${openAlerts.length}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('new'))}</div><div class="v" style="color:var(--blue)">${newAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_offline'))}</div><div class="v" style="color:var(--red)">${offlineAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_unstable'))}</div><div class="v" style="color:var(--orange)">${unstableAlerts}</div></div>`; const emptyAlerts=`<div class="empty"><div>${escapeHtml(tr('noAlerts'))}</div><div style="margin-top:8px">${escapeHtml(tr('noAlertsHint'))}</div></div>`; const alertHtml=alerts.length?alerts.map(a=>`<div class="item"><div class="item-head"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span>${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><small>${link(a.ip,a.ip||'')} • ${fmtTs(a.created_at)}</small><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`).join(''):emptyAlerts; const eventHtml=events.length?events.map(e=>`<div class="item"><div class="item-head"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${link(e.ip,e.ip||'')} • ${fmtTs(e.ts)}</small></div>`).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`; qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml; qs('dashboardAlerts').innerHTML=alertHtml; qs('dashboardEvents').innerHTML=eventHtml}
+function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().toLowerCase(); const sev=(qs('alertSeverity')?.value||'').trim().toLowerCase(); const eventText=(qs('eventsSearch')?.value||'').trim().toLowerCase(); const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||''); const alerts=(state.alerts||[]).filter(a=>{const hay=`${a.title||''} ${a.message||''} ${a.ip||''}`.toLowerCase(); if(alertText&&!hay.includes(alertText)) return false; if(sev&&String(a.severity||'').toLowerCase()!==sev) return false; return true;}); const events=(state.events||[]).filter(e=>{const hay=`${e.message||''} ${e.ip||''} ${e.event_type||''}`.toLowerCase(); if(eventText&&!hay.includes(eventText)) return false; return true;}); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const newAlerts=openAlerts.filter(a=>a.title===`New device detected`).length; const offlineAlerts=openAlerts.filter(a=>a.title===`Device offline`).length; const unstableAlerts=openAlerts.filter(a=>a.title===`Device unstable`).length; qs('alertsSummary').innerHTML=`<div class="viewer-stat"><div class="k">${escapeHtml(tr('openAlerts'))}</div><div class="v" style="color:var(--gold)">${openAlerts.length}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('new'))}</div><div class="v" style="color:var(--blue)">${newAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_offline'))}</div><div class="v" style="color:var(--red)">${offlineAlerts}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_unstable'))}</div><div class="v" style="color:var(--orange)">${unstableAlerts}</div></div>`; const emptyAlerts=`<div class="empty"><div>${escapeHtml(tr('noAlerts'))}</div><div style="margin-top:8px">${escapeHtml(tr('noAlertsHint'))}</div></div>`; const alertHtml=alerts.length?alerts.map(a=>`<div class="item"><div class="item-head"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span>${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><small>${link(a.ip,a.ip||'')} • ${fmtTs(a.created_at)}</small><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`).join(''):emptyAlerts; const eventHtml=events.length?events.map(e=>`<div class="item"><div class="item-head"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${link(e.ip,e.ip||'')} • ${fmtTs(e.ts)}</small></div>`).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`; qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml}
 function renderViewer(){const online=(state.devices||[]).filter(d=>d.status==='online'); const offline=(state.devices||[]).filter(d=>d.status==='offline'); const unstable=(state.devices||[]).filter(d=>d.status==='unstable'); const newcomers=(state.devices||[]).filter(d=>d.status==='new'); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const liveEvents=(state.events||[]).filter(e=>['device_offline','device_online','device_unstable','device_stable','new_device'].includes(e.event_type||'')).slice(0,10); const viewerStats=[{key:'all',label:tr('viewerFilterAll'),value:(state.devices||[]).length,color:'var(--text)'},{key:'online',label:tr('viewerFilterOnline'),value:online.length,color:'var(--green)'},{key:'offline',label:tr('viewerFilterOffline'),value:offline.length,color:'var(--red)'},{key:'new',label:tr('viewerFilterNew'),value:newcomers.length,color:'var(--blue)'},{key:'unstable',label:tr('viewerFilterUnstable'),value:unstable.length,color:'var(--orange)'},{key:'alerts',label:tr('viewerFilterAlerts'),value:openAlerts.length,color:'var(--gold)'}]; qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div></button>`).join(''); const focusDevices=viewerDevicesForFilter(); qs('viewerFilterTag').textContent=viewerFilterLabel(state.viewerFilter); qs('viewerDevices').innerHTML=focusDevices.length?focusDevices.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; const attention=[...offline,...unstable].sort((a,b)=>Number(b.last_seen||0)-Number(a.last_seen||0)).slice(0,12); qs('viewerAttention').innerHTML=attention.length?attention.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerEvents').innerHTML=liveEvents.length?liveEvents.map(viewerEventRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerNew').innerHTML=newcomers.length?newcomers.slice(0,12).map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`}
 function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
 function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setStatusAnimation').value=st.settings?.status_animation||'blink'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(`${scanSummaryText(st.scan)} • ${workerSummaryText(st.workers||state.status?.workers||{})}`)}
-async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'5.0.0'; qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardSub')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sUnstable').textContent=status.unstable??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${scanSummaryText(status.scan)} • ${workerSummaryText(status.workers||{})}`; qs('sideScanState').textContent=workerSummaryText(status.workers||{}); qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
+async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); if(qs('versionText')) qs('versionText').textContent=status.version||'5.0.0'; if(qs('heroSub')) qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardSub')}`; if(qs('sTotal')) qs('sTotal').textContent=status.total??0; if(qs('sOnline')) qs('sOnline').textContent=status.online??0; if(qs('sOffline')) qs('sOffline').textContent=status.offline??0; if(qs('sUnstable')) qs('sUnstable').textContent=status.unstable??0; if(qs('sNew')) qs('sNew').textContent=status.new??0; if(qs('sCritical')) qs('sCritical').textContent=status.critical??0; if(qs('sPinned')) qs('sPinned').textContent=status.pinned??0; if(qs('sideScanState')) qs('sideScanState').textContent=workerSummaryText(status.workers||{}); if(qs('sideNetworksCount')) qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; if(qs('lastRefreshText')) qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); if(qs('dbPath')) qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
 async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
 async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage',tr('deviceAdded')); await refreshAll()}
 async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
@@ -1118,29 +1200,34 @@ function alertSeverityCard(alerts){
   const parts=[['critical','#f43f5e'],['high','var(--red)'],['medium','var(--orange)'],['info','var(--blue)']];
   return `<div class="viz-card"><h3>${escapeHtml(localText('חומרת התראות','Alert severity'))}</h3><p>${escapeHtml(localText('איך ההתראות הפתוחות מתחלקות לפי חומרה.','How open alerts are distributed by severity.'))}</p><div class="viz-stack">${parts.map(([key,color])=>`<span style="width:${(counts[key]/total)*100}%;background:${color}"></span>`).join('')}</div><div class="viz-legend">${parts.map(([key,color])=>`<div class="viz-legend-row"><div><span class="viz-dot" style="background:${color}"></span><strong>${escapeHtml(key)}</strong></div><span>${counts[key]}</span></div>`).join('')}</div></div>`;
 }
-function dashboardJournalEntries(){
-  const openAlerts=(state.alerts||[]).filter(a=>a.status==='open').map(a=>({
-    ts:Number(a.created_at||0),
-    kind:'alert',
-    severity:String(a.severity||'info').toLowerCase(),
-    title:a.title||tr('alertsTitle'),
-    body:a.message||'',
-    ip:a.ip||'',
-  }));
-  const recentEvents=relevantStatusEvents().map(e=>({
-    ts:Number(e.ts||0),
-    kind:'event',
-    severity:e.event_type==='device_offline'?'high':(e.event_type==='device_unstable'?'medium':'info'),
-    title:e.message||e.event_type||tr('eventsTitle'),
-    body:localText('אירוע רשת חי','Live network event'),
-    ip:e.ip||'',
-  }));
-  return [...openAlerts,...recentEvents].sort((a,b)=>b.ts-a.ts).slice(0,5);
-}
-function journalCard(item){
-  const severity=item.severity==='critical'?'high':(item.severity||'info');
-  const kindLabel=item.kind==='alert'?tr('alertsTitle'):tr('eventsTitle');
-  return `<div class="journal-card ${escapeHtml(severity)}"><div class="journal-top"><div class="journal-title">${escapeHtml(item.title||kindLabel)}</div><span class="journal-kind">${escapeHtml(kindLabel)}</span></div><div class="journal-body">${escapeHtml(item.body||'')}</div><div class="journal-meta"><span><strong>${escapeHtml(item.ip||'—')}</strong></span><span>${escapeHtml(fmtTs(item.ts))}</span></div></div>`;
+function renderAlertHub(){
+  const openAlerts=(state.alerts||[]).filter(a=>a.status==='open');
+  const criticalAlerts=openAlerts.filter(a=>['critical','high'].includes(String(a.severity||'').toLowerCase()));
+  const recentEvents=(state.events||[]).slice(0,40);
+  const signature=currentAlertSignature();
+  if(signature && state.alertMuteSignature && signature!==state.alertMuteSignature){
+    state.alertMuteSignature='';
+  }
+  const blinking=criticalAlerts.length>0 && signature!==state.alertMuteSignature;
+  const items=openAlerts.slice(0,6);
+  const summary=qs('alertCenterSummary');
+  if(summary){
+    summary.innerHTML=`<div class="viewer-stat"><div class="k">${escapeHtml(tr('openAlerts'))}</div><div class="v" style="color:var(--gold)">${openAlerts.length}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('critical'))}</div><div class="v" style="color:var(--red)">${criticalAlerts.length}</div></div><div class="viewer-stat"><div class="k">${escapeHtml(tr('status_unstable'))}</div><div class="v" style="color:var(--orange)">${openAlerts.filter(a=>a.title===`Device unstable`).length}</div></div>`;
+  }
+  const list=qs('alertCenterList');
+  if(list){
+    const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||'');
+    list.innerHTML=openAlerts.length?openAlerts.map(a=>alertCardV2(a,link)).join(''):`<div class="empty">${escapeHtml(tr('noAlerts'))}</div>`;
+  }
+  const eventsMount=qs('alertCenterEvents');
+  if(eventsMount){
+    const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||'');
+    eventsMount.innerHTML=recentEvents.length?recentEvents.map(e=>eventLineV2(e,link)).join(''):`<div class="empty">${escapeHtml(tr('noEvents'))}</div>`;
+  }
+  const hub=qs('dashboardAlertHub');
+  if(hub){
+    hub.innerHTML=`<button class="alert-hub ${openAlerts.length?'':'alert-hub-calm'} ${blinking?'blinking':''}" onclick="openAlertHub()" style="width:100%;font:inherit;color:inherit;text-align:inherit"><div class="alert-hub-main"><div class="alert-hub-title">${escapeHtml(tr('alertPanelTitle'))}</div><div class="alert-hub-sub">${escapeHtml(openAlerts.length?localText('יש אירועים פתוחים שדורשים תשומת לב','Open items need attention'):tr('noAlerts'))}</div></div><div class="alert-hub-count"><strong style="color:${criticalAlerts.length?'var(--red)':'var(--gold)'}">${openAlerts.length}</strong>${criticalAlerts.length?`<span class="alert-hub-critical">${escapeHtml(localText(`${criticalAlerts.length} קריטיות`,`Critical: ${criticalAlerts.length}`))}</span>`:''}</div></button>`;
+  }
 }
 function alertCardV2(a,link){return `<div class="alert-item ${escapeHtml(String(a.severity||'info').toLowerCase())}"><div class="alert-item-top"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span class="alert-severity">${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><div class="alert-meta"><span>${link(a.ip,a.ip||'')}</span><span>${fmtTs(a.created_at)}</span></div><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`}
 function eventLineV2(e,link){return `<div class="event-line"><div class="event-pill">${escapeHtml(e.level||'info')}</div><div class="event-body"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><small>${link(e.ip,e.ip||'')} • ${fmtTs(e.ts)}</small></div></div>`}
@@ -1150,8 +1237,7 @@ renderDashboard=function(){
   qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`;
   qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`;
   const pulse=qs('dashboardPulse'); if(pulse) pulse.innerHTML=`${stackedStatusBar(state.devices||[])}${eventBarsCard()}`;
-  const journal=dashboardJournalEntries();
-  const journalMount=qs('dashboardJournal'); if(journalMount) journalMount.innerHTML=journal.length?journal.map(journalCard).join(''):`<div class="empty">${escapeHtml(tr('noEvents'))}</div>`;
+  renderAlertHub();
 }
 renderViewer=function(){
   const devices=state.devices||[];
@@ -1203,15 +1289,3 @@ window.addEventListener('load', async()=>{qs('setTheme')?.addEventListener('chan
 </script>
 </body>
 </html>
-.dashboard-flow{display:grid;gap:14px}
-.journal-strip{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:12px;overflow:auto;padding-bottom:4px}
-.journal-card{padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));min-height:132px;display:grid;gap:10px;align-content:start}
-.journal-card.high{border-color:rgba(251,113,133,.34);box-shadow:inset 0 1px 0 rgba(251,113,133,.08)}
-.journal-card.medium{border-color:rgba(245,158,11,.28);box-shadow:inset 0 1px 0 rgba(245,158,11,.08)}
-.journal-card.info{border-color:rgba(91,140,255,.22);box-shadow:inset 0 1px 0 rgba(91,140,255,.08)}
-.journal-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.journal-title{font-size:14px;font-weight:900}
-.journal-kind{padding:5px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted)}
-.journal-body{font-size:13px;color:var(--text);line-height:1.45}
-.journal-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-.journal-meta strong{color:var(--text)}
