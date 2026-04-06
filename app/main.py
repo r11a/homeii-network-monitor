@@ -33,7 +33,7 @@ LEGACY_EVENTS = Path("/data/events.json")
 
 THREADS = 40
 PING_INTERVAL = 30
-FAIL_THRESHOLD = 2
+FAIL_THRESHOLD = 1
 RECOVER_THRESHOLD = 1
 UNSTABLE_WINDOW = 600
 UNSTABLE_THRESHOLD = 4
@@ -1321,27 +1321,31 @@ def monitor_one(ip: str) -> None:
 
 
 
+def run_monitor_pass(critical_only: bool = False) -> None:
+    worker_name = "critical_monitor" if critical_only else "monitor"
+    interval = critical_interval_seconds() if critical_only else interval_from_settings()
+    set_worker_status(worker_name, last_started=now_ts(), interval=interval)
+    conn = db()
+    try:
+        query = "SELECT ip FROM devices WHERE ignored=0"
+        query += " AND critical=1" if critical_only else " AND critical=0"
+        ips = [r[0] for r in conn.execute(query).fetchall()]
+    finally:
+        conn.close()
+    with ThreadPoolExecutor(max_workers=THREADS) as ex:
+        futures = [ex.submit(monitor_one, ip) for ip in ips]
+        for future in futures:
+            try:
+                future.result()
+            except Exception:
+                pass
+    set_worker_status(worker_name, last_finished=now_ts(), last_cycle=now_ts(), cycle_count=int(worker_state[worker_name]["cycle_count"]) + 1, last_error="")
+
+
 def monitor_cycle(critical_only: bool = False) -> None:
     while True:
         try:
-            worker_name = "critical_monitor" if critical_only else "monitor"
-            interval = critical_interval_seconds() if critical_only else interval_from_settings()
-            set_worker_status(worker_name, last_started=now_ts(), interval=interval)
-            conn = db()
-            try:
-                query = "SELECT ip FROM devices WHERE ignored=0"
-                query += " AND critical=1" if critical_only else " AND critical=0"
-                ips = [r[0] for r in conn.execute(query).fetchall()]
-            finally:
-                conn.close()
-            with ThreadPoolExecutor(max_workers=THREADS) as ex:
-                futures = [ex.submit(monitor_one, ip) for ip in ips]
-                for future in futures:
-                    try:
-                        future.result()
-                    except Exception:
-                        pass
-            set_worker_status(worker_name, last_finished=now_ts(), last_cycle=now_ts(), cycle_count=int(worker_state[worker_name]["cycle_count"]) + 1, last_error="")
+            run_monitor_pass(critical_only)
         except Exception as e:
             worker_name = "critical_monitor" if critical_only else "monitor"
             set_worker_status(worker_name, last_finished=now_ts(), last_error=str(e))
@@ -1566,11 +1570,13 @@ def logo():
 
 @app.get("/api/status")
 def api_status():
+    ensure_background_workers()
     return status_payload()
 
 
 @app.get("/api/devices")
 def api_devices():
+    ensure_background_workers()
     return {"devices": get_devices()}
 
 
@@ -1602,6 +1608,7 @@ def api_events(limit: int = 50):
 
 @app.get("/api/settings")
 def api_settings():
+    ensure_background_workers()
     conn = db()
     try:
         rows = conn.execute("SELECT key, value FROM settings ORDER BY key").fetchall()
@@ -2011,6 +2018,17 @@ def start_background_workers() -> None:
     start_worker("rescan", rescan_loop)
     start_worker("special_hosts", discover_special_hosts)
     start_worker("startup_scan", run_full_scan, "startup")
+
+
+def ensure_background_workers() -> None:
+    start_background_workers()
+    now = now_ts()
+    monitor = worker_state.get("monitor", {})
+    critical = worker_state.get("critical_monitor", {})
+    if now - int(monitor.get("last_cycle") or 0) > max(45, interval_from_settings() * 2):
+        start_worker("monitor_kick", run_monitor_pass, False)
+    if now - int(critical.get("last_cycle") or 0) > max(30, critical_interval_seconds() * 2):
+        start_worker("critical_monitor_kick", run_monitor_pass, True)
 
 
 @app.on_event("startup")
