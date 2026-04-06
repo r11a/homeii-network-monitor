@@ -417,6 +417,8 @@ body.viewer-mode .viewer-close{display:inline-flex}
 .alert-center-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 .alert-center-section h4{margin:0 0 10px;font-size:14px;font-weight:900}
 .settings-shell{display:grid;gap:16px;align-content:start}
+body #settingsStandalone{display:none}
+body.settings-mode #settingsStandalone{display:grid !important;gap:16px;align-content:start;min-height:calc(100vh - 40px)}
 body.settings-mode #tab-settings{display:grid !important;gap:16px;align-content:start;min-height:calc(100vh - 40px)}
 body.settings-mode .settings-page{display:none !important}
 body.settings-mode .settings-page.active{display:block !important}
@@ -698,6 +700,7 @@ body.settings-mode .settings-page .panel{max-width:1320px}
       </div>
       </div>
     </section>
+    <div id="settingsStandalone"></div>
   
   <div id="alertCenterModal" class="modal hidden">
     <div class="modal-backdrop" onclick="closeAlertCenter()"></div>
@@ -810,6 +813,12 @@ async function api(url,options){const res=await fetch(url,{cache:'no-store',...(
 function switchTab(tab,btn){
   document.querySelectorAll('.section').forEach(el=>{el.classList.remove('active'); el.style.display='none';});
   document.querySelectorAll('.main-nav .nav-btn').forEach(el=>el.classList.remove('active'));
+  const settingsHost=qs('settingsStandalone');
+  if(settingsHost){
+    settingsHost.style.display='none';
+    settingsHost.style.visibility='hidden';
+    settingsHost.style.opacity='0';
+  }
   const target=qs(`tab-${tab}`); if(target){ target.classList.add('active'); target.style.display='block'; target.style.visibility='visible'; target.style.opacity='1'; }
   if(btn) btn.classList.add('active');
   const settingsMode = tab === 'settings';
@@ -818,12 +827,12 @@ function switchTab(tab,btn){
   setSidebarMode(settingsMode);
   document.body.classList.toggle('settings-mode', settingsMode);
   if(settingsMode){
+    mountSettingsStandalone();
     const settingsSection=qs('tab-settings');
     if(settingsSection){
-      settingsSection.style.display='grid';
-      settingsSection.style.visibility='visible';
-      settingsSection.style.opacity='1';
-      settingsSection.style.minHeight='calc(100vh - 40px)';
+      settingsSection.style.display='none';
+      settingsSection.style.visibility='hidden';
+      settingsSection.style.opacity='0';
     }
     const activeSettingsBtn=document.querySelector('.settings-nav-btn.active') || document.querySelector('.settings-nav-btn[data-settings-page="general"]');
     const page=(activeSettingsBtn && activeSettingsBtn.dataset.settingsPage) || 'general';
@@ -881,17 +890,25 @@ function setSidebarMode(settingsMode){
   const sb=document.querySelector('.sidebar');
   if(sb) sb.classList.toggle('settings-mode', !!settingsMode);
 }
+function mountSettingsStandalone(){
+  const source=qs('tab-settings');
+  const host=qs('settingsStandalone');
+  if(!source || !host || host.dataset.mounted==='1') return;
+  while(source.firstChild){
+    host.appendChild(source.firstChild);
+  }
+  host.dataset.mounted='1';
+}
 function ensureSettingsVisibility(page='general'){
   if(!document.body.classList.contains('settings-mode')) return;
-  const section=qs('tab-settings');
-  if(section){
-    section.classList.add('active');
-    section.hidden=false;
-    section.style.setProperty('display','grid','important');
-    section.style.setProperty('visibility','visible','important');
-    section.style.setProperty('opacity','1','important');
-    section.style.setProperty('min-height','calc(100vh - 40px)','important');
-    section.style.setProperty('align-content','start','important');
+  const host=qs('settingsStandalone');
+  if(host){
+    host.hidden=false;
+    host.style.setProperty('display','grid','important');
+    host.style.setProperty('visibility','visible','important');
+    host.style.setProperty('opacity','1','important');
+    host.style.setProperty('min-height','calc(100vh - 40px)','important');
+    host.style.setProperty('align-content','start','important');
   }
   document.querySelectorAll('.settings-page').forEach(el=>{
     const active=el.id===`settings-page-${page}`;
@@ -1321,7 +1338,7 @@ renderAlerts=function(){
   const eventHtml=events.length?events.map(e=>eventLineV2(e,link)).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`;
   qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml;
 }
-window.addEventListener('load', async()=>{qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); updateHeaderClock(); window.setInterval(updateHeaderClock,1000); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
+window.addEventListener('load', async()=>{mountSettingsStandalone(); qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); updateHeaderClock(); window.setInterval(updateHeaderClock,1000); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
 </script>
 </body>
 </html>
