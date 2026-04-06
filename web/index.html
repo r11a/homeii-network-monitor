@@ -1074,13 +1074,18 @@ function availabilitySquareClass(point){
 function availabilityStrip(series, captionText=''){
   const points=Array.isArray(series)?series:[];
   if(!points.length) return '';
-  return `<div class="availability-strip">${points.map(point=>`<span class="availability-square ${availabilitySquareClass(point)}" title="${escapeHtml(fmtTs(point.ts))} • ${Math.round(Number(point.availability_pct||0))}%"></span>`).join('')}</div>${captionText?`<div class="availability-caption"><span>${escapeHtml(localText('לפני 24 שעות','24h ago'))}</span><span>${escapeHtml(captionText)}</span><span>${escapeHtml(localText('עכשיו','Now'))}</span></div>`:''}`;
+  return `<div class="availability-strip">${points.map(point=>`<span class="availability-square ${availabilitySquareClass(point)}" title="${escapeHtml(hourLabel(point.ts))} • ${Math.round(Number(point.availability_pct||0))}%"></span>`).join('')}</div>${captionText?`<div class="availability-caption"><span>00:00</span><span>${escapeHtml(captionText)}</span><span>23:00</span></div>`:''}`;
 }
 function deviceTimeline(device){
   return state.viewerCategoryDevices?.[device.ip]?.series || [];
 }
 function deviceAvailabilityPct(device){
   return Number(state.viewerCategoryDevices?.[device.ip]?.availability_24h || 0);
+}
+function hourLabel(ts){
+  if(!ts) return '';
+  const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US';
+  return new Date(Number(ts)*1000).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit',hour12:false});
 }
 function renderKpiAvailabilityStrips(){
   const strip = availabilityStrip(state.viewerSummarySeries || [], `${Math.round(Number(state.viewerSummaryAvailability || 0))}%`);
