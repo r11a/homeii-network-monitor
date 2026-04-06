@@ -156,15 +156,10 @@ def mark_device_recovered(ip: str, name: str, prev_state: str) -> None:
         log_event("success", f"{name or ip} is stable again", "device_stable", ip)
 
 
-def probe_device(ip: str, known_mac: str = "") -> tuple[bool, str, dict[str, str]]:
-    if ping(ip):
-        ident = arp_identity_for_ip(ip)
-        return True, "ping", ident
+def probe_device(ip: str) -> tuple[bool, str, dict[str, str]]:
+    ok = ping(ip)
     ident = arp_identity_for_ip(ip)
-    found_mac = normalize_mac(ident.get("mac", ""))
-    if found_mac and known_mac and found_mac == normalize_mac(known_mac):
-        return True, "arp", ident
-    return False, "", ident
+    return ok, ("ping" if ok else ""), ident
 
 
 def interval_from_settings(default_value: int = PING_INTERVAL) -> int:
@@ -1216,18 +1211,16 @@ def run_full_scan(mode: str = "manual") -> None:
                             category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
                             name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
                             assigned_network=CASE WHEN devices.assigned_network='' THEN excluded.assigned_network ELSE devices.assigned_network END,
-                            last_seen=excluded.last_seen,
-                            fail_count=CASE WHEN devices.approved=1 OR devices.manual=1 THEN 0 ELSE devices.fail_count END,
-                            success_count=CASE WHEN devices.approved=1 OR devices.manual=1 THEN CASE WHEN devices.success_count<1 THEN 1 ELSE devices.success_count+1 END ELSE devices.success_count END,
-                            status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN 'online'
+                            last_seen=CASE WHEN devices.approved=1 OR devices.manual=1 THEN devices.last_seen ELSE excluded.last_seen END,
+                            fail_count=devices.fail_count,
+                            success_count=devices.success_count,
+                            status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN devices.status
                                   ELSE CASE WHEN devices.status='unknown' THEN excluded.status ELSE devices.status END END,
                             updated_at=excluded.updated_at, source='arp'
                         """,
                         (item["ip"], name, host, category, vendor, item["mac"], status, ts, ts, ts, "arp", '', assigned_network),
                     )
                     conn.commit()
-                    if row and is_managed and prev_status in ("offline", "unstable"):
-                        mark_device_recovered(item["ip"], name, prev_status)
                 finally:
                     conn.close()
     except Exception as e:
@@ -1249,7 +1242,7 @@ def monitor_one(ip: str) -> None:
         d = row_to_device(row)
         if d["ignored"]:
             return
-        ok, detected_source, ident = probe_device(ip, d.get("mac", ""))
+        ok, detected_source, ident = probe_device(ip)
         prev_state = d["status"] or "unknown"
         changed = False
         ts = now_ts()
