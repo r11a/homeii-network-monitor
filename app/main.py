@@ -38,6 +38,10 @@ UNSTABLE_THRESHOLD = 4
 MAX_EVENTS = 300
 SCAN_RESCHEDULE_SECONDS = 300
 KNOWN_PROTOCOLS = ["ping", "arp", "dns", "special", "vendor"]
+ALERT_TITLE_NEW = "New device detected"
+ALERT_TITLE_OFFLINE = "Device offline"
+ALERT_TITLE_BACK_ONLINE = "Device back online"
+ALERT_TITLE_UNSTABLE = "Device unstable"
 
 
 def load_options() -> Dict[str, Any]:
@@ -1060,6 +1064,7 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         )
         if is_new:
             log_event("info", f"New device detected: {name or ip}", "new_device", ip)
+            create_alert(ip, "medium", ALERT_TITLE_NEW, f"{name or ip} was discovered and awaits review")
         conn.commit()
     finally:
         conn.close()
@@ -1212,16 +1217,19 @@ def monitor_one(ip: str) -> None:
                 d["status"] = "unstable"
             if d["status"] == "offline":
                 log_event("error", f"{d['name'] or ip} went offline", "device_offline", ip)
-                create_alert(ip, "high", "Device offline", f"{d['name'] or ip} is offline")
-            elif d["status"] in ("online", "unstable"):
-                level = "warning" if d["status"] == "unstable" else "success"
-                title = "Device unstable" if d["status"] == "unstable" else "Device online"
-                msg = f"{d['name'] or ip} is {d['status']}"
-                log_event(level, msg, f"device_{d['status']}", ip)
-                if d["status"] == "unstable":
-                    create_alert(ip, "medium", title, msg)
-                else:
-                    resolve_alerts_for_ip(ip)
+                create_alert(ip, "high", ALERT_TITLE_OFFLINE, f"{d['name'] or ip} is offline")
+            elif d["status"] == "unstable":
+                msg = f"{d['name'] or ip} is unstable"
+                log_event("warning", msg, "device_unstable", ip)
+                create_alert(ip, "medium", ALERT_TITLE_UNSTABLE, msg)
+            elif d["status"] == "online":
+                log_event("success", f"{d['name'] or ip} is online", "device_online", ip)
+                resolve_alerts_for_ip(ip, ALERT_TITLE_OFFLINE)
+                resolve_alerts_for_ip(ip, ALERT_TITLE_UNSTABLE)
+                if prev_state == "offline":
+                    create_alert(ip, "info", ALERT_TITLE_BACK_ONLINE, f"{d['name'] or ip} is back online")
+                elif prev_state == "unstable":
+                    log_event("success", f"{d['name'] or ip} is stable again", "device_stable", ip)
 
         d["updated_at"] = ts
         conn.execute(
@@ -1532,6 +1540,7 @@ def api_accept(ip: str):
                 d["last_seen"] = now_ts()
                 d["success_count"] = max(1, d["success_count"])
             upsert_device(ip, d)
+            resolve_alerts_for_ip(ip, ALERT_TITLE_NEW)
             log_event("success", f"Accepted device {d['name'] or ip}", "device_accepted", ip)
         return {"ok": True, "status": "online" if ok else "offline"}
     finally:
