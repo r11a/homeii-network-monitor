@@ -91,12 +91,13 @@ body.dark{
 }
 .top-shell,.hero,.actionbar,.panel,.toolbar,.tablewrap{border-radius:22px}
 .top-shell{padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;position:relative;overflow:hidden}
-.top-shell::before,.hero::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.12),transparent 35%,rgba(34,211,238,.10));pointer-events:none}
+.top-shell::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.10),transparent 40%,rgba(34,211,238,.08));pointer-events:none}
+.top-shell::after{content:'';position:absolute;inset:1px;border-radius:21px;pointer-events:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(255,255,255,.02)}
 .hero{padding:0;display:grid;gap:8px;position:relative;overflow:visible;border:0;background:transparent;box-shadow:none}
-.hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.04em}
+.hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.045em;font-family:"Arial Nova","Aptos Display","Segoe UI Variable","Trebuchet MS",sans-serif;text-wrap:balance}
 .hero-sub{margin:0;color:var(--muted);font-size:13px}
 .hero-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.hero-meta-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:12px;color:var(--muted)}
+.hero-meta-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);font-size:12px;color:var(--muted);backdrop-filter:blur(10px)}
 .hero-clock{font-size:14px;font-weight:900;color:var(--text)}
 .hero-date,.hero-sync{font-size:12px;color:var(--muted)}
 .actionbar{padding:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;border:0;background:transparent;box-shadow:none}
@@ -366,7 +367,6 @@ body:not(.dark) .badge,
 body:not(.dark) .status-pill{
   background:rgba(245,249,255,.94);
 }
-body.viewer-mode .actionbar,
 body.viewer-mode .kpis,
 body.viewer-mode #tab-dashboard,
 body.viewer-mode #tab-devices,
@@ -382,6 +382,8 @@ body.viewer-mode .hero-title{font-size:24px}
 body.viewer-mode .hero-sub{display:block;font-size:12px}
 body.viewer-mode .hero-meta{gap:8px}
 body.viewer-mode .hero-meta-chip{padding:6px 10px;font-size:11px}
+body.viewer-mode .actionbar .btn:not(.viewer-close){display:none}
+body.viewer-mode .actionbar{display:flex;justify-content:flex-end}
 body.viewer-mode #tab-viewer{display:block !important}
 body.viewer-mode .viewer-close{display:inline-flex}
 .viewer-admin-link{display:none;text-decoration:none}
@@ -808,7 +810,7 @@ async function api(url,options){const res=await fetch(url,{cache:'no-store',...(
 function switchTab(tab,btn){
   document.querySelectorAll('.section').forEach(el=>{el.classList.remove('active'); el.style.display='none';});
   document.querySelectorAll('.main-nav .nav-btn').forEach(el=>el.classList.remove('active'));
-  const target=qs(`tab-${tab}`); if(target){ target.classList.add('active'); target.style.display='block'; }
+  const target=qs(`tab-${tab}`); if(target){ target.classList.add('active'); target.style.display='block'; target.style.visibility='visible'; target.style.opacity='1'; }
   if(btn) btn.classList.add('active');
   const settingsMode = tab === 'settings';
   applyViewerMode(tab === 'viewer');
@@ -817,7 +819,12 @@ function switchTab(tab,btn){
   document.body.classList.toggle('settings-mode', settingsMode);
   if(settingsMode){
     const settingsSection=qs('tab-settings');
-    if(settingsSection) settingsSection.style.display='grid';
+    if(settingsSection){
+      settingsSection.style.display='grid';
+      settingsSection.style.visibility='visible';
+      settingsSection.style.opacity='1';
+      settingsSection.style.minHeight='calc(100vh - 40px)';
+    }
     const activeSettingsBtn=document.querySelector('.settings-nav-btn.active') || document.querySelector('.settings-nav-btn[data-settings-page="general"]');
     const page=(activeSettingsBtn && activeSettingsBtn.dataset.settingsPage) || 'general';
     switchSettingsPage(page, activeSettingsBtn);
@@ -881,7 +888,13 @@ function backToMainNav(){
 function switchSettingsPage(page, btn){
   document.querySelectorAll('.settings-page').forEach(el=>{el.classList.remove('active'); el.style.display='none';});
   const target=qs(`settings-page-${page}`);
-  if(target){ target.classList.add('active'); target.style.display='block'; }
+  if(target){
+    target.classList.add('active');
+    target.style.display='block';
+    target.style.visibility='visible';
+    target.style.opacity='1';
+    target.hidden=false;
+  }
   document.querySelectorAll('.settings-nav-btn').forEach(el=>el.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'});
