@@ -60,6 +60,8 @@ HOMEII_NETWORKS = OPTIONS.get("networks", ["192.168.1.0/24"])
 
 app = FastAPI(title="HOMEii Network Monitor", version=APP_VERSION)
 _db_lock = threading.Lock()
+_worker_lock = threading.Lock()
+_worker_threads: Dict[str, threading.Thread] = {}
 scan_state = {
     "running": False,
     "last_started": 0,
@@ -68,6 +70,11 @@ scan_state = {
     "last_error": "",
     "target_count": 0,
     "target_networks": [],
+}
+worker_state = {
+    "monitor": {"last_started": 0, "last_finished": 0, "last_cycle": 0, "last_error": "", "cycle_count": 0, "interval": PING_INTERVAL},
+    "critical_monitor": {"last_started": 0, "last_finished": 0, "last_cycle": 0, "last_error": "", "cycle_count": 0, "interval": max(5, int(PING_INTERVAL / 1.5))},
+    "rescan": {"last_started": 0, "last_finished": 0, "last_cycle": 0, "last_error": "", "cycle_count": 0, "interval": 30},
 }
 _dns_cache: Dict[str, str] = {}
 
@@ -158,6 +165,35 @@ def probe_device(ip: str, known_mac: str = "") -> tuple[bool, str, dict[str, str
     if found_mac and known_mac and found_mac == normalize_mac(known_mac):
         return True, "arp", ident
     return False, "", ident
+
+
+def interval_from_settings(default_value: int = PING_INTERVAL) -> int:
+    try:
+        value = int(str(get_setting("scan_interval", str(default_value)) or default_value).strip())
+    except Exception:
+        value = default_value
+    return max(5, min(value, 3600))
+
+
+def critical_interval_seconds() -> int:
+    return max(5, int(round(interval_from_settings() / 1.5)))
+
+
+def set_worker_status(name: str, **kwargs: Any) -> None:
+    state = worker_state.setdefault(name, {"last_started": 0, "last_finished": 0, "last_cycle": 0, "last_error": "", "cycle_count": 0, "interval": 0})
+    state.update(kwargs)
+
+
+def background_worker_payload() -> Dict[str, Any]:
+    payload: Dict[str, Any] = {}
+    with _worker_lock:
+        for name, state in worker_state.items():
+            thread = _worker_threads.get(name)
+            payload[name] = {
+                **state,
+                "alive": bool(thread and thread.is_alive()),
+            }
+    return payload
 
 
 def db() -> sqlite3.Connection:
@@ -1292,28 +1328,53 @@ def monitor_one(ip: str) -> None:
 
 
 
-def monitor_loop() -> None:
+def monitor_cycle(critical_only: bool = False) -> None:
     while True:
-        conn = db()
         try:
-            ips = [r[0] for r in conn.execute("SELECT ip FROM devices WHERE ignored=0").fetchall()]
-        finally:
-            conn.close()
-        with ThreadPoolExecutor(max_workers=THREADS) as ex:
-            futures = [ex.submit(monitor_one, ip) for ip in ips]
-            for future in futures:
-                try:
-                    future.result()
-                except Exception:
-                    pass
-        time.sleep(int(get_setting("scan_interval", str(PING_INTERVAL)) or PING_INTERVAL))
+            worker_name = "critical_monitor" if critical_only else "monitor"
+            interval = critical_interval_seconds() if critical_only else interval_from_settings()
+            set_worker_status(worker_name, last_started=now_ts(), interval=interval)
+            conn = db()
+            try:
+                query = "SELECT ip FROM devices WHERE ignored=0"
+                query += " AND critical=1" if critical_only else " AND critical=0"
+                ips = [r[0] for r in conn.execute(query).fetchall()]
+            finally:
+                conn.close()
+            with ThreadPoolExecutor(max_workers=THREADS) as ex:
+                futures = [ex.submit(monitor_one, ip) for ip in ips]
+                for future in futures:
+                    try:
+                        future.result()
+                    except Exception:
+                        pass
+            set_worker_status(worker_name, last_finished=now_ts(), last_cycle=now_ts(), cycle_count=int(worker_state[worker_name]["cycle_count"]) + 1, last_error="")
+        except Exception as e:
+            worker_name = "critical_monitor" if critical_only else "monitor"
+            set_worker_status(worker_name, last_finished=now_ts(), last_error=str(e))
+            log_system_event("error", f"{worker_name} failed: {e}", f"{worker_name}_error")
+        time.sleep(critical_interval_seconds() if critical_only else interval_from_settings())
+
+
+def monitor_loop() -> None:
+    monitor_cycle(False)
+
+
+def critical_monitor_loop() -> None:
+    monitor_cycle(True)
 
 
 
 def rescan_loop() -> None:
     while True:
-        if now_ts() - int(scan_state.get("last_finished") or 0) >= SCAN_RESCHEDULE_SECONDS:
-            run_full_scan("auto")
+        try:
+            set_worker_status("rescan", last_started=now_ts(), interval=30)
+            if now_ts() - int(scan_state.get("last_finished") or 0) >= SCAN_RESCHEDULE_SECONDS:
+                run_full_scan("auto")
+            set_worker_status("rescan", last_finished=now_ts(), last_cycle=now_ts(), cycle_count=int(worker_state["rescan"]["cycle_count"]) + 1, last_error="")
+        except Exception as e:
+            set_worker_status("rescan", last_finished=now_ts(), last_error=str(e))
+            log_system_event("error", f"rescan failed: {e}", "rescan_error")
         time.sleep(30)
 
 
@@ -1376,6 +1437,7 @@ def status_payload() -> Dict[str, Any]:
         "network_stats": network_stats_payload(devices),
         "discovery_mode": get_discovery_mode(),
         "discovery_protocols": get_discovery_protocols(),
+        "workers": background_worker_payload(),
         "db_ok": DB_PATH.exists(),
         "db_path": str(DB_PATH),
     }
@@ -1550,7 +1612,7 @@ def api_settings():
     conn = db()
     try:
         rows = conn.execute("SELECT key, value FROM settings ORDER BY key").fetchall()
-        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": get_networks(), "network_names": get_network_names(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "db_path": str(DB_PATH)}
+        return {"settings": {r["key"]: r["value"] for r in rows}, "networks": get_networks(), "network_names": get_network_names(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "db_path": str(DB_PATH), "workers": background_worker_payload()}
     finally:
         conn.close()
 
@@ -1940,8 +2002,28 @@ async def api_save_networks_post(request: Request):
     )
 
 
+def start_worker(name: str, target, *args) -> None:
+    with _worker_lock:
+        thread = _worker_threads.get(name)
+        if thread and thread.is_alive():
+            return
+        thread = threading.Thread(target=target, args=args, daemon=True, name=f"homeii-{name}")
+        _worker_threads[name] = thread
+        thread.start()
+
+
+def start_background_workers() -> None:
+    start_worker("monitor", monitor_loop)
+    start_worker("critical_monitor", critical_monitor_loop)
+    start_worker("rescan", rescan_loop)
+    start_worker("special_hosts", discover_special_hosts)
+    start_worker("startup_scan", run_full_scan, "startup")
+
+
+@app.on_event("startup")
+def app_startup() -> None:
+    start_background_workers()
+
+
 init_db()
-threading.Thread(target=monitor_loop, daemon=True).start()
-threading.Thread(target=rescan_loop, daemon=True).start()
-threading.Thread(target=discover_special_hosts, daemon=True).start()
-threading.Thread(target=run_full_scan, args=("startup",), daemon=True).start()
+start_background_workers()
