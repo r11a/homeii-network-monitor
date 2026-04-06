@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
 import threading
 
 try:
@@ -115,7 +117,10 @@ def lookup_vendor(mac: str) -> str:
         lookup_client = _get_lookup_client()
         if lookup_client is not None:
             try:
-                vendor = str(lookup_client.lookup(normalized)).strip()
+                result = lookup_client.lookup(normalized)
+                if inspect.isawaitable(result):
+                    result = asyncio.run(result)
+                vendor = str(result).strip()
             except Exception:
                 vendor = ""
 
