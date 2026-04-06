@@ -1447,6 +1447,16 @@ def settings_page():
     return RedirectResponse(url="/#settings")
 
 
+@app.get("/viewer")
+def viewer_page():
+    return FileResponse("/app/web/index.html")
+
+
+@app.get("/viewer.html")
+def viewer_html_page():
+    return FileResponse("/app/web/index.html")
+
+
 @app.get("/logo")
 def logo():
     path = "/app/web/logo.gif"
