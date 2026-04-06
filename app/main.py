@@ -33,12 +33,12 @@ LEGACY_EVENTS = Path("/data/events.json")
 
 THREADS = 40
 PING_INTERVAL = 30
-FAIL_THRESHOLD = 3
-RECOVER_THRESHOLD = 2
+FAIL_THRESHOLD = 2
+RECOVER_THRESHOLD = 1
 UNSTABLE_WINDOW = 600
 UNSTABLE_THRESHOLD = 4
 MAX_EVENTS = 300
-SCAN_RESCHEDULE_SECONDS = 300
+SCAN_RESCHEDULE_SECONDS = 180
 KNOWN_PROTOCOLS = ["ping", "arp", "dns", "special", "vendor"]
 ALERT_TITLE_NEW = "New device detected"
 ALERT_TITLE_OFFLINE = "Device offline"
@@ -131,6 +131,33 @@ def arp_identity_for_ip(ip: str) -> dict[str, str]:
             mac = normalize_mac(item.get("mac", ""))
             return {"mac": mac, "vendor": vendor_from_mac(mac) if mac else ""}
     return {"mac": "", "vendor": ""}
+
+
+def managed_row(row: sqlite3.Row | None) -> bool:
+    if not row:
+        return False
+    return bool(row["approved"]) or bool(row["manual"])
+
+
+def mark_device_recovered(ip: str, name: str, prev_state: str) -> None:
+    log_event("success", f"{name or ip} is online", "device_online", ip)
+    resolve_alerts_for_ip(ip, ALERT_TITLE_OFFLINE)
+    resolve_alerts_for_ip(ip, ALERT_TITLE_UNSTABLE)
+    if prev_state == "offline":
+        create_alert(ip, "info", ALERT_TITLE_BACK_ONLINE, f"{name or ip} is back online")
+    elif prev_state == "unstable":
+        log_event("success", f"{name or ip} is stable again", "device_stable", ip)
+
+
+def probe_device(ip: str, known_mac: str = "") -> tuple[bool, str, dict[str, str]]:
+    if ping(ip):
+        ident = arp_identity_for_ip(ip)
+        return True, "ping", ident
+    ident = arp_identity_for_ip(ip)
+    found_mac = normalize_mac(ident.get("mac", ""))
+    if found_mac and known_mac and found_mac == normalize_mac(known_mac):
+        return True, "arp", ident
+    return False, "", ident
 
 
 def db() -> sqlite3.Connection:
@@ -1046,6 +1073,8 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         name = choose_display_name(row["name"] if row else "", host, vendor, ip)
         category = row["category"] if row and row["category"] else auto_category(f"{name} {host}", vendor)
         is_new = row is None
+        prev_status = row["status"] if row else "unknown"
+        is_managed = managed_row(row)
         if is_new and not allow_new:
             return
         assigned_network = (row["assigned_network"] if row and "assigned_network" in row.keys() and row["assigned_network"] else infer_assigned_network(ip))
@@ -1058,7 +1087,11 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
             ON CONFLICT(ip) DO UPDATE SET hostname=?, last_seen=?, updated_at=?, source=?, assigned_network=CASE WHEN devices.assigned_network='' THEN excluded.assigned_network ELSE devices.assigned_network END,
                 name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
                 category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
-                status=CASE WHEN devices.approved=1 THEN devices.status WHEN devices.manual=1 AND devices.status!='offline' THEN devices.status ELSE 'new' END
+                vendor=CASE WHEN excluded.vendor!='' THEN excluded.vendor ELSE devices.vendor END,
+                mac=CASE WHEN excluded.mac!='' THEN excluded.mac ELSE devices.mac END,
+                fail_count=CASE WHEN devices.approved=1 OR devices.manual=1 THEN 0 ELSE devices.fail_count END,
+                success_count=CASE WHEN devices.approved=1 OR devices.manual=1 THEN CASE WHEN devices.success_count<1 THEN 1 ELSE devices.success_count+1 END ELSE devices.success_count END,
+                status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN 'online' WHEN devices.manual=1 AND devices.status!='offline' THEN devices.status ELSE 'new' END
             """,
             (
                 ip, name, host, category, vendor, mac, ts, ts, ts, source, '', assigned_network,
@@ -1069,6 +1102,8 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
             log_event("info", f"New device detected: {name or ip}", "new_device", ip)
             create_alert(ip, "medium", ALERT_TITLE_NEW, f"{name or ip} was discovered and awaits review")
         conn.commit()
+        if row and is_managed and prev_status in ("offline", "unstable"):
+            mark_device_recovered(ip, name, prev_status)
     finally:
         conn.close()
 
@@ -1133,6 +1168,8 @@ def run_full_scan(mode: str = "manual") -> None:
                     approved = bool(row["approved"]) if row and "approved" in row.keys() else False
                     status = row["status"] if row and row["status"] not in ("unknown", "") else ("online" if approved else "new")
                     assigned_network = row["assigned_network"] if row and row["assigned_network"] else infer_assigned_network(item["ip"])
+                    prev_status = row["status"] if row else "unknown"
+                    is_managed = managed_row(row)
                     conn.execute(
                         """
                         INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
@@ -1143,14 +1180,18 @@ def run_full_scan(mode: str = "manual") -> None:
                             category=CASE WHEN devices.category='' THEN excluded.category ELSE devices.category END,
                             name=CASE WHEN devices.name='' THEN excluded.name ELSE devices.name END,
                             assigned_network=CASE WHEN devices.assigned_network='' THEN excluded.assigned_network ELSE devices.assigned_network END,
-                            status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN
-                                    CASE WHEN devices.status IN ('unknown','new') THEN 'online' ELSE devices.status END
+                            last_seen=excluded.last_seen,
+                            fail_count=CASE WHEN devices.approved=1 OR devices.manual=1 THEN 0 ELSE devices.fail_count END,
+                            success_count=CASE WHEN devices.approved=1 OR devices.manual=1 THEN CASE WHEN devices.success_count<1 THEN 1 ELSE devices.success_count+1 END ELSE devices.success_count END,
+                            status=CASE WHEN devices.approved=1 OR devices.manual=1 THEN 'online'
                                   ELSE CASE WHEN devices.status='unknown' THEN excluded.status ELSE devices.status END END,
                             updated_at=excluded.updated_at, source='arp'
                         """,
                         (item["ip"], name, host, category, vendor, item["mac"], status, ts, ts, ts, "arp", '', assigned_network),
                     )
                     conn.commit()
+                    if row and is_managed and prev_status in ("offline", "unstable"):
+                        mark_device_recovered(item["ip"], name, prev_status)
                 finally:
                     conn.close()
     except Exception as e:
@@ -1172,7 +1213,7 @@ def monitor_one(ip: str) -> None:
         d = row_to_device(row)
         if d["ignored"]:
             return
-        ok = ping(ip)
+        ok, detected_source, ident = probe_device(ip, d.get("mac", ""))
         prev_state = d["status"] or "unknown"
         changed = False
         ts = now_ts()
@@ -1181,6 +1222,10 @@ def monitor_one(ip: str) -> None:
             d["fail_count"] = 0
             d["success_count"] += 1
             d["last_seen"] = ts
+            if ident.get("mac"):
+                d["mac"] = ident["mac"]
+            if ident.get("vendor") and (not d["vendor"] or d["vendor"] == "—"):
+                d["vendor"] = ident["vendor"]
             host = reverse_dns(ip)
             if host and d["hostname"] != host:
                 d["hostname"] = host
@@ -1194,6 +1239,8 @@ def monitor_one(ip: str) -> None:
             d["name"] = choose_display_name(d.get("name",""), d.get("hostname",""), d.get("vendor",""), ip)
             if not d["category"]:
                 d["category"] = auto_category(f"{d['name']} {d['hostname']}", d["vendor"])
+            if detected_source:
+                d["source"] = detected_source
             if get_discovery_mode() == "manual_only" and not d.get("approved") and not d.get("manual"):
                 return
             if not d.get("approved") and not d.get("manual"):
@@ -1226,13 +1273,7 @@ def monitor_one(ip: str) -> None:
                 log_event("warning", msg, "device_unstable", ip)
                 create_alert(ip, "medium", ALERT_TITLE_UNSTABLE, msg)
             elif d["status"] == "online":
-                log_event("success", f"{d['name'] or ip} is online", "device_online", ip)
-                resolve_alerts_for_ip(ip, ALERT_TITLE_OFFLINE)
-                resolve_alerts_for_ip(ip, ALERT_TITLE_UNSTABLE)
-                if prev_state == "offline":
-                    create_alert(ip, "info", ALERT_TITLE_BACK_ONLINE, f"{d['name'] or ip} is back online")
-                elif prev_state == "unstable":
-                    log_event("success", f"{d['name'] or ip} is stable again", "device_stable", ip)
+                mark_device_recovered(ip, d["name"] or ip, prev_state)
 
         d["updated_at"] = ts
         conn.execute(
