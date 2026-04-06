@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor Settings</title>
+<title>HOMEii Network Monitor הגדרות</title>
 <style>
 :root{
   color-scheme: dark;
@@ -29,6 +29,19 @@ body{
     radial-gradient(620px 280px at -10% 10%,rgba(34,211,238,.12),transparent 60%),
     linear-gradient(180deg,var(--bg),var(--bg2));
   overflow:hidden;
+}
+body.light .sidebar{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.82),rgba(244,248,254,.94)),
+    linear-gradient(180deg,#ffffff,#f4f8fe);
+}
+body.light .nav-btn{
+  background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(242,247,255,.92));
+  box-shadow:0 10px 24px rgba(148,163,184,.12), inset 0 1px 0 rgba(255,255,255,.7);
+}
+body.light .nav-btn.active,body.light .nav-btn:hover{
+  background:linear-gradient(180deg,rgba(50,104,245,.18),rgba(24,185,214,.08));
+  box-shadow:0 12px 28px rgba(50,104,245,.16);
 }
 .app{height:100vh;display:grid;grid-template-columns:280px 1fr}
 .sidebar{
@@ -70,7 +83,8 @@ body{
 }
 .top-shell,.panel{border-radius:24px}
 .top-shell{padding:18px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;position:relative;overflow:hidden;margin-bottom:16px}
-.top-shell::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.10),transparent 40%,rgba(34,211,238,.08));pointer-events:none}
+.top-shell::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.08),transparent 44%,rgba(34,211,238,.06));pointer-events:none}
+.top-shell::after{content:'';position:absolute;inset:1px;border-radius:23px;pointer-events:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(255,255,255,.02)}
 .hero{display:grid;gap:8px}
 .hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.045em;font-family:"Arial Nova","Aptos Display","Segoe UI Variable","Trebuchet MS",sans-serif}
 .hero-sub{margin:0;color:var(--muted);font-size:13px}
@@ -123,7 +137,7 @@ textarea{min-height:120px;resize:vertical}
     <div class="brand">
       <div>
         <div class="brand-title">HOMEii Network</div>
-        <div class="brand-sub">Monitor <span id="versionText">5.0.0</span> • Settings</div>
+        <div class="brand-sub">מוניטור <span id="versionText">5.0.0</span> • הגדרות</div>
       </div>
       <div class="logo"><img src="./logo" alt="" onerror="this.style.display='none'; this.parentNode.textContent='H';"></div>
     </div>
@@ -137,8 +151,8 @@ textarea{min-height:120px;resize:vertical}
       <button class="nav-btn settings-nav-btn" data-page="system" onclick="switchPage('system', this)">מערכת</button>
     </div>
     <div class="sidebar-footer">
-      <div class="info-card"><div class="k">Status</div><div class="v" id="sideScanState">—</div></div>
-      <div class="info-card"><div class="k">Networks</div><div class="v" id="sideNetworksCount">—</div></div>
+      <div class="info-card"><div class="k">סטטוס</div><div class="v" id="sideScanState">—</div></div>
+      <div class="info-card"><div class="k">רשתות</div><div class="v" id="sideNetworksCount">—</div></div>
       <div class="health"><span class="dot"></span><span id="dbPath">DB: /data/homeii/homeii.db</span></div>
     </div>
   </aside>
@@ -165,8 +179,8 @@ textarea{min-height:120px;resize:vertical}
         <div class="panel-head"><div><h2>כללי</h2><p>הגדרות כלליות של הממשק, גילוי ותצוגת ברירת מחדל.</p></div></div>
         <div class="settings-form-grid">
           <div class="field"><label>רענון אוטומטי (שניות)</label><input id="setRefresh" type="number" min="5" step="5"></div>
-          <div class="field"><label>תצוגת ברירת מחדל</label><select id="setView"><option value="table">table</option><option value="grid">grid</option></select></div>
-          <div class="field"><label>סגנון דשבורד</label><select id="setStyle"><option value="advanced">advanced</option><option value="compact">compact</option></select></div>
+          <div class="field"><label>תצוגת ברירת מחדל</label><select id="setView"><option value="table">טבלה</option><option value="grid">כרטיסים</option></select></div>
+          <div class="field"><label>סגנון דשבורד</label><select id="setStyle"><option value="advanced">מתקדם</option><option value="compact">קומפקטי</option></select></div>
           <div class="field"><label>מצב גילוי</label><select id="setDiscoveryMode"><option value="auto_manual">אוטומטי + ידני</option><option value="manual_only">ידני בלבד</option><option value="auto_only">אוטומטי בלבד</option></select></div>
         </div>
         <div class="field" style="margin-top:12px">
@@ -175,8 +189,8 @@ textarea{min-height:120px;resize:vertical}
             <label><input type="checkbox" id="proto_ping"> Ping</label>
             <label><input type="checkbox" id="proto_arp"> ARP</label>
             <label><input type="checkbox" id="proto_dns"> DNS</label>
-            <label><input type="checkbox" id="proto_special"> Host</label>
-            <label><input type="checkbox" id="proto_vendor"> Vendor</label>
+            <label><input type="checkbox" id="proto_special"> שם מארח</label>
+            <label><input type="checkbox" id="proto_vendor"> יצרן</label>
           </div>
         </div>
         <div class="settings-actions">
@@ -224,8 +238,8 @@ textarea{min-height:120px;resize:vertical}
       <div class="panel">
         <div class="panel-head"><div><h2>מראה</h2><p>בחר ערכת נושא, סגנון דשבורד והעדפות תצוגה.</p></div></div>
         <div class="settings-form-grid">
-          <div class="field"><label>ערכת נושא</label><select id="setTheme"><option value="light">light</option><option value="dark">dark</option></select></div>
-          <div class="field"><label>הבהוב מצבי התקן</label><select id="setStatusAnimation"><option value="blink">blink</option><option value="static">static</option></select></div>
+          <div class="field"><label>ערכת נושא</label><select id="setTheme"><option value="light">בהיר</option><option value="dark">כהה</option></select></div>
+          <div class="field"><label>הבהוב מצבי התקן</label><select id="setStatusAnimation"><option value="blink">מהבהב</option><option value="static">קבוע</option></select></div>
           <div class="field"><label>תצוגה פעילה</label><div class="chips"><span class="chip" id="appearanceCurrent">ערכת נושא פעילה</span></div></div>
         </div>
         <div class="settings-actions">
