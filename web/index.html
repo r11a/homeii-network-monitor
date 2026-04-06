@@ -315,11 +315,13 @@ body.viewer-mode #tab-devices,
 body.viewer-mode #tab-alerts,
 body.viewer-mode #tab-settings{display:none !important}
 body.viewer-mode .main-nav{display:grid;grid-template-columns:1fr}
-body.viewer-mode .main-nav .nav-btn:not([data-tab="viewer"]){display:none}
+body.viewer-mode .main-nav .nav-btn:not([data-tab="viewer"]):not(.viewer-admin-link){display:none}
 body.viewer-mode .top{grid-template-columns:1fr}
 body.viewer-mode .hero{padding:18px 22px}
 body.viewer-mode .hero-sub{display:block}
 body.viewer-mode .sidebar{gap:18px}
+.viewer-admin-link{display:none;text-decoration:none}
+body.viewer-mode .viewer-admin-link{display:block}
 
 @keyframes pulseStatus{
   0%{transform:scale(.92);opacity:.68;box-shadow:0 0 0 0 rgba(255,255,255,0)}
@@ -351,6 +353,7 @@ body.viewer-mode .sidebar{gap:18px}
       <button class="nav-btn" data-tab="devices" onclick="switchTab('devices', this)" id="navDevices">Devices</button>
       <button class="nav-btn" data-tab="alerts" onclick="switchTab('alerts', this)" id="navAlerts">Alerts</button>
       <button class="nav-btn" data-tab="settings" onclick="switchTab('settings', this)" id="navSettings">Settings</button>
+      <a class="nav-btn viewer-admin-link" id="viewerAdminLink" href="./">ממשק מלא</a>
     </div>
     <div class="nav settings-side-nav">
       <button class="nav-btn" onclick="backToMainNav()" id="settingsBackBtn">← חזרה</button>
@@ -641,7 +644,7 @@ const normalizedPath=(location.pathname||'').replace(/\/+$/,'');
 const directViewerMode=(normalizedPath.endsWith('/viewer')||normalizedPath.endsWith('/viewer.html'));
 const I18N={
   he:{
-    brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
+    brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",viewerAdmin:"ממשק מלא",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
     scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",critical:"קריטיים",pinned:"נעוצים",
     dashboardTitle:"מכשירים שדורשים תשומת לב",dashboardSub:"דשבורד חכם עם דגש על מנותקים, קריטיים ושינויים אחרונים.",viewerTitle:"Viewer",viewerSub:"תצוגה חיה לקריאה בלבד של מצב הרשת.",viewerReadonly:"לצפייה בלבד",viewerSummaryTitle:"מצב חי",viewerSummarySub:"סיכום מהיר של מצב הרשת ללא פעולות עריכה.",viewerFocusTitle:"תצוגת צפייה",viewerFocusSub:"בחר סיכום למעלה כדי להציג רק את מה שמעניין אותך, בלי לעבור דף.",viewerAttentionTitle:"מנותקים ולא יציבים",viewerAttentionSub:"התקנים שמצריכים תשומת לב מיידית.",viewerEventsTitle:"שינויים חיים",viewerEventsSub:"נפילות, חזרות, חוסר יציבות וגילוי חדש.",viewerNewTitle:"מכשירים חדשים",viewerNewSub:"התקנים שהתגלו וממתינים לבדיקה.",recentDevicesTitle:"מכשירים אחרונים",recentDevicesSub:"התקנים פעילים ושינויים אחרונים ברשת.",networkSummaryTitle:"סיכום רשתות",networkSummarySub:"כמות התקנים לפי רשת וסטטוס.",attentionTitle:"דורשים טיפול",attentionSub:"מנותקים, קריטיים או חדשים שמומלץ לבדוק.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית. לחיצה על שם ההתקן פותחת את כל הפרטים והפעולות.",
     search:"חיפוש",status:"סטטוס",category:"קטגוריה",networkFilter:"רשת",vendorFilter:"יצרן",sortBy:"מיון",bulkActions:"פעולות מרובות",selected:"נבחרו",bulkPin:"נעץ מסומנים",bulkUnpin:"בטל נעיצה",bulkCritical:"סמן כקריטי",bulkUncritical:"בטל סימון קריטי",bulkDelete:"מחק מסומנים",sortName:"שם",sortIp:"IP",sortStatus:"סטטוס",sortVendor:"יצרן",sortLastSeen:"נראה לאחרונה",networkNames:"שמות רשתות",view:"תצוגה",all:"הכל",clearFilters:"נקה סינונים",rescan:"סריקה מחדש",alertsTitle:"התראות",eventsTitle:"אירועים",openAlerts:"התראות פתוחות",recentEvents:"אירועים אחרונים",
@@ -655,7 +658,7 @@ const I18N={
     version:"גרסה",db:"מסד נתונים",scanMode:"מצב סריקה",lastScanStarted:"סריקה אחרונה התחילה",lastScanFinished:"סריקה אחרונה הסתיימה",light:"בהיר",dark:"כהה",table:"טבלה",grid:"כרטיסים",advanced:"מתקדם",compact:"קומפקטי",optional:"אופציונלי",severity:"חומרה",updatedNow:"עודכן",networkCol:"רשת",details:"פרטים",alertSearch:"חיפוש בהתראות",eventSearch:"חיפוש באירועים",systemEvent:"אירוע מערכת",dbHealth:"מצב מסד הנתונים",scanSummary:"סיכום סריקה",productPolish:"ליטוש מוצר",sysVersionLabel:"גרסת מערכת",sysDbLabel:"מסד נתונים פעיל",sysNetworksLabel:"רשתות מנוטרות",sysScanModeLabel:"מצב סריקה נוכחי",sysScanStartedLabel:"זמן התחלת הסריקה האחרונה",sysScanFinishedLabel:"זמן סיום הסריקה האחרונה",networkNamesHint:"אם יש שם רשת, הוא יוצג בממשק במקום ה-CIDR",networkEditorTitle:"שיוך שמות לרשתות",networkManagerHint:"הוסף טווח רשת וכינוי באותה שורה. ניתן גם לערוך או למחוק לפני השמירה.",networkCidr:"טווח רשת (CIDR)",networkAlias:"כינוי רשת",addNetwork:"הוסף רשת",edit:"ערוך",delete:"מחק",saveNetworksOnly:"שמור רשתות",networkEmpty:"עדיין לא הוגדרו רשתות",settingsHelperNote:"שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים",saveAppearance:"שמור מראה"
   },
   en:{
-    brand:"HOMEii Network",dashboard:"Dashboard",viewer:"Viewer",devices:"Devices",alerts:"Alerts",settings:"Settings",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
+    brand:"HOMEii Network",dashboard:"Dashboard",viewer:"Viewer",devices:"Devices",alerts:"Alerts",settings:"Settings",viewerAdmin:"Full app",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
     scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",critical:"Critical",pinned:"Pinned",
     dashboardTitle:"Devices needing attention",dashboardSub:"Smart dashboard focused on offline, critical and recent changes.",viewerTitle:"Viewer",viewerSub:"Read-only live overview of the network state.",viewerReadonly:"Read only",viewerSummaryTitle:"Live overview",viewerSummarySub:"Quick status summary without edit actions.",viewerFocusTitle:"Watch panel",viewerFocusSub:"Use the summary cards to filter what you watch without leaving this page.",viewerAttentionTitle:"Offline and unstable",viewerAttentionSub:"Devices that need immediate attention.",viewerEventsTitle:"Live changes",viewerEventsSub:"Down, back online, unstable and new-device activity.",viewerNewTitle:"New devices",viewerNewSub:"Recently discovered devices waiting for review.",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",devicesTitle:"Devices",devicesSub:"Compact table. Click the device name to open full details and actions.",
     search:"Search",status:"Status",category:"Category",networkFilter:"Network",vendorFilter:"Vendor",sortBy:"Sort by",bulkActions:"Bulk actions",selected:"selected",bulkPin:"Pin selected",bulkUnpin:"Unpin selected",bulkCritical:"Mark critical",bulkUncritical:"Unmark critical",bulkDelete:"Delete selected",sortName:"Name",sortIp:"IP",sortStatus:"Status",sortVendor:"Vendor",sortLastSeen:"Last seen",networkNames:"Network Names",view:"View",all:"All",clearFilters:"Clear filters",rescan:"Rescan",alertsTitle:"Alerts",eventsTitle:"Events",openAlerts:"Open alerts",recentEvents:"Recent events",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",
@@ -721,7 +724,7 @@ function switchSettingsPage(page, btn){
 
 function applyTranslations(){
   setText('brandTitle',tr('brand'));
-  setText('navDashboard',tr('dashboard')); setText('navViewer',tr('viewer')); setText('navDevices',tr('devices')); setText('navAlerts',tr('alerts')); setText('navSettings',tr('settings'));
+  setText('navDashboard',tr('dashboard')); setText('navViewer',tr('viewer')); setText('navDevices',tr('devices')); setText('navAlerts',tr('alerts')); setText('navSettings',tr('settings')); setText('viewerAdminLink',tr('viewerAdmin'));
   setText('settingsBackBtn',tr('settingsBack')); setText('sideGeneral',tr('general')); setText('sideNetworks',tr('networks')); setText('sideManual',tr('manualDevice')); setText('sideAppearance',tr('appearance')); setText('sideLanguage',tr('language')); setText('sideSystem',tr('system'));
   setText('settingsTopNote',tr('settingsTopNote')); setText('settingsHelperNote',tr('settingsHelperNote'));
   setText('btnScan',tr('scan')); setText('btnAcceptAll',tr('acceptAll')); setText('btnRefresh',tr('refresh'));
