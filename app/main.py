@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import unquote
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, File, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 try:
@@ -1805,6 +1805,98 @@ def api_export_settings_json():
         media_type="application/json; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="homeii_settings.json"'},
     )
+
+
+def csv_bool(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return text in {"1", "true", "yes", "on", "y"}
+
+
+def csv_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(float(str(value or "").strip()))
+    except Exception:
+        return default
+
+
+@app.post("/api/import/devices")
+async def api_import_devices(file: UploadFile = File(...)):
+    raw = await file.read()
+    text = raw.decode("utf-8-sig", errors="ignore")
+    reader = csv.DictReader(io.StringIO(text))
+    imported = 0
+    skipped = 0
+    for row in reader:
+        ip = str((row or {}).get("ip", "")).strip()
+        if not ip:
+            skipped += 1
+            continue
+        display_name = str(row.get("display_name", "")).strip()
+        hostname = str(row.get("hostname", "")).strip()
+        vendor = str(row.get("vendor", "")).strip()
+        category = str(row.get("category", "")).strip()
+        assigned_network = str(row.get("assigned_network", "")).strip() or infer_assigned_network(ip)
+        if assigned_network and assigned_network not in get_networks():
+            inferred = infer_assigned_network(ip)
+            assigned_network = inferred or assigned_network
+        upsert_device(ip, {
+            "name": display_name,
+            "hostname": hostname,
+            "vendor": vendor,
+            "category": category,
+            "status": str(row.get("status", "")).strip() or "unknown",
+            "assigned_network": assigned_network,
+            "mac": str(row.get("mac", "")).strip(),
+            "last_seen": csv_int(row.get("last_seen"), 0),
+            "approved": csv_bool(row.get("approved")),
+            "manual": csv_bool(row.get("manual")),
+            "critical": csv_bool(row.get("critical")),
+            "pinned": csv_bool(row.get("pinned")),
+            "notes": str(row.get("notes", "")).strip(),
+            "updated_at": now_ts(),
+            "source": "import",
+        })
+        imported += 1
+    if imported:
+        refresh_assigned_networks()
+        log_system_event("info", f"Imported {imported} device(s) from CSV", "devices_imported")
+    return {"ok": True, "imported": imported, "skipped": skipped}
+
+
+@app.post("/api/import/settings")
+async def api_import_settings(file: UploadFile = File(...)):
+    raw = await file.read()
+    try:
+        payload = json.loads(raw.decode("utf-8-sig", errors="ignore") or "{}")
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Invalid settings file"}, status_code=400)
+    if not isinstance(payload, dict):
+        return JSONResponse({"ok": False, "error": "Invalid settings file"}, status_code=400)
+    incoming_settings = payload.get("settings", {})
+    if not isinstance(incoming_settings, dict):
+        incoming_settings = {}
+    for key, default in DEFAULT_SETTINGS.items():
+        if key in {"networks_json", "network_names_json", "discovery_mode", "discovery_protocols_json"}:
+            continue
+        if key in incoming_settings:
+            set_setting(key, str(incoming_settings.get(key, default) or default))
+    networks = normalize_networks(payload.get("networks", [])) or get_networks()
+    saved = save_networks(networks)
+    names = normalize_network_name_map(payload.get("network_names", {}), saved)
+    set_setting("network_names_json", json.dumps(names, ensure_ascii=False))
+    discovery_mode = str(payload.get("discovery_mode", incoming_settings.get("discovery_mode", get_discovery_mode())) or get_discovery_mode())
+    set_setting("discovery_mode", discovery_mode if discovery_mode in ("auto_manual", "manual_only", "auto_only") else "auto_manual")
+    set_discovery_protocols(payload.get("discovery_protocols", incoming_settings.get("discovery_protocols_json", get_discovery_protocols())))
+    reassigned = refresh_assigned_networks(saved)
+    log_system_event("info", f"Imported settings profile with {len(saved)} network(s)", "settings_imported")
+    return {
+        "ok": True,
+        "networks": saved,
+        "network_names": get_network_names(),
+        "discovery_mode": get_discovery_mode(),
+        "discovery_protocols": get_discovery_protocols(),
+        "reassigned": reassigned,
+    }
 
 
 @app.get("/api/ha/summary")
