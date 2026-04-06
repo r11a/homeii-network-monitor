@@ -1642,6 +1642,55 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             return "online"
         return "unknown"
 
+    def availability_for_status(status: str) -> float:
+        if status == "online":
+            return 100.0
+        if status in ("unstable", "new"):
+            return 50.0
+        return 0.0
+
+    device_timelines: Dict[str, Dict[str, Any]] = {}
+    summary_series = []
+    summary_total = max(1, len(devices))
+
+    for device in devices:
+        series = []
+        total_score = 0.0
+        for point in bucket_points:
+            status = device_status_at(device, point)
+            availability_pct = availability_for_status(status)
+            total_score += availability_pct
+            series.append(
+                {
+                    "ts": point,
+                    "state": status,
+                    "availability_pct": availability_pct,
+                }
+            )
+        device_timelines[device["ip"]] = {
+            "ip": device["ip"],
+            "category": device.get("category") or "",
+            "availability_24h": round(total_score / max(1, len(series)), 1),
+            "series": series,
+        }
+
+    for point_index, point in enumerate(bucket_points):
+        counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
+        availability_sum = 0.0
+        for device in devices:
+            device_point = device_timelines[device["ip"]]["series"][point_index]
+            status = device_point["state"]
+            counts[status] = counts.get(status, 0) + 1
+            availability_sum += float(device_point["availability_pct"])
+        summary_series.append(
+            {
+                "ts": point,
+                "state": aggregate_state(counts),
+                "counts": counts,
+                "availability_pct": round(availability_sum / summary_total, 1),
+            }
+        )
+
     payload = []
     for category, category_devices in grouped.items():
         current_counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
@@ -1649,16 +1698,20 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             current_counts[device.get("status") or "unknown"] = current_counts.get(device.get("status") or "unknown", 0) + 1
 
         series = []
+        availability_total = 0.0
         for point in bucket_points:
             counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
             for device in category_devices:
                 historical_status = device_status_at(device, point)
                 counts[historical_status] = counts.get(historical_status, 0) + 1
+            availability_pct = round((counts.get("online", 0) / max(1, len(category_devices))) * 100, 1)
+            availability_total += availability_pct
             series.append(
                 {
                     "ts": point,
                     "state": aggregate_state(counts),
                     "counts": counts,
+                    "availability_pct": availability_pct,
                 }
             )
 
@@ -1674,6 +1727,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                 "pinned": sum(1 for device in category_devices if device.get("pinned")),
                 "state": aggregate_state(current_counts),
                 "devices": [device["ip"] for device in category_devices],
+                "availability_24h": round(availability_total / max(1, len(series)), 1),
                 "series": series,
             }
         )
@@ -1688,6 +1742,14 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         "hours": hours,
         "bucket_seconds": bucket_seconds,
         "categories": payload,
+        "devices": device_timelines,
+        "summary": {
+            "availability_24h": round(
+                sum(float(point["availability_pct"]) for point in summary_series) / max(1, len(summary_series)),
+                1,
+            ),
+            "series": summary_series,
+        },
     }
 
 
