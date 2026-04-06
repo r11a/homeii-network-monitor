@@ -7,17 +7,17 @@
 <style>
 :root{
   color-scheme: light;
-  --bg:#eef3fb; --bg2:#f8fbff; --sidebar:#f4f7fc; --card:#ffffff; --card2:#ffffff;
-  --text:#172640; --muted:#647693; --line:rgba(17,34,68,.10); --line2:rgba(17,34,68,.16);
-  --blue:#2f72dc; --green:#14945a; --red:#d85e68; --orange:#d68822; --gold:#b78a10;
-  --shadow:0 14px 32px rgba(17,34,68,.10);
+  --bg:#0b1020; --bg2:#101729; --sidebar:#0f1627; --card:#131d31; --card2:#18233b;
+  --text:#edf3ff; --muted:#90a0bf; --line:rgba(148,163,184,.12); --line2:rgba(96,165,250,.26);
+  --blue:#5b8cff; --green:#35d399; --red:#fb7185; --orange:#f59e0b; --gold:#f5c94a; --cyan:#22d3ee;
+  --shadow:0 18px 40px rgba(2,8,23,.34);
 }
 body.dark{
   color-scheme: dark;
-  --bg:#07101d; --bg2:#0d1727; --sidebar:#08111d; --card:#121e31; --card2:#18263d;
-  --text:#eef4ff; --muted:#97a8c5; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.12);
-  --blue:#6ea7ff; --green:#4ed48a; --red:#ff6b78; --orange:#ffbe5e; --gold:#f2cd67;
-  --shadow:0 18px 48px rgba(0,0,0,.28);
+  --bg:#060a14; --bg2:#0b1120; --sidebar:#0a1020; --card:#11192c; --card2:#16213a;
+  --text:#f5f8ff; --muted:#8b9bbd; --line:rgba(148,163,184,.12); --line2:rgba(96,165,250,.30);
+  --blue:#7aa2ff; --green:#4ce1a6; --red:#ff7f96; --orange:#ffb648; --gold:#ffd56f; --cyan:#47d6ff;
+  --shadow:0 22px 54px rgba(0,0,0,.34);
 }
 body.compact-dashboard .main{padding:16px}
 body.compact-dashboard .hero{padding:14px 16px}
@@ -34,114 +34,137 @@ body.compact-dashboard .item{border-radius:14px}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{
-  font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+  font-family:Bahnschrift,"Segoe UI Variable","Trebuchet MS",system-ui,sans-serif;
   color:var(--text);
   background:
-    radial-gradient(800px 360px at 100% -10%,rgba(110,167,255,.12),transparent 60%),
-    radial-gradient(600px 260px at -10% 10%,rgba(78,212,138,.10),transparent 60%),
+    radial-gradient(760px 340px at 100% -10%,rgba(91,140,255,.22),transparent 60%),
+    radial-gradient(620px 280px at -10% 10%,rgba(34,211,238,.14),transparent 60%),
+    radial-gradient(540px 240px at 45% 0%,rgba(53,211,153,.10),transparent 55%),
     linear-gradient(180deg,var(--bg),var(--bg2));
   overflow:hidden;
 }
 .app{height:100vh;display:grid;grid-template-columns:248px 1fr}
 .sidebar{
   height:100vh;padding:18px 14px;display:flex;flex-direction:column;gap:16px;
-  border-left:1px solid var(--line);background:linear-gradient(180deg,var(--sidebar),rgba(0,0,0,.03));
+  border-left:1px solid var(--line);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),
+    linear-gradient(180deg,var(--sidebar),rgba(10,15,28,.88));
+  backdrop-filter:blur(18px);
 }
 .brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 6px 10px}
-.brand-title{font-size:18px;font-weight:900;letter-spacing:-.02em}
+.brand-title{font-size:20px;font-weight:900;letter-spacing:-.03em}
 .brand-sub{font-size:12px;color:var(--muted);margin-top:3px}
-.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(180deg,#85b3ff,#6798f3);color:#fff;font-size:22px;font-weight:900;border:1px solid rgba(255,255,255,.14)}
+.logo{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;font-size:22px;font-weight:900;border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 24px rgba(91,140,255,.35)}
 .logo img{width:100%;height:100%;object-fit:contain}
 .nav{display:grid;gap:8px}
 .nav-btn{
-  width:100%;padding:12px 14px;border-radius:16px;cursor:pointer;text-align:right;color:var(--text);
-  border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+  width:100%;padding:13px 15px;border-radius:16px;cursor:pointer;text-align:right;color:var(--text);
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+  transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
-.nav-btn.active,.nav-btn:hover{border-color:var(--line2);background:linear-gradient(180deg,rgba(110,167,255,.18),rgba(110,167,255,.08))}
+.nav-btn.active,.nav-btn:hover{transform:translateY(-1px);border-color:var(--line2);background:linear-gradient(180deg,rgba(91,140,255,.22),rgba(34,211,238,.08));box-shadow:0 10px 20px rgba(2,8,23,.18)}
 .sidebar-footer{margin-top:auto;display:grid;gap:10px}
-.info-card{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
+.info-card{border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));border-radius:18px;padding:12px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.info-card::before{content:'';position:absolute;inset:auto 0 0 0;height:3px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
 .info-card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .info-card .v{margin-top:8px;font-size:18px;font-weight:900}
 .health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
-.dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(53,211,153,.65)}
 .main{height:100vh;overflow-y:auto;overflow-x:hidden;padding:20px}
 .top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start;margin-bottom:14px}
 .hero,.actionbar,.kpi,.panel,.toolbar,.tablewrap,.empty,.item,.msg{
-  border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));box-shadow:var(--shadow)
+  border:1px solid var(--line);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01)),
+    linear-gradient(180deg,var(--card),var(--card2));
+  box-shadow:var(--shadow)
 }
 .hero,.actionbar,.panel,.toolbar,.tablewrap{border-radius:22px}
-.hero{padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px}
-.hero-title{margin:0;font-size:24px;font-weight:900;letter-spacing:-.03em}
+.hero{padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.12),transparent 35%,rgba(34,211,238,.10));pointer-events:none}
+.hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.04em}
 .hero-sub{margin-top:6px;color:var(--muted);font-size:13px}
 .actionbar{padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .btn,input,select,textarea{
-  border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--text);font:inherit
+  border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);font:inherit
 }
-.btn{padding:10px 13px;cursor:pointer}
-.btn.primary{background:linear-gradient(180deg,#2f7dff,#1f63d7);border:none;color:#fff}
-.btn.green{background:linear-gradient(180deg,#28b86f,#14945a);border:none;color:#fff}
-.btn.red{background:linear-gradient(180deg,#ff7a85,#d85d67);border:none;color:#fff}
+.btn{padding:10px 13px;cursor:pointer;transition:transform .18s ease, box-shadow .18s ease, filter .18s ease}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.03)}
+.btn.primary{background:linear-gradient(135deg,var(--blue),#355df5);border:none;color:#fff;box-shadow:0 10px 20px rgba(91,140,255,.28)}
+.btn.green{background:linear-gradient(135deg,#1fcf8f,var(--green));border:none;color:#08131e;box-shadow:0 10px 20px rgba(53,211,153,.22)}
+.btn.red{background:linear-gradient(135deg,var(--red),#e11d48);border:none;color:#fff;box-shadow:0 10px 20px rgba(251,113,133,.22)}
 .btn.small{padding:7px 10px;border-radius:12px;font-size:12px}
-.scanState,.mini{padding:8px 11px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.scanState,.mini{padding:8px 11px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.03)}
 .kpis{display:grid;grid-template-columns:1.6fr repeat(5,1fr);gap:12px;margin-bottom:14px}
-.kpi{border-radius:18px;padding:14px 16px;cursor:pointer}
-.kpi.active{outline:2px solid rgba(110,167,255,.28)}
-.kpi.primary-alert{background:linear-gradient(180deg, rgba(216,94,104,.12), rgba(216,94,104,.04)),linear-gradient(180deg,var(--card),var(--card2))}
+.kpi{border-radius:20px;padding:16px 18px;cursor:pointer;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;inset:auto 0 0 0;height:4px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.kpi.active{outline:2px solid rgba(91,140,255,.32)}
+.kpi.primary-alert{background:linear-gradient(180deg, rgba(251,113,133,.14), rgba(251,113,133,.04)),linear-gradient(180deg,var(--card),var(--card2))}
 .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.kpi .value{margin-top:10px;font-size:28px;font-weight:900}
+.kpi .value{margin-top:10px;font-size:31px;font-weight:900}
 .kpi .value.online{color:var(--green)} .kpi .value.offline{color:var(--red)} .kpi .value.new{color:var(--blue)} .kpi .value.alerts{color:var(--orange)} .kpi .value.pinned{color:var(--gold)}
 .section{display:none}.section.active{display:block}
 .grid{display:grid;gap:14px}.grid.two{grid-template-columns:1.12fr .88fr}
-.panel{padding:18px}
+.panel{padding:20px;position:relative;overflow:hidden}
+.panel::before{content:'';position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,rgba(91,140,255,.26),transparent 45%,rgba(34,211,238,.2))}
 .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
-.panel-head h2{margin:0;font-size:18px;font-weight:900}
+.panel-head h2{margin:0;font-size:19px;font-weight:900}
 .panel-head p{margin:6px 0 0;color:var(--muted);font-size:13px}
 .dashboard-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
 .dashboard-card{
-  border:2px solid var(--red);border-radius:22px;padding:14px 16px;min-height:132px;
-  display:grid;grid-template-columns:1fr 1.15fr;gap:14px;direction:ltr;background:rgba(255,255,255,.02)
+  border:1px solid var(--line2);border-radius:24px;padding:16px 18px;min-height:148px;
+  display:grid;grid-template-columns:1fr 1.15fr;gap:14px;direction:ltr;
+  background:
+    radial-gradient(circle at top left,rgba(91,140,255,.12),transparent 38%),
+    linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01)),
+    rgba(255,255,255,.02);
+  box-shadow:0 18px 36px rgba(2,8,23,.28)
 }
-.dashboard-card.online{border-color:var(--green)} .dashboard-card.offline{border-color:var(--red)} .dashboard-card.new{border-color:var(--blue)} .dashboard-card.unstable{border-color:var(--orange)}
+.dashboard-card::after{content:'';position:absolute;inset:auto 16px 16px 16px;height:3px;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.dashboard-card.online{border-color:rgba(53,211,153,.35)} .dashboard-card.online::after{background:linear-gradient(90deg,var(--green),#7ef0c7)} .dashboard-card.offline{border-color:rgba(251,113,133,.35)} .dashboard-card.offline::after{background:linear-gradient(90deg,var(--red),#ff9ab0)} .dashboard-card.new{border-color:rgba(91,140,255,.35)} .dashboard-card.new::after{background:linear-gradient(90deg,var(--blue),var(--cyan))} .dashboard-card.unstable{border-color:rgba(245,158,11,.35)} .dashboard-card.unstable::after{background:linear-gradient(90deg,var(--orange),#ffd469)}
 .d-left{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;text-align:left}
 .d-right{direction:rtl;text-align:right;min-width:0}
-.status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px}
+.status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;background:rgba(255,255,255,.03)}
 .status-dot{width:12px;height:12px;border-radius:50%;background:var(--red)}
 .dashboard-card.online .status-dot{background:var(--green)} .dashboard-card.offline .status-dot{background:var(--red)} .dashboard-card.new .status-dot{background:var(--blue)} .dashboard-card.unstable .status-dot{background:var(--orange)}
-.d-name{margin:0;font-size:22px;line-height:1.05;font-weight:900;word-break:break-word}
-.d-ip{margin-top:8px;font-size:15px;direction:ltr}
+.d-name{margin:0;font-size:24px;line-height:1.05;font-weight:900;word-break:break-word}
+.d-ip{margin-top:8px;font-size:15px;direction:ltr;color:var(--muted)}
 .d-meta{font-size:13px;color:var(--muted);margin-top:10px}
 .d-actions{display:flex;gap:8px;flex-wrap:nowrap;margin-top:12px}
 .smart-list{display:grid;gap:10px}
-.smart-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.02)}
+.smart-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))}
 .smart-main{min-width:0}
 .smart-title{font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .smart-sub{margin-top:4px;font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
 .smart-meta{display:grid;gap:6px;justify-items:end;text-align:left}
 .smart-count{font-size:24px;font-weight:900}
 .badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;background:rgba(255,255,255,.02)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;background:rgba(255,255,255,.03)}
 .chip.offline{border-color:rgba(216,94,104,.35);color:var(--red)}
 .chip.critical{border-color:rgba(214,136,34,.35);color:var(--orange)}
 .chip.new{border-color:rgba(47,114,220,.35);color:var(--blue)}
 .chip.online{border-color:rgba(20,148,90,.35);color:var(--green)}
 .network-metrics{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 
-.toolbar{padding:12px;display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr;gap:10px;margin-bottom:12px}
+.toolbar{padding:14px;display:grid;grid-template-columns:1.6fr .8fr .8fr .8fr;gap:12px;margin-bottom:12px}
 .field{display:grid;gap:6px}.field label{font-size:12px;color:var(--muted)}
-input,select,textarea{padding:10px 12px;outline:none;width:100%} textarea{min-height:120px;resize:vertical}
+input,select,textarea{padding:12px 14px;outline:none;width:100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)} textarea{min-height:120px;resize:vertical}
 .quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .tablewrap{overflow:auto}
 .tablewrap table{table-layout:auto;width:100%}
 table{width:100%;border-collapse:collapse;min-width:1080px}
-th,td{padding:10px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle;font-size:12px;white-space:nowrap}
-th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;position:sticky;top:0;background:var(--card2)} th.sortable{cursor:pointer;user-select:none} th.sortable:hover{color:var(--text)} th.sortable .sort-ind{font-size:10px;margin-inline-start:6px;opacity:.7}
+th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle;font-size:12px;white-space:nowrap}
+th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;position:sticky;top:0;background:rgba(24,35,59,.96)} th.sortable{cursor:pointer;user-select:none} th.sortable:hover{color:var(--text)} th.sortable .sort-ind{font-size:10px;margin-inline-start:6px;opacity:.7}
 .name-cell{display:flex;align-items:flex-start;gap:8px;min-width:0}.name-main{display:flex;flex-direction:column;min-width:0}.name-link{background:none;border:0;padding:0;margin:0;color:var(--text);font:inherit;font-weight:700;cursor:pointer;text-align:right}.name-link:hover{text-decoration:underline}.name-subrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px}
 .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px}
 .badge::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
 .badge.online::before{background:var(--green)} .badge.offline::before{background:var(--red)} .badge.unstable::before{background:var(--orange)} .badge.new::before{background:var(--blue)}
 .status-actions{display:flex;gap:6px;flex-wrap:nowrap;align-items:center}
 .actions{display:flex;gap:6px;flex-wrap:nowrap;align-items:center}.row-mini-actions{display:flex;gap:6px;align-items:center;white-space:nowrap}
-.item{padding:13px 14px;border-radius:18px;background:rgba(255,255,255,.02)}
+.item{padding:14px 16px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))}
 .item-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
 .item small{color:var(--muted)}
 .settings-page{display:none}
@@ -167,12 +190,16 @@ body.settings-mode .hero-sub{display:none;}
 .settings-note{margin:8px 0 14px;color:var(--muted);font-size:13px}
 .network-name-row{display:grid;grid-template-columns:1fr 1.2fr;gap:12px;align-items:end}
 .network-name-row .readonly-cidr{padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(180deg,var(--card),var(--card2));color:var(--muted);font-size:13px}
-.network-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0 8px}
-.network-row{display:grid;grid-template-columns:1.2fr 1fr auto;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,var(--card),var(--card2))}
+.network-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0 8px}
+.network-row{display:grid;grid-template-columns:1.2fr 1fr auto;gap:12px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))}
 .network-row .meta{display:flex;flex-direction:column;gap:4px}
 .network-row .alias{font-weight:800}
 .network-row .cidr{color:var(--muted);font-size:13px;direction:ltr;text-align:left}
 .network-row .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.network-row .statline{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.network-row .metric{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.meter{margin-top:10px;height:8px;border-radius:999px;overflow:hidden;background:rgba(148,163,184,.14)}
+.meter-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
 
 .network-summary .item strong{font-size:15px}
 .settings-page .chips{margin-top:12px}
@@ -564,9 +591,12 @@ function getDashboardDevices(){const rows=[...state.devices]; rows.sort((a,b)=>{
 function getPriorityDevices(){return [...state.devices].filter(d=>d.status==='offline'||d.critical||d.status==='new').sort((a,b)=>{const score=d=>((d.status==='offline')?100:0)+(d.critical?60:0)+((d.status==='new')?40:0)+(d.pinned?10:0); return score(b)-score(a)}).slice(0,8)}
 function dashboardCard(d){const status=escapeHtml(d.status||'unknown'); return `<div class="dashboard-card ${status}"><div class="d-left"><div class="status-pill"><span class="status-dot"></span><span>${escapeHtml(statusLabel(d.status||'unknown'))}</span></div><div class="d-meta"><b>${escapeHtml(tr('lastSeen'))}:</b> ${timeAgo(d.last_seen)}</div><div class="d-actions"><button class="btn small" onclick="pingNow('${d.ip}')">${escapeHtml(tr('ping'))}</button><button class="btn small" onclick="togglePin('${d.ip}')">${escapeHtml(d.pinned?tr('unpin'):tr('pin'))}</button><button class="btn small" onclick="editDevice('${d.ip}')">${escapeHtml((state.settings.language||'he')==='he'?'ערוך':'Edit')}</button></div></div><div class="d-right"><h3 class="d-name"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></h3>${(d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip))?`<div class="d-sub">${escapeHtml(d.subtitle)}</div>`:''}<div class="d-ip">${escapeHtml(d.ip)}</div></div></div>`}
 function priorityRow(d){const chips=[]; if(d.status==='offline') chips.push(`<span class="chip offline">${escapeHtml(tr('status_offline'))}</span>`); if(d.critical) chips.push(`<span class="chip critical">${escapeHtml(tr('critical'))}</span>`); if(d.status==='new') chips.push(`<span class="chip new">${escapeHtml(tr('new'))}</span>`); if(d.pinned) chips.push(`<span class="chip">${escapeHtml(tr('pinned'))}</span>`); return `<div class="smart-row"><div class="smart-main"><div class="smart-title"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button></div><div class="smart-sub"><span>${escapeHtml(d.ip)}</span>${d.vendor?`<span>${escapeHtml(d.vendor)}</span>`:''}${d.assigned_network?`<span>${escapeHtml(displayNetwork(d.assigned_network))}</span>`:''}</div></div><div class="smart-meta"><div class="badges">${chips.join('')}</div><div class="smart-sub">${escapeHtml(tr('lastSeen'))}: ${timeAgo(d.last_seen)}</div></div></div>`}
-function networkSummaryRows(){const bucket=new Map(); (state.devices||[]).forEach(d=>{const key=d.assigned_network||'unassigned'; const item=bucket.get(key)||{label:key==='unassigned'?'—':displayNetwork(key), total:0, online:0, offline:0, critical:0}; item.total+=1; if(d.status==='online') item.online+=1; if(d.status==='offline') item.offline+=1; if(d.critical) item.critical+=1; bucket.set(key,item)}); return [...bucket.values()].sort((a,b)=>b.total-a.total).slice(0,8)}
+function networkSummaryRows(){const rows=(state.status?.network_stats||[]).map(item=>({label:item.label||displayNetwork(item.cidr||''),cidr:item.cidr||'',total:Number(item.devices||0),online:Number(item.online||0),offline:Number(item.offline||0),critical:Number(item.critical||0),hosts:Number(item.hosts||0),utilization:(Number(item.hosts||0)>0?Math.min(100,Math.round((Number(item.devices||0)/Number(item.hosts||0))*100)):0)})); const unassigned=(state.devices||[]).filter(d=>!(d.assigned_network||'')).length; if(unassigned){rows.push({label:'—',cidr:'',total:unassigned,online:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.status==='online').length,offline:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.status==='offline').length,critical:(state.devices||[]).filter(d=>!(d.assigned_network||'')&&d.critical).length,hosts:0,utilization:0});} return rows.sort((a,b)=>b.total-a.total).slice(0,8)}
 
 function displayNetwork(cidr){const names=state.status?.network_names||{}; return (names[cidr]||'').trim() || cidr || '—'}
+function networkHostCount(cidr){const match=String(cidr||'').trim().match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d{1,2})$/); if(!match) return 0; const prefix=Number(match[5]); if(prefix<0||prefix>32) return 0; const addresses=Math.pow(2,32-prefix); return addresses<=2 ? addresses : Math.max(0, addresses-2);}
+function getNetworkStat(cidr){return (state.status?.network_stats||[]).find(item=>item.cidr===cidr)||null}
+function scanSummaryText(scan){if(!scan) return tr('idle'); const base=scan.running?tr('running'):(scan.last_mode==='idle'?tr('idle'):(scan.last_mode||'idle')); const targets=Number(scan.target_count||0); const networks=Array.isArray(scan.target_networks)?scan.target_networks.length:0; if(targets||networks){ return `${base} • ${targets||0} IP • ${networks||0} NET`; } return base; }
 function populateNetworks(devices){const sel=qs('filterNetwork'); if(!sel) return; const current=sel.value; const base=(state.status?.networks||[]); const assigned=(devices||[]).map(d=>d.assigned_network||'').filter(Boolean); const nets=[...new Set([...base,...assigned])]; sel.innerHTML=`<option value="">${escapeHtml(tr('all'))}</option>`+nets.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); if(nets.includes(current)) sel.value=current; }
 function populateVendors(devices){const sel=qs('filterVendor'); if(!sel) return; const current=sel.value; const vals=[...new Set((devices||[]).map(d=>(d.vendor||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,(state.settings.language||'he')==='he'?'he':'en')); sel.innerHTML=`<option value="">${escapeHtml(tr('all'))}</option>`+vals.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join(''); if(vals.includes(current)) sel.value=current; }
 
@@ -602,6 +632,12 @@ function renderNetworkManager(){
       <div class="meta">
         <div class="alias">${escapeHtml((n.alias||'').trim() || displayNetwork(n.cidr))}</div>
         <div class="cidr">${escapeHtml(n.cidr)}</div>
+        <div class="statline">
+          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${networkHostCount(n.cidr)}</span>
+          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'התקנים':'Devices')}: ${Number(getNetworkStat(n.cidr)?.devices||0)}</span>
+          <span class="metric">${escapeHtml((state.settings.language||'he')==='he'?'מחוברים':'Online')}: ${Number(getNetworkStat(n.cidr)?.online||0)}</span>
+        </div>
+        <div class="meter"><div class="meter-fill" style="width:${Math.min(100, Math.round(((Number(getNetworkStat(n.cidr)?.devices||0))/(Math.max(1,networkHostCount(n.cidr))))*100))}%"></div></div>
       </div>
       <div class="meta">
         <small>${escapeHtml((state.settings.language||'he')==='he'?'כינוי':'Alias')}</small>
@@ -677,9 +713,9 @@ async function bulkDelete(){if(!state.selectedIps.size) return; await api(`./api
 function rowActions(d){return `<div class="row-mini-actions"><button class="btn small" onclick="openEditDevice('${d.ip}')">${escapeHtml(tr('details'))}</button></div>`}
 function renderDevices(){const devices=filteredDevices(); const view=(qs('devicesView').value||state.settings.default_view||'table'); const mount=qs('devicesMount'); if(!devices.length){mount.innerHTML=`<div class="empty">${escapeHtml(tr('noDevices'))}</div>`; updateBulkBar(); return;} if(view==='grid'){mount.innerHTML=`<div class="dashboard-cards" style="margin-top:14px">${devices.map(dashboardCard).join('')}</div>`; updateBulkBar(); return;} const allChecked=devices.length && devices.every(d=>state.selectedIps.has(d.ip)); mount.innerHTML=`<div class="tablewrap" style="margin-top:14px"><table><thead><tr><th><input type="checkbox" class="row-check" ${allChecked?'checked':''} onchange="toggleSelectAll(this.checked)"></th><th class="sortable" onclick="setSort('name')">${escapeHtml(tr('nameCol'))}${sortIndicator('name')}</th><th class="sortable" onclick="setSort('ip')">${escapeHtml(tr('ipCol'))}${sortIndicator('ip')}</th><th class="sortable" onclick="setSort('status')">${escapeHtml(tr('statusCol'))}${sortIndicator('status')}</th><th>${escapeHtml(tr('categoryCol'))}</th><th>${escapeHtml(tr('networkCol'))}</th><th class="sortable" onclick="setSort('vendor')">${escapeHtml(tr('vendorCol'))}${sortIndicator('vendor')}</th><th>${escapeHtml(tr('macCol'))}</th><th class="sortable" onclick="setSort('last_seen')">${escapeHtml(tr('lastSeenCol'))}${sortIndicator('last_seen')}</th><th>${escapeHtml(tr('actionsCol'))}</th></tr></thead><tbody>${devices.map(d=>`<tr><td><input type="checkbox" class="row-check" ${state.selectedIps.has(d.ip)?'checked':''} onchange="toggleSelected('${d.ip}',this.checked)"></td><td><div class="name-cell"><div class="name-main"><button class="name-link" onclick="openEditDevice('${d.ip}')">${escapeHtml(d.display_name||d.name||d.hostname||d.ip)}</button>${d.subtitle && d.subtitle!==(d.display_name||d.name||d.hostname||d.ip)?`<div class="subtext">${escapeHtml(d.subtitle)}</div>`:''}<div class="name-subrow">${d.pinned?`<span class="mini">${escapeHtml(tr('pinned'))}</span>`:''}${d.critical?`<span class="mini">${escapeHtml(tr('critical'))}</span>`:''}</div></div></div></td><td>${escapeHtml(d.ip)}</td><td><div class="status-actions">${deviceStatusBadge(d.status)}${d.approved?`<span class="mini">${escapeHtml(tr('known'))}</span>`:`<span class="mini">${escapeHtml(tr('pending'))}</span>`}</div></td><td>${escapeHtml(d.category||'—')}</td><td>${escapeHtml(displayNetwork(d.assigned_network||''))}</td><td>${escapeHtml(d.vendor||'—')}</td><td>${escapeHtml(d.mac||'—')}</td><td>${timeAgo(d.last_seen)}</td><td><div class="actions">${rowActions(d)}</div></td></tr>`).join('')}</tbody></table></div>`; updateBulkBar();}
 function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().toLowerCase(); const sev=(qs('alertSeverity')?.value||'').trim().toLowerCase(); const eventText=(qs('eventsSearch')?.value||'').trim().toLowerCase(); const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||''); const alerts=(state.alerts||[]).filter(a=>{const hay=`${a.title||''} ${a.message||''} ${a.ip||''}`.toLowerCase(); if(alertText&&!hay.includes(alertText)) return false; if(sev&&String(a.severity||'').toLowerCase()!==sev) return false; return true;}); const events=(state.events||[]).filter(e=>{const hay=`${e.message||''} ${e.ip||''} ${e.event_type||''}`.toLowerCase(); if(eventText&&!hay.includes(eventText)) return false; return true;}); const alertHtml=alerts.length?alerts.map(a=>`<div class="item"><div class="item-head"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span>${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><small>${link(a.ip,a.ip||'')} • ${fmtTs(a.created_at)}</small><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`).join(''):`<div class="empty"><div>${escapeHtml(tr('noAlerts'))}</div></div>`; const eventHtml=events.length?events.map(e=>`<div class="item"><div class="item-head"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><span>${escapeHtml(e.level||'')}</span></div><small>${link(e.ip,e.ip||'')} • ${fmtTs(e.ts)}</small></div>`).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`; qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml; qs('dashboardAlerts').innerHTML=alertHtml; qs('dashboardEvents').innerHTML=eventHtml}
-function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
-function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(st.scan?.running?tr('running'):(st.scan?.last_mode==='idle'?tr('idle'):(st.scan?.last_mode||'idle')))}
-async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'5.0.0'; qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardTitle')} • ${tr('devicesTitle')} • ${tr('settings')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${status.scan?.running?tr('running'):(status.scan?.last_mode==='idle'?tr('idle'):(status.scan?.last_mode||'idle'))}`; qs('sideScanState').textContent=status.scan?.running?tr('running'):(status.scan?.last_mode==='idle'?tr('idle'):(status.scan?.last_mode||'idle')); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('lastRefresh').textContent=`${new Date().toLocaleTimeString((state.settings.language||'he')==='he'?'he-IL':'en-US')}`; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
+function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
+function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(scanSummaryText(st.scan))}
+async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'5.0.0'; qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardTitle')} • ${tr('devicesTitle')} • ${tr('settings')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${scanSummaryText(status.scan)}`; qs('sideScanState').textContent=scanSummaryText(status.scan); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('lastRefresh').textContent=`${new Date().toLocaleTimeString((state.settings.language||'he')==='he'?'he-IL':'en-US')}`; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
 async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
 async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage',tr('deviceAdded')); await refreshAll()}
 async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
@@ -695,8 +731,12 @@ async function saveNetworksOnly(){
   const networks=encodeURIComponent((qs('setNetworks').value||'').trim());
   const names={};
   (state.networkDrafts||[]).forEach(item=>{ if((item.alias||'').trim()) names[item.cidr]=item.alias.trim() });
-  await api(`./api/save_networks?networks=${networks}&network_names=${encodeURIComponent(JSON.stringify(names))}`);
-  showMsg('settingsMessage',tr('networksSaved'));
+  const result=await api(`./api/save_networks?networks=${networks}&network_names=${encodeURIComponent(JSON.stringify(names))}`);
+  state.networkDrafts=(result.networks||[]).map(n=>({cidr:n, alias:((result.network_names||{})[n]||'').trim()}));
+  renderNetworkManager();
+  const hosts=(result.network_stats||[]).reduce((sum,item)=>sum+Number(item.hosts||0),0);
+  const reassigned=Number(result.reassigned||0);
+  showMsg('settingsMessage',`${tr('networksSaved')} • ${(result.networks||[]).length} NET • ${hosts} IP • ${reassigned} DEV`);
   await refreshAll();
 }
 async function saveNetworksAndScan(){await saveNetworksOnly(); await runScan();}
@@ -706,8 +746,8 @@ async function saveSettings(){
   const networks=encodeURIComponent((qs('setNetworks').value||'').trim());
   const names={}; (state.networkDrafts||[]).forEach(item=>{ if((item.alias||'').trim()) names[item.cidr]=item.alias.trim() });
   const protocols=['ping','arp','dns','special','vendor'].filter(p=>qs('proto_'+p)?.checked);
-  await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value||30}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&language=${language}&discovery_mode=${qs('setDiscoveryMode').value}&discovery_protocols=${encodeURIComponent(protocols.join(','))}&networks=${networks}&network_names=${encodeURIComponent(JSON.stringify(names))}`);
-  setTheme(theme); applyDashboardStyle(qs('setStyle').value); showMsg('settingsMessage',tr('settingsSaved')); await refreshAll()
+  const result=await api(`./api/save_settings?auto_refresh=${qs('setRefresh').value||30}&default_view=${qs('setView').value}&dashboard_style=${qs('setStyle').value}&theme=${theme}&language=${language}&discovery_mode=${qs('setDiscoveryMode').value}&discovery_protocols=${encodeURIComponent(protocols.join(','))}&networks=${networks}&network_names=${encodeURIComponent(JSON.stringify(names))}`);
+  setTheme(theme); applyDashboardStyle(qs('setStyle').value); showMsg('settingsMessage',`${tr('settingsSaved')} • ${Number(result.reassigned||0)} DEV`); await refreshAll()
 }
 function editDevice(ip){openEditDevice(ip)}
 window.addEventListener('load', async()=>{qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); const hash=(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${hash}"]`); if(btn) switchTab(hash,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
