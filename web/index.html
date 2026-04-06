@@ -200,6 +200,27 @@ body.no-status-pulse .status-dot{animation:none !important}
 .viewer-stat.active{border-color:var(--line2);box-shadow:0 0 0 1px rgba(50,104,245,.18),0 16px 30px rgba(2,8,23,.18)}
 .viewer-stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .viewer-stat .v{margin-top:10px;font-size:30px;font-weight:900}
+.viewer-category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.viewer-category-card{padding:16px 18px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018));display:grid;gap:10px;cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.viewer-category-card:hover{transform:translateY(-1px);box-shadow:0 16px 28px rgba(2,8,23,.18)}
+.viewer-category-card.active{box-shadow:0 0 0 1px rgba(50,104,245,.24),0 18px 32px rgba(2,8,23,.18)}
+.viewer-category-card.good{border-color:rgba(53,211,153,.34);background:linear-gradient(180deg,rgba(53,211,153,.10),rgba(255,255,255,.02))}
+.viewer-category-card.bad{border-color:rgba(251,113,133,.34);background:linear-gradient(180deg,rgba(251,113,133,.10),rgba(255,255,255,.02))}
+.viewer-category-card.warn{border-color:rgba(245,158,11,.34);background:linear-gradient(180deg,rgba(245,158,11,.10),rgba(255,255,255,.02))}
+.viewer-category-card.fresh{border-color:rgba(91,140,255,.34);background:linear-gradient(180deg,rgba(91,140,255,.10),rgba(255,255,255,.02))}
+.viewer-category-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.viewer-category-name{font-size:18px;font-weight:900}
+.viewer-category-total{font-size:28px;font-weight:900}
+.viewer-category-meta{display:flex;gap:8px;flex-wrap:wrap}
+.viewer-category-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted);background:rgba(255,255,255,.03)}
+.viewer-availability{display:grid;gap:10px}
+.viewer-availability-bar{display:grid;grid-template-columns:repeat(24,1fr);gap:4px}
+.viewer-availability-cell{height:14px;border-radius:999px;background:rgba(148,163,184,.18)}
+.viewer-availability-cell.online{background:linear-gradient(180deg,rgba(53,211,153,.92),rgba(53,211,153,.38))}
+.viewer-availability-cell.offline{background:linear-gradient(180deg,rgba(251,113,133,.95),rgba(251,113,133,.38))}
+.viewer-availability-cell.unstable{background:linear-gradient(180deg,rgba(245,158,11,.95),rgba(245,158,11,.38))}
+.viewer-availability-cell.new{background:linear-gradient(180deg,rgba(91,140,255,.95),rgba(91,140,255,.38))}
+.viewer-availability-axis{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--muted)}
 .viewer-readonly{font-size:12px;color:var(--muted)}
 .viewer-event{display:grid;gap:6px}
 .viewer-event .event-title{font-weight:800}
@@ -552,12 +573,17 @@ body.settings-mode .settings-page .panel{max-width:1320px}
           <div class="panel-head"><div><h2 id="viewerTitle">Viewer</h2><p id="viewerSub">Live read-only overview of the network state.</p></div><div class="viewer-readonly" id="viewerReadonly">Read only</div></div>
           <div id="viewerSummary" class="viewer-summary"></div>
         </div>
+        <div class="panel compact-panel">
+          <div class="panel-head"><div><h2 id="viewerCategoriesTitle">קטגוריות</h2><p id="viewerCategoriesSub">כרטיסים דינמיים לפי כל הקטגוריות המשויכות במערכת.</p></div></div>
+          <div id="viewerCategories" class="viewer-category-grid"></div>
+        </div>
         <div class="viewer-grid">
           <div class="panel compact-panel">
             <div class="viewer-focus-head">
               <div><h3 id="viewerFocusTitle">All devices</h3><p id="viewerFocusSub">Filter what you want to watch without leaving this page.</p></div>
               <div class="viewer-filter-tag" id="viewerFilterTag">All</div>
             </div>
+            <div id="viewerCategoryDetail" class="viewer-availability" style="margin-bottom:14px"></div>
             <div id="viewerDevices" class="dashboard-cards compact-cards compact-scroll tall"></div>
           </div>
           <div class="viewer-stack">
@@ -771,7 +797,7 @@ function safeArray(v){ return Array.isArray(v) ? v : [] }
 function setText(id,val){const el=qs(id); if(el) el.textContent=val}
 function setPlaceholder(id,val){const el=qs(id); if(el) el.placeholder=val}
 function setOptText(id,idx,val){const el=qs(id); if(el && el.options && el.options[idx]) el.options[idx].text=val}
-const state={status:null,devices:[],alerts:[],events:[],settings:{},activeFilter:'',viewerFilter:'all',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null,alertMuteSignature:'',alertLastSignature:''};
+const state={status:null,devices:[],alerts:[],events:[],viewerCategories:[],settings:{},activeFilter:'',viewerFilter:'all',viewerCategoryKey:'',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null,alertMuteSignature:'',alertLastSignature:''};
 const normalizedPath=(location.pathname||'').replace(/\/+$/,'');
 const directViewerMode=(normalizedPath.endsWith('/viewer')||normalizedPath.endsWith('/viewer.html'));
 const I18N={
@@ -948,7 +974,7 @@ function applyTranslations(){
   setText('kpiOfflineLabel',tr('offlineDevices')); setText('kpiOnlineLabel',tr('online')); setText('kpiTotalLabel',tr('total')); setText('kpiUnstableLabel',tr('unstableDevices')); setText('kpiNewLabel',tr('new')); setText('kpiCriticalLabel',tr('critical')); setText('kpiPinnedLabel',tr('pinned'));
   setText('attentionTitle',tr('attentionTitle')); setText('attentionSub',tr('attentionSub')); setText('recentDevicesTitle',tr('recentDevicesTitle')); setText('recentDevicesSub',tr('recentDevicesSub')); setText('networkSummaryTitle',tr('networkSummaryTitle')); setText('networkSummarySub',tr('networkSummarySub')); setText('alertsOpenTitle',tr('openAlerts')); setText('eventsRecentTitle',tr('recentEvents'));
   setText('dashboardPulseTitle',(state.settings.language||'he')==='he'?'דופק הרשת':'Network Pulse'); setText('dashboardPulseSub',(state.settings.language||'he')==='he'?'מגמת שינויים אחרונה והרכב מצב המכשירים.':'Recent changes and live network composition.');
-  setText('viewerTitle',tr('viewerTitle')); setText('viewerSub',tr('viewerSub')); setText('viewerReadonly',tr('viewerReadonly')); setText('viewerFocusTitle',tr('viewerFocusTitle')); setText('viewerFocusSub',tr('viewerFocusSub')); setText('viewerAttentionTitle',tr('viewerAttentionTitle')); setText('viewerAttentionSub',tr('viewerAttentionSub')); setText('viewerEventsTitle',tr('viewerEventsTitle')); setText('viewerEventsSub',tr('viewerEventsSub')); setText('viewerNewTitle',tr('viewerNewTitle')); setText('viewerNewSub',tr('viewerNewSub'));
+  setText('viewerTitle',tr('viewerTitle')); setText('viewerSub',tr('viewerSub')); setText('viewerReadonly',tr('viewerReadonly')); setText('viewerFocusTitle',tr('viewerFocusTitle')); setText('viewerFocusSub',tr('viewerFocusSub')); setText('viewerAttentionTitle',tr('viewerAttentionTitle')); setText('viewerAttentionSub',tr('viewerAttentionSub')); setText('viewerEventsTitle',tr('viewerEventsTitle')); setText('viewerEventsSub',tr('viewerEventsSub')); setText('viewerNewTitle',tr('viewerNewTitle')); setText('viewerNewSub',tr('viewerNewSub')); setText('viewerCategoriesTitle',localText('קטגוריות','Categories')); setText('viewerCategoriesSub',localText('כרטיסים דינמיים לפי כל הקטגוריות המשויכות במערכת.','Dynamic cards for every category currently assigned in the system.'));
   setText('devicesTitle',tr('devicesTitle')); setText('devicesSub',tr('devicesSub'));
   setText('lblSearch',tr('search')); setPlaceholder('searchText',(state.settings.language||'he')==='he'?'שם, IP, hostname, vendor, mac...':'Name, IP, hostname, vendor, mac...');
   setText('lblStatusFilter',tr('status')); setText('lblCategoryFilter',tr('category')); setText('lblNetworkFilter',tr('networkFilter')); setText('lblVendorFilter',tr('vendorFilter')); setText('lblSortBy',tr('sortBy')); setText('lblView',tr('view'));
@@ -994,6 +1020,82 @@ function viewerDevicesForFilter(){
     const score=d=>((d.status==='offline')?100:0)+((d.status==='unstable')?75:0)+((d.status==='new')?60:0)+(openAlertIps.has(d.ip)?40:0)+(d.critical?30:0)+(d.pinned?20:0);
     return score(b)-score(a) || sortByLastSeen(a,b);
   }).slice(0,18);
+}
+function viewerCategoryKey(category){ return (category||'').trim() || '__uncategorized__'; }
+function viewerCategoryLabel(category){ return (category||'').trim() || localText('ללא קטגוריה','Uncategorized'); }
+function findViewerCategory(){
+  if(!state.viewerCategoryKey) return null;
+  return (state.viewerCategories||[]).find(item=>viewerCategoryKey(item.category)===state.viewerCategoryKey) || null;
+}
+function setViewerCategory(key){
+  state.viewerCategoryKey = state.viewerCategoryKey===key ? '' : key;
+  renderViewer();
+}
+function viewerCategoryDevices(){
+  const current=findViewerCategory();
+  const devices=viewerDevicesForFilter();
+  if(!current) return devices;
+  const ips=new Set((current.devices||[]).map(String));
+  return devices.filter(device=>ips.has(String(device.ip)));
+}
+function viewerCategoryStateClass(category){
+  if(!category) return 'good';
+  if(category.state==='offline') return 'bad';
+  if(category.state==='unstable') return 'warn';
+  if(category.state==='new') return 'fresh';
+  return 'good';
+}
+function renderViewerCategories(){
+  const mount=qs('viewerCategories');
+  if(!mount) return;
+  const categories=state.viewerCategories||[];
+  if(!categories.length){
+    mount.innerHTML=`<div class="empty">${escapeHtml(localText('אין קטגוריות להצגה','No categories to show'))}</div>`;
+    return;
+  }
+  mount.innerHTML=categories.map(category=>{
+    const key=viewerCategoryKey(category.category);
+    const active=state.viewerCategoryKey===key;
+    return `<button class="viewer-category-card ${viewerCategoryStateClass(category)} ${active?'active':''}" onclick="setViewerCategory(decodeURIComponent('${encodeURIComponent(key)}'))">
+      <div class="viewer-category-top">
+        <div>
+          <div class="viewer-category-name">${escapeHtml(viewerCategoryLabel(category.category))}</div>
+          <div class="viewer-category-meta">
+            <span class="viewer-category-chip">${escapeHtml(localText('התקנים','Devices'))}: ${Number(category.total||0)}</span>
+            <span class="viewer-category-chip" style="color:var(--green)">${escapeHtml(localText('זמינים','Available'))}: ${Number(category.online||0)}</span>
+            ${Number(category.offline||0)?`<span class="viewer-category-chip" style="color:var(--red)">${escapeHtml(localText('נפלו','Down'))}: ${Number(category.offline||0)}</span>`:''}
+            ${Number(category.unstable||0)?`<span class="viewer-category-chip" style="color:var(--orange)">${escapeHtml(localText('לא יציבים','Unstable'))}: ${Number(category.unstable||0)}</span>`:''}
+          </div>
+        </div>
+        <div class="viewer-category-total" style="color:${category.state==='offline'?'var(--red)':category.state==='unstable'?'var(--orange)':category.state==='new'?'var(--blue)':'var(--green)'}">${Number(category.total||0)}</div>
+      </div>
+    </button>`;
+  }).join('');
+}
+function renderViewerCategoryDetail(){
+  const mount=qs('viewerCategoryDetail');
+  if(!mount) return;
+  const category=findViewerCategory();
+  if(!category){
+    mount.innerHTML=`<div class="empty">${escapeHtml(localText('בחר קטגוריה כדי לראות זמינות ל־24 שעות ואת ההתקנים המשויכים.','Pick a category to see 24-hour availability and its devices.'))}</div>`;
+    return;
+  }
+  const series=Array.isArray(category.series)?category.series:[];
+  mount.innerHTML=`
+    <div class="viewer-focus-head" style="margin-bottom:0">
+      <div>
+        <h3 style="margin:0">${escapeHtml(viewerCategoryLabel(category.category))}</h3>
+        <p style="margin:6px 0 0;color:var(--muted);font-size:13px">${escapeHtml(localText('פס זמינות ב־24 השעות האחרונות וההתקנים בקטגוריה זו.','Availability strip for the last 24 hours and the devices in this category.'))}</p>
+      </div>
+      <div class="viewer-filter-tag">${escapeHtml(localText('24 שעות','24h'))}</div>
+    </div>
+    <div class="viewer-availability-bar">
+      ${series.map(point=>`<span class="viewer-availability-cell ${escapeHtml(point.state||'unknown')}" title="${escapeHtml(fmtTs(point.ts))}"></span>`).join('')}
+    </div>
+    <div class="viewer-availability-axis">
+      <span>${escapeHtml(localText('לפני 24 שעות','24h ago'))}</span>
+      <span>${escapeHtml(localText('עכשיו','Now'))}</span>
+    </div>`;
 }
 function populateCategories(devices){const sel=qs('filterCategory'); const current=sel.value; const cats=Array.from(new Set(devices.map(d=>(d.category||'').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'he')); sel.innerHTML=`<option value="">${escapeHtml(tr('all'))}</option>`+cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join(''); sel.value=current}
 function applyKpiFilter(filter){if(document.body.classList.contains('viewer-mode')) return; state.activeFilter=filter||''; qs('filterStatus').value=['online','offline','unstable','new'].includes(filter)?filter:''; renderDevices(); document.querySelectorAll('.kpi').forEach(el=>el.classList.toggle('active',(el.dataset.filter||'')===state.activeFilter)); const btn=document.querySelector('.nav-btn[data-tab="devices"]'); switchTab('devices',btn)}
@@ -1137,7 +1239,7 @@ function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().t
 function renderViewer(){const online=(state.devices||[]).filter(d=>d.status==='online'); const offline=(state.devices||[]).filter(d=>d.status==='offline'); const unstable=(state.devices||[]).filter(d=>d.status==='unstable'); const newcomers=(state.devices||[]).filter(d=>d.status==='new'); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const liveEvents=(state.events||[]).filter(e=>['device_offline','device_online','device_unstable','device_stable','new_device'].includes(e.event_type||'')).slice(0,10); const viewerStats=[{key:'all',label:tr('viewerFilterAll'),value:(state.devices||[]).length,color:'var(--text)'},{key:'online',label:tr('viewerFilterOnline'),value:online.length,color:'var(--green)'},{key:'offline',label:tr('viewerFilterOffline'),value:offline.length,color:'var(--red)'},{key:'new',label:tr('viewerFilterNew'),value:newcomers.length,color:'var(--blue)'},{key:'unstable',label:tr('viewerFilterUnstable'),value:unstable.length,color:'var(--orange)'},{key:'alerts',label:tr('viewerFilterAlerts'),value:openAlerts.length,color:'var(--gold)'}]; qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div></button>`).join(''); const focusDevices=viewerDevicesForFilter(); qs('viewerFilterTag').textContent=viewerFilterLabel(state.viewerFilter); qs('viewerDevices').innerHTML=focusDevices.length?focusDevices.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; const attention=[...offline,...unstable].sort((a,b)=>Number(b.last_seen||0)-Number(a.last_seen||0)).slice(0,12); qs('viewerAttention').innerHTML=attention.length?attention.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerEvents').innerHTML=liveEvents.length?liveEvents.map(viewerEventRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerNew').innerHTML=newcomers.length?newcomers.slice(0,12).map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`}
 function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
 function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setStatusAnimation').value=st.settings?.status_animation||'blink'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(`${scanSummaryText(st.scan)} • ${workerSummaryText(st.workers||state.status?.workers||{})}`)}
-async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); if(document.body.classList.contains('settings-mode')){ const activeBtn=document.querySelector('.settings-nav-btn.active'); ensureSettingsVisibility((activeBtn&&activeBtn.dataset.settingsPage)||'general'); } if(qs('versionText')) qs('versionText').textContent=status.version||'5.0.0'; if(qs('heroSub')) qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardSub')}`; if(qs('sTotal')) qs('sTotal').textContent=status.total??0; if(qs('sOnline')) qs('sOnline').textContent=status.online??0; if(qs('sOffline')) qs('sOffline').textContent=status.offline??0; if(qs('sUnstable')) qs('sUnstable').textContent=status.unstable??0; if(qs('sNew')) qs('sNew').textContent=status.new??0; if(qs('sCritical')) qs('sCritical').textContent=status.critical??0; if(qs('sPinned')) qs('sPinned').textContent=status.pinned??0; if(qs('sideScanState')) qs('sideScanState').textContent=workerSummaryText(status.workers||{}); if(qs('sideNetworksCount')) qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; if(qs('lastRefreshText')) qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); if(qs('dbPath')) qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
+async function refreshAll(){const [status,devices,alerts,events,settings,viewerCategories]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings'),api('./api/viewer/categories')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.viewerCategories=viewerCategories.categories||[]; state.dbPath=settings.db_path||''; if(state.viewerCategoryKey && !(state.viewerCategories||[]).some(item=>viewerCategoryKey(item.category)===state.viewerCategoryKey)){ state.viewerCategoryKey=''; } applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); if(document.body.classList.contains('settings-mode')){ const activeBtn=document.querySelector('.settings-nav-btn.active'); ensureSettingsVisibility((activeBtn&&activeBtn.dataset.settingsPage)||'general'); } if(qs('versionText')) qs('versionText').textContent=status.version||'5.0.0'; if(qs('heroSub')) qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardSub')}`; if(qs('sTotal')) qs('sTotal').textContent=status.total??0; if(qs('sOnline')) qs('sOnline').textContent=status.online??0; if(qs('sOffline')) qs('sOffline').textContent=status.offline??0; if(qs('sUnstable')) qs('sUnstable').textContent=status.unstable??0; if(qs('sNew')) qs('sNew').textContent=status.new??0; if(qs('sCritical')) qs('sCritical').textContent=status.critical??0; if(qs('sPinned')) qs('sPinned').textContent=status.pinned??0; if(qs('sideScanState')) qs('sideScanState').textContent=workerSummaryText(status.workers||{}); if(qs('sideNetworksCount')) qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; if(qs('lastRefreshText')) qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); if(qs('dbPath')) qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
 async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
 async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage',tr('deviceAdded')); await refreshAll()}
 async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
@@ -1308,9 +1410,15 @@ renderViewer=function(){
     {key:'alerts',label:tr('viewerFilterAlerts'),value:openAlerts.length,color:'var(--gold)'}
   ];
   qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div></button>`).join('');
-  const focusDevices=viewerDevicesForFilter().slice(0,8);
+  renderViewerCategories();
+  if(!findViewerCategory() && (state.viewerCategories||[]).length){
+    state.viewerCategoryKey=viewerCategoryKey(state.viewerCategories[0].category);
+  }
+  renderViewerCategoryDetail();
+  const focusDevices=viewerCategoryDevices().slice(0,12);
   const attention=[...offline,...unstable].sort((a,b)=>Number(b.last_seen||0)-Number(a.last_seen||0)).slice(0,6);
-  qs('viewerFilterTag').textContent=viewerFilterLabel(state.viewerFilter);
+  const currentCategory=findViewerCategory();
+  qs('viewerFilterTag').textContent=currentCategory?viewerCategoryLabel(currentCategory.category):viewerFilterLabel(state.viewerFilter);
   qs('viewerDevices').innerHTML=focusDevices.length?focusDevices.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`;
   qs('viewerAttention').innerHTML=attention.length?attention.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`;
   qs('viewerEvents').innerHTML=liveEvents.length?liveEvents.map(viewerEventRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`;
