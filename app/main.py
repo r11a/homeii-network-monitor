@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import unquote
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 try:
@@ -596,7 +596,18 @@ def normalize_networks(values: list[str] | str | None) -> list[str]:
     if values is None:
         return []
     if isinstance(values, str):
-        raw = re.split(r"[\n,;]+", values)
+        text = values.strip()
+        if text.startswith("[") and text.endswith("]"):
+            try:
+                decoded = json.loads(text)
+                if isinstance(decoded, list):
+                    raw = decoded
+                else:
+                    raw = re.split(r"[\n,;]+", values)
+            except Exception:
+                raw = re.split(r"[\n,;]+", values)
+        else:
+            raw = re.split(r"[\n,;]+", values)
     else:
         raw = list(values)
     out: list[str] = []
@@ -657,6 +668,25 @@ def normalize_network_name_map(raw: Any, allowed_networks: list[str] | None = No
             continue
         normalized[cidr] = alias
     return normalized
+
+
+def parse_network_input(raw: Any) -> list[str] | str:
+    if raw is None:
+        return ""
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    if isinstance(raw, str):
+        text = raw.strip()
+        if not text:
+            return ""
+        try:
+            decoded = json.loads(text)
+            if isinstance(decoded, list):
+                return [str(item).strip() for item in decoded if str(item).strip()]
+        except Exception:
+            pass
+        return text
+    return str(raw)
 
 
 def estimated_hosts_for_network(cidr: str) -> int:
@@ -1753,6 +1783,26 @@ def api_save_settings(auto_refresh: str = "30", default_view: str = "table", das
     return {"ok": True, "networks": get_networks(), "network_names": get_network_names(), "network_stats": network_stats_payload(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "reassigned": reassigned}
 
 
+@app.post("/api/save_settings")
+async def api_save_settings_post(request: Request):
+    payload = await request.json()
+    networks_raw = parse_network_input(payload.get("networks", ""))
+    protocols_raw = payload.get("discovery_protocols", "")
+    if isinstance(protocols_raw, list):
+        protocols_raw = ",".join(str(item).strip() for item in protocols_raw if str(item).strip())
+    return api_save_settings(
+        auto_refresh=str(payload.get("auto_refresh", "30") or "30"),
+        default_view=str(payload.get("default_view", "table") or "table"),
+        dashboard_style=str(payload.get("dashboard_style", "advanced") or "advanced"),
+        theme=str(payload.get("theme", "light") or "light"),
+        language=str(payload.get("language", "he") or "he"),
+        networks="\n".join(networks_raw) if isinstance(networks_raw, list) else str(networks_raw),
+        network_names=json.dumps(payload.get("network_names", {}) or {}, ensure_ascii=False),
+        discovery_mode=str(payload.get("discovery_mode", "auto_manual") or "auto_manual"),
+        discovery_protocols=str(protocols_raw),
+    )
+
+
 @app.get("/api/save_networks")
 def api_save_networks(networks: str = "", network_names: str = ""):
     saved = save_networks(networks)
@@ -1764,6 +1814,17 @@ def api_save_networks(networks: str = "", network_names: str = ""):
     except Exception:
         pass
     return {"ok": True, "networks": saved, "network_names": get_network_names(), "network_stats": network_stats_payload(), "reassigned": reassigned}
+
+
+@app.post("/api/save_networks")
+async def api_save_networks_post(request: Request):
+    payload = await request.json()
+    networks_raw = parse_network_input(payload.get("networks", ""))
+    network_names_raw = payload.get("network_names", {}) or {}
+    return api_save_networks(
+        networks="\n".join(networks_raw) if isinstance(networks_raw, list) else str(networks_raw),
+        network_names=json.dumps(network_names_raw, ensure_ascii=False),
+    )
 
 
 init_db()
