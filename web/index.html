@@ -446,7 +446,7 @@ body.settings-mode .settings-page .panel{max-width:1320px}
       <button class="nav-btn" data-tab="viewer" onclick="switchTab('viewer', this)" id="navViewer">Viewer</button>
       <button class="nav-btn" data-tab="devices" onclick="switchTab('devices', this)" id="navDevices">Devices</button>
       <button class="nav-btn" data-tab="alerts" onclick="switchTab('alerts', this)" id="navAlerts">Alerts</button>
-      <button class="nav-btn" data-tab="settings" onclick="switchTab('settings', this)" id="navSettings">Settings</button>
+      <button class="nav-btn" onclick="location.href='./settings.html'" id="navSettings">Settings</button>
       <a class="nav-btn viewer-admin-link" id="viewerAdminLink" href="./">ממשק מלא</a>
     </div>
     <div class="nav settings-side-nav">
@@ -894,9 +894,8 @@ function mountSettingsStandalone(){
   const source=qs('tab-settings');
   const host=qs('settingsStandalone');
   if(!source || !host || host.dataset.mounted==='1') return;
-  while(source.firstChild){
-    host.appendChild(source.firstChild);
-  }
+  host.innerHTML=source.innerHTML;
+  source.innerHTML='';
   host.dataset.mounted='1';
 }
 function ensureSettingsVisibility(page='general'){
