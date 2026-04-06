@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HOMEii Network Monitor הגדרות</title>
+<title>HOMEii Network Monitor Settings</title>
 <style>
 :root{
   color-scheme: dark;
@@ -163,9 +163,9 @@ textarea{min-height:120px;resize:vertical}
         <h1 class="hero-title">HOMEii Network Monitor</h1>
         <div class="hero-sub">הגדרות מערכת מלאות בעמוד ייעודי, יציב ונקי.</div>
         <div class="hero-meta">
-          <span class="hero-chip" id="currentClock">—</span>
-          <span class="hero-chip" id="currentDate">—</span>
-          <span class="hero-chip" id="lastRefreshText">—</span>
+          <span class="hero-chip" id="currentClock">â€”</span>
+          <span class="hero-chip" id="currentDate">â€”</span>
+          <span class="hero-chip" id="lastRefreshText">â€”</span>
         </div>
       </div>
       <div class="actions">
@@ -286,35 +286,642 @@ textarea{min-height:120px;resize:vertical}
 </div>
 
 <script>
-const qs=id=>document.getElementById(id);
-const state={settings:{},status:null,networkDrafts:[],dbPath:''};
-function fmtTs(ts){if(!ts)return '—'; try{return new Date(Number(ts)*1000).toLocaleString((state.settings.language||'he')==='he'?'he-IL':'en-US')}catch{return String(ts)}}
-async function api(url,options){const res=await fetch(url,{cache:'no-store',...(options||{})}); const data=await res.json().catch(()=>({ok:false,error:'Invalid JSON'})); if(!res.ok) throw new Error(data.error||data.detail||`HTTP ${res.status}`); return data}
-function showMsg(id,text,ok=true){const el=qs(id); if(!el)return; el.textContent=text; el.className=`msg show ${ok?'ok':'err'}`; clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',3000)}
-function switchPage(page,btn){document.querySelectorAll('.page').forEach(el=>el.classList.remove('active')); qs(`page-${page}`)?.classList.add('active'); document.querySelectorAll('.settings-nav-btn').forEach(el=>el.classList.remove('active')); if(btn) btn.classList.add('active'); document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'})}
-function updateHeaderClock(){const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; const now=new Date(); qs('currentClock').textContent=now.toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit',second:'2-digit'}); qs('currentDate').textContent=now.toLocaleDateString(lang,{weekday:'short',year:'numeric',month:'2-digit',day:'2-digit'})}
-function applyTheme(theme){document.body.classList.toggle('light',theme==='light')}
-function validCidr(value){const v=(value||'').trim(); if(!/^\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}$/.test(v)) return false; const [ip,prefix]=v.split('/'); const octets=ip.split('.').map(Number); return octets.length===4 && octets.every(n=>Number.isInteger(n)&&n>=0&&n<=255) && Number(prefix)>=0 && Number(prefix)<=32;}
-function networkHostCount(cidr){const m=String(cidr||'').trim().match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d{1,2})$/); if(!m) return 0; const prefix=Number(m[5]); const addresses=Math.pow(2,32-prefix); return addresses<=2 ? addresses : Math.max(0, addresses-2);}
-function displayNetwork(cidr){const names=state.status?.network_names||{}; return (names[cidr]||'').trim() || cidr || '—'}
-function getNetworkStat(cidr){return (state.status?.network_stats||[]).find(item=>item.cidr===cidr)||null}
-function renderNetworkManager(){const mount=qs('networkManagerList'); const rows=state.networkDrafts||[]; if(!rows.length){mount.innerHTML='<div class="empty">אין רשתות שמורות כרגע</div>'; return;} mount.innerHTML=rows.map((n,idx)=>`<div class="network-row"><div class="meta"><div class="alias">${(n.alias||'').trim()||displayNetwork(n.cidr)}</div><div class="cidr">${n.cidr}</div><div class="statline"><span class="metric">טווח: ${networkHostCount(n.cidr)}</span><span class="metric">התקנים: ${Number(getNetworkStat(n.cidr)?.devices||0)}</span><span class="metric">מחוברים: ${Number(getNetworkStat(n.cidr)?.online||0)}</span></div><div class="meter"><div class="meter-fill" style="width:${Math.min(100,Math.round(((Number(getNetworkStat(n.cidr)?.devices||0))/(Math.max(1,networkHostCount(n.cidr))))*100))}%"></div></div></div><div class="meta"><small>כינוי</small><strong>${(n.alias||'').trim()||'—'}</strong></div><div class="actions"><button class="btn" onclick="editNetworkDraft(${idx})">ערוך</button><button class="btn" onclick="removeNetworkDraft(${idx})">מחק</button></div></div>`).join('')}
-function addNetworkDraft(){const cidr=(qs('networkCidrInput').value||'').trim(); const alias=(qs('networkAliasInput').value||'').trim(); if(!validCidr(cidr)) return showMsg('settingsMessage','טווח רשת לא תקין',false); const idx=(state.networkDrafts||[]).findIndex(x=>x.cidr===cidr); if(idx>=0) state.networkDrafts[idx].alias=alias; else state.networkDrafts.push({cidr,alias}); qs('networkCidrInput').value=''; qs('networkAliasInput').value=''; renderNetworkManager(); showMsg('settingsMessage','הרשת נוספה לרשימה. לחץ שמור רשתות כדי להחיל אותה')}
-function editNetworkDraft(idx){const item=(state.networkDrafts||[])[idx]; if(!item) return; qs('networkCidrInput').value=item.cidr||''; qs('networkAliasInput').value=item.alias||''; state.networkDrafts.splice(idx,1); renderNetworkManager()}
-function removeNetworkDraft(idx){state.networkDrafts.splice(idx,1); renderNetworkManager()}
-async function saveNetworksOnly(){const names={}; (state.networkDrafts||[]).forEach(item=>{if((item.alias||'').trim()) names[item.cidr]=item.alias.trim()}); const result=await api('./api/save_networks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({networks:(state.networkDrafts||[]).map(item=>item.cidr).filter(Boolean),network_names:names})}); state.networkDrafts=(result.networks||[]).map(n=>({cidr:n,alias:((result.network_names||{})[n]||'').trim()})); showMsg('settingsMessage',`נשמרו ${(result.networks||[]).length} רשתות`); await refreshData()}
-async function saveNetworksAndScan(){await saveNetworksOnly(); await api('./api/scan?mode=manual'); showMsg('settingsMessage','הסריקה הופעלה'); await refreshData()}
-async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('manualMessage','כתובת IP חובה',false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage','ההתקן נוסף'); await refreshData()}
-async function saveSettings(){const protocols=['ping','arp','dns','special','vendor'].filter(p=>qs('proto_'+p)?.checked); const names={}; (state.networkDrafts||[]).forEach(item=>{if((item.alias||'').trim()) names[item.cidr]=item.alias.trim()}); await api('./api/save_settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_refresh:qs('setRefresh').value||30,default_view:qs('setView').value,dashboard_style:qs('setStyle').value,theme:qs('setTheme').value,status_animation:qs('setStatusAnimation').value,language:qs('setLanguage').value,discovery_mode:qs('setDiscoveryMode').value,discovery_protocols:protocols,networks:(state.networkDrafts||[]).map(item=>item.cidr).filter(Boolean),network_names:names})}); applyTheme(qs('setTheme').value); showMsg('settingsMessage','ההגדרות נשמרו'); await refreshData()}
-function triggerImportDevices(){qs('importDevicesInput')?.click()}
-function triggerImportSettings(){qs('importSettingsInput')?.click()}
-async function handleImportDevices(event){const file=event?.target?.files?.[0]; if(!file) return; try{const form=new FormData(); form.append('file',file); const result=await api('./api/import/devices',{method:'POST',body:form}); showMsg('systemMessage',`יובאו ${Number(result.imported||0)} מכשירים`)}catch(err){showMsg('systemMessage',String(err.message||err),false)}finally{event.target.value=''; await refreshData()}}
-async function handleImportSettings(event){const file=event?.target?.files?.[0]; if(!file) return; try{const form=new FormData(); form.append('file',file); const result=await api('./api/import/settings',{method:'POST',body:form}); showMsg('systemMessage',`יובאו ${(result.networks||[]).length} רשתות`)}catch(err){showMsg('systemMessage',String(err.message||err),false)}finally{event.target.value=''; await refreshData()}}
-function scanSummaryText(scan){if(!scan) return 'idle'; const base=scan.running?'running':(scan.last_mode==='idle'?'idle':(scan.last_mode||'idle')); const targets=Number(scan.target_count||0); const networks=Array.isArray(scan.target_networks)?scan.target_networks.length:0; return (targets||networks)?`${base} • ${targets||0} IP • ${networks||0} NET`:base}
-function workerSummaryText(workers){const monitor=workers?.monitor||{}; const critical=workers?.critical_monitor||{}; return `ניטור ${monitor.alive?'רץ':'תקוע'} • קריטי ${critical.alive?'רץ':'תקוע'}`}
-function renderSettingsData(status,settingsData){state.status=status; state.settings=settingsData.settings||{}; state.dbPath=settingsData.db_path||''; qs('versionText').textContent=status.version||'5.0.0'; qs('setRefresh').value=state.settings.auto_refresh||30; qs('setView').value=state.settings.default_view||'table'; qs('setStyle').value=state.settings.dashboard_style||'advanced'; qs('setTheme').value=state.settings.theme||'light'; qs('setStatusAnimation').value=state.settings.status_animation||'blink'; qs('setLanguage').value=state.settings.language||'he'; qs('setDiscoveryMode').value=settingsData.discovery_mode||state.settings.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(settingsData.discovery_protocols||[]).includes(p)}); state.networkDrafts=(settingsData.networks||[]).map(n=>({cidr:n,alias:((settingsData.network_names||{})[n]||'').trim()})); renderNetworkManager(); applyTheme(state.settings.theme||'light'); qs('appearanceCurrent').textContent=`ערכת נושא פעילה: ${state.settings.theme||'light'}`; qs('sideScanState').textContent=workerSummaryText(status.workers||{}); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`; qs('sysVersion').textContent=status.version||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysNetworks').textContent=(settingsData.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysScanMode').textContent=`${scanSummaryText(status.scan)} • ${workerSummaryText(status.workers||{})}`; qs('sysScanStarted').textContent=fmtTs(status.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(status.scan?.last_finished)}
-async function refreshData(){const [status,settingsData]=await Promise.all([api('./api/status'),api('./api/settings')]); renderSettingsData(status,settingsData); const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; qs('lastRefreshText').textContent=`סנכרון אחרון: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock()}
-window.addEventListener('load',async()=>{updateHeaderClock(); window.setInterval(updateHeaderClock,1000); try{await refreshData()}catch(e){console.error(e); alert('טעינת הגדרות נכשלה')}})
+const qs = id => document.getElementById(id);
+const state = { settings: {}, status: null, networkDrafts: [], dbPath: '' };
+
+const I18N = {
+  he: {
+    pageTitle: 'HOMEii Network Monitor הגדרות',
+    brandSub: 'מוניטור {version} • הגדרות',
+    backHome: 'חזרה לתפריט הראשי',
+    navGeneral: 'כללי',
+    navNetworks: 'רשתות',
+    navManual: 'התקן ידני',
+    navAppearance: 'מראה',
+    navLanguage: 'שפה',
+    navSystem: 'מערכת',
+    sidebarStatus: 'סטטוס',
+    sidebarNetworks: 'רשתות',
+    heroSub: 'הגדרות מערכת מלאות בעמוד ייעודי, יציב ונקי.',
+    refreshBtn: 'רענון נתונים',
+    saveBtn: 'שמור הגדרות',
+    generalTitle: 'כללי',
+    generalDesc: 'הגדרות כלליות של הממשק, גילוי ותצוגת ברירת מחדל.',
+    refreshSeconds: 'רענון אוטומטי (שניות)',
+    defaultView: 'תצוגת ברירת מחדל',
+    dashboardStyle: 'סגנון דשבורד',
+    discoveryMode: 'מצב גילוי',
+    discoveryProtocols: 'פרוטוקולי גילוי',
+    saveGeneral: 'שמור הגדרות כלליות',
+    networksTitle: 'רשתות',
+    networksDesc: 'הגדר את כל טווחי הרשת והכינויים שברצונך לסרוק.',
+    networkCidr: 'טווח רשת (CIDR)',
+    networkAlias: 'כינוי רשת',
+    addNetwork: 'הוסף רשת',
+    saveAndScan: 'שמור והפעל סריקה',
+    saveNetworks: 'שמור רשתות',
+    manualTitle: 'הוספת התקן ידנית',
+    manualDesc: 'הוסף התקן ידנית אם לא זוהה אוטומטית.',
+    ipAddress: 'כתובת IP',
+    name: 'שם',
+    category: 'קטגוריה',
+    notes: 'הערות',
+    addDevice: 'הוסף התקן',
+    appearanceTitle: 'מראה',
+    appearanceDesc: 'בחר ערכת נושא, סגנון דשבורד והעדפות תצוגה.',
+    theme: 'ערכת נושא',
+    statusAnimation: 'הבהוב מצבי ההתקן',
+    activeAppearance: 'תצוגה פעילה',
+    saveAppearance: 'שמור מראה',
+    languageTitle: 'שפה',
+    languageDesc: 'בחר שפת ממשק לכל המערכת.',
+    language: 'שפה',
+    saveLanguage: 'שמור שפה',
+    systemTitle: 'מערכת',
+    systemDesc: 'מידע מערכת, סטטוס סריקה, ייצוא וייבוא.',
+    sysVersionLabel: 'גרסת מערכת',
+    sysDbLabel: 'מסד נתונים פעיל',
+    sysNetworksLabel: 'רשתות',
+    sysScanModeLabel: 'מצב סריקה נוכחי',
+    sysScanStartedLabel: 'זמן התחלת הסריקה האחרונה',
+    sysScanFinishedLabel: 'זמן סיום הסריקה האחרונה',
+    exportDevices: 'ייצוא מכשירים',
+    exportSettings: 'ייצוא הגדרות',
+    importDevices: 'ייבוא מכשירים',
+    importSettings: 'ייבוא הגדרות',
+    optionTable: 'טבלה',
+    optionGrid: 'כרטיסים',
+    optionAdvanced: 'מתקדם',
+    optionCompact: 'קומפקטי',
+    optionAutoManual: 'אוטומטי + ידני',
+    optionManualOnly: 'ידני בלבד',
+    optionAutoOnly: 'אוטומטי בלבד',
+    optionLight: 'בהיר',
+    optionDark: 'כהה',
+    optionBlink: 'מהבהב',
+    optionStatic: 'קבוע',
+    protocolHost: 'שם מארח',
+    protocolVendor: 'יצרן',
+    placeholderNetworkAlias: 'למשל ATSIL',
+    placeholderManualName: 'למשל שרת ארון',
+    placeholderManualCategory: 'למשל שרת / מצלמה / רשת',
+    placeholderOptional: 'אופציונלי',
+    emptyNetworks: 'אין רשתות שמורות כרגע',
+    alias: 'כינוי',
+    range: 'טווח',
+    devices: 'התקנים',
+    online: 'מחוברים',
+    edit: 'ערוך',
+    remove: 'מחק',
+    invalidCidr: 'טווח רשת לא תקין',
+    networkDraftAdded: 'הרשת נוספה לרשימה. לחץ שמור רשתות כדי להחיל אותה',
+    networksSaved: 'נשמרו {count} רשתות',
+    scanStarted: 'הסריקה הופעלה',
+    ipRequired: 'כתובת IP חובה',
+    deviceAdded: 'ההתקן נוסף',
+    settingsSaved: 'ההגדרות נשמרו',
+    importedDevices: 'יובאו {count} מכשירים',
+    importedNetworks: 'יובאו {count} רשתות',
+    invalidJson: 'JSON לא תקין',
+    idle: 'ממתין',
+    running: 'רץ',
+    ipShort: 'IP',
+    netShort: 'רשתות',
+    monitor: 'ניטור',
+    critical: 'קריטי',
+    alive: 'רץ',
+    stuck: 'תקוע',
+    activeTheme: 'ערכת נושא פעילה: {theme}',
+    themeLightValue: 'בהיר',
+    themeDarkValue: 'כהה',
+    lastRefresh: 'סנכרון אחרון: {time}',
+    loadFailed: 'טעינת הגדרות נכשלה'
+  },
+  en: {
+    pageTitle: 'HOMEii Network Monitor Settings',
+    brandSub: 'Monitor {version} • Settings',
+    backHome: 'Back to main menu',
+    navGeneral: 'General',
+    navNetworks: 'Networks',
+    navManual: 'Manual Device',
+    navAppearance: 'Appearance',
+    navLanguage: 'Language',
+    navSystem: 'System',
+    sidebarStatus: 'Status',
+    sidebarNetworks: 'Networks',
+    heroSub: 'Complete system settings in a dedicated, stable, clean page.',
+    refreshBtn: 'Refresh data',
+    saveBtn: 'Save settings',
+    generalTitle: 'General',
+    generalDesc: 'General interface, discovery, and default view settings.',
+    refreshSeconds: 'Auto refresh (seconds)',
+    defaultView: 'Default view',
+    dashboardStyle: 'Dashboard style',
+    discoveryMode: 'Discovery mode',
+    discoveryProtocols: 'Discovery protocols',
+    saveGeneral: 'Save general settings',
+    networksTitle: 'Networks',
+    networksDesc: 'Define every network range and alias you want to scan.',
+    networkCidr: 'Network range (CIDR)',
+    networkAlias: 'Network alias',
+    addNetwork: 'Add network',
+    saveAndScan: 'Save and run scan',
+    saveNetworks: 'Save networks',
+    manualTitle: 'Add device manually',
+    manualDesc: 'Add a device manually if it was not detected automatically.',
+    ipAddress: 'IP address',
+    name: 'Name',
+    category: 'Category',
+    notes: 'Notes',
+    addDevice: 'Add device',
+    appearanceTitle: 'Appearance',
+    appearanceDesc: 'Choose theme, dashboard style, and display preferences.',
+    theme: 'Theme',
+    statusAnimation: 'Device status animation',
+    activeAppearance: 'Active appearance',
+    saveAppearance: 'Save appearance',
+    languageTitle: 'Language',
+    languageDesc: 'Choose the interface language for the whole system.',
+    language: 'Language',
+    saveLanguage: 'Save language',
+    systemTitle: 'System',
+    systemDesc: 'System info, scan status, export, and import.',
+    sysVersionLabel: 'System version',
+    sysDbLabel: 'Active database',
+    sysNetworksLabel: 'Networks',
+    sysScanModeLabel: 'Current scan mode',
+    sysScanStartedLabel: 'Last scan start time',
+    sysScanFinishedLabel: 'Last scan end time',
+    exportDevices: 'Export devices',
+    exportSettings: 'Export settings',
+    importDevices: 'Import devices',
+    importSettings: 'Import settings',
+    optionTable: 'Table',
+    optionGrid: 'Cards',
+    optionAdvanced: 'Advanced',
+    optionCompact: 'Compact',
+    optionAutoManual: 'Auto + manual',
+    optionManualOnly: 'Manual only',
+    optionAutoOnly: 'Auto only',
+    optionLight: 'Light',
+    optionDark: 'Dark',
+    optionBlink: 'Blink',
+    optionStatic: 'Static',
+    protocolHost: 'Host',
+    protocolVendor: 'Vendor',
+    placeholderNetworkAlias: 'For example ATSIL',
+    placeholderManualName: 'For example rack server',
+    placeholderManualCategory: 'For example server / camera / network',
+    placeholderOptional: 'Optional',
+    emptyNetworks: 'No saved networks yet',
+    alias: 'Alias',
+    range: 'Range',
+    devices: 'Devices',
+    online: 'Online',
+    edit: 'Edit',
+    remove: 'Remove',
+    invalidCidr: 'Invalid network range',
+    networkDraftAdded: 'The network was added to the list. Press save networks to apply it',
+    networksSaved: 'Saved {count} networks',
+    scanStarted: 'Scan started',
+    ipRequired: 'IP address is required',
+    deviceAdded: 'Device added',
+    settingsSaved: 'Settings saved',
+    importedDevices: 'Imported {count} devices',
+    importedNetworks: 'Imported {count} networks',
+    invalidJson: 'Invalid JSON',
+    idle: 'idle',
+    running: 'running',
+    ipShort: 'IP',
+    netShort: 'NET',
+    monitor: 'Monitor',
+    critical: 'Critical',
+    alive: 'alive',
+    stuck: 'stuck',
+    activeTheme: 'Active theme: {theme}',
+    themeLightValue: 'Light',
+    themeDarkValue: 'Dark',
+    lastRefresh: 'Last sync: {time}',
+    loadFailed: 'Failed to load settings'
+  }
+};
+
+function currentLang() {
+  return (state.settings.language || qs('setLanguage')?.value || 'he') === 'en' ? 'en' : 'he';
+}
+
+function tr(key, vars = {}) {
+  const dict = I18N[currentLang()] || I18N.he;
+  const text = dict[key] ?? I18N.he[key] ?? key;
+  return String(text).replace(/\{(\w+)\}/g, (_, token) => String(vars[token] ?? ''));
+}
+
+function fmtTs(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(Number(ts) * 1000).toLocaleString(currentLang() === 'he' ? 'he-IL' : 'en-US');
+  } catch {
+    return String(ts);
+  }
+}
+
+async function api(url, options) {
+  const res = await fetch(url, { cache: 'no-store', ...(options || {}) });
+  const data = await res.json().catch(() => ({ ok: false, error: tr('invalidJson') }));
+  if (!res.ok) throw new Error(data.error || data.detail || `HTTP ${res.status}`);
+  return data;
+}
+
+function showMsg(id, text, ok = true) {
+  const el = qs(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = `msg show ${ok ? 'ok' : 'err'}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = 'msg'; }, 3000);
+}
+
+function switchPage(page, btn) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  qs(`page-${page}`)?.classList.add('active');
+  document.querySelectorAll('.settings-nav-btn').forEach(el => el.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelector('.main')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateHeaderClock() {
+  const locale = currentLang() === 'he' ? 'he-IL' : 'en-US';
+  const now = new Date();
+  qs('currentClock').textContent = now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  qs('currentDate').textContent = now.toLocaleDateString(locale, { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function applyTheme(theme) {
+  document.body.classList.toggle('light', theme === 'light');
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLang();
+  document.documentElement.dir = currentLang() === 'he' ? 'rtl' : 'ltr';
+  document.title = tr('pageTitle');
+
+  qs('btnBackHome').textContent = tr('backHome');
+  const navKeys = { general: 'navGeneral', networks: 'navNetworks', manual: 'navManual', appearance: 'navAppearance', language: 'navLanguage', system: 'navSystem' };
+  document.querySelectorAll('.settings-nav-btn').forEach(btn => {
+    btn.textContent = tr(navKeys[btn.dataset.page] || '');
+  });
+
+  const version = qs('versionText').textContent || '5.0.0';
+  document.querySelector('.brand-sub').textContent = tr('brandSub', { version });
+  document.querySelector('.hero-sub').textContent = tr('heroSub');
+
+  const topButtons = document.querySelectorAll('.top-shell .actions .btn');
+  if (topButtons[0]) topButtons[0].textContent = tr('refreshBtn');
+  if (topButtons[1]) topButtons[1].textContent = tr('saveBtn');
+
+  const sideLabels = document.querySelectorAll('.sidebar-footer .info-card .k');
+  if (sideLabels[0]) sideLabels[0].textContent = tr('sidebarStatus');
+  if (sideLabels[1]) sideLabels[1].textContent = tr('sidebarNetworks');
+
+  const sectionTexts = {
+    general: ['generalTitle', 'generalDesc'],
+    networks: ['networksTitle', 'networksDesc'],
+    manual: ['manualTitle', 'manualDesc'],
+    appearance: ['appearanceTitle', 'appearanceDesc'],
+    language: ['languageTitle', 'languageDesc'],
+    system: ['systemTitle', 'systemDesc']
+  };
+  Object.entries(sectionTexts).forEach(([page, keys]) => {
+    const root = qs(`page-${page}`);
+    if (!root) return;
+    const title = root.querySelector('.panel-head h2');
+    const desc = root.querySelector('.panel-head p');
+    if (title) title.textContent = tr(keys[0]);
+    if (desc) desc.textContent = tr(keys[1]);
+  });
+
+  const labels = {
+    setRefresh: 'refreshSeconds',
+    setView: 'defaultView',
+    setStyle: 'dashboardStyle',
+    setDiscoveryMode: 'discoveryMode',
+    networkCidrInput: 'networkCidr',
+    networkAliasInput: 'networkAlias',
+    manualIp: 'ipAddress',
+    manualName: 'name',
+    manualCategory: 'category',
+    manualNotes: 'notes',
+    setTheme: 'theme',
+    setStatusAnimation: 'statusAnimation',
+    setLanguage: 'language'
+  };
+  Object.entries(labels).forEach(([id, key]) => {
+    const label = qs(id)?.closest('.field')?.querySelector('label');
+    if (label) label.textContent = tr(key);
+  });
+  const protocolTitle = qs('proto_ping')?.closest('.field')?.querySelector('label');
+  if (protocolTitle) protocolTitle.textContent = tr('discoveryProtocols');
+
+  const networkButtons = document.querySelectorAll('#page-networks .settings-actions .btn');
+  if (networkButtons[0]) networkButtons[0].textContent = tr('addNetwork');
+  if (networkButtons[1]) networkButtons[1].textContent = tr('saveAndScan');
+  if (networkButtons[2]) networkButtons[2].textContent = tr('saveNetworks');
+  const generalSave = document.querySelector('#page-general .settings-actions .btn.primary');
+  if (generalSave) generalSave.textContent = tr('saveGeneral');
+  const manualSave = document.querySelector('#page-manual .settings-actions .btn.green');
+  if (manualSave) manualSave.textContent = tr('addDevice');
+  const appearanceSave = document.querySelector('#page-appearance .settings-actions .btn.primary');
+  if (appearanceSave) appearanceSave.textContent = tr('saveAppearance');
+  const languageSave = document.querySelector('#page-language .settings-actions .btn.primary');
+  if (languageSave) languageSave.textContent = tr('saveLanguage');
+
+  const systemTitles = ['sysVersionLabel', 'sysDbLabel', 'sysNetworksLabel', 'sysScanModeLabel', 'sysScanStartedLabel', 'sysScanFinishedLabel'];
+  document.querySelectorAll('#page-system .item strong').forEach((el, idx) => {
+    el.textContent = tr(systemTitles[idx]);
+  });
+  const systemButtons = document.querySelectorAll('#page-system .settings-actions .btn');
+  if (systemButtons[0]) systemButtons[0].textContent = tr('exportDevices');
+  if (systemButtons[1]) systemButtons[1].textContent = tr('exportSettings');
+  if (systemButtons[2]) systemButtons[2].textContent = tr('importDevices');
+  if (systemButtons[3]) systemButtons[3].textContent = tr('importSettings');
+
+  if (qs('setView')?.options[0]) qs('setView').options[0].text = tr('optionTable');
+  if (qs('setView')?.options[1]) qs('setView').options[1].text = tr('optionGrid');
+  if (qs('setStyle')?.options[0]) qs('setStyle').options[0].text = tr('optionAdvanced');
+  if (qs('setStyle')?.options[1]) qs('setStyle').options[1].text = tr('optionCompact');
+  if (qs('setDiscoveryMode')?.options[0]) qs('setDiscoveryMode').options[0].text = tr('optionAutoManual');
+  if (qs('setDiscoveryMode')?.options[1]) qs('setDiscoveryMode').options[1].text = tr('optionManualOnly');
+  if (qs('setDiscoveryMode')?.options[2]) qs('setDiscoveryMode').options[2].text = tr('optionAutoOnly');
+  if (qs('setTheme')?.options[0]) qs('setTheme').options[0].text = tr('optionLight');
+  if (qs('setTheme')?.options[1]) qs('setTheme').options[1].text = tr('optionDark');
+  if (qs('setStatusAnimation')?.options[0]) qs('setStatusAnimation').options[0].text = tr('optionBlink');
+  if (qs('setStatusAnimation')?.options[1]) qs('setStatusAnimation').options[1].text = tr('optionStatic');
+
+  const protocolLabels = document.querySelectorAll('#page-general .quick-actions label');
+  if (protocolLabels[0]) protocolLabels[0].lastChild.textContent = ' Ping';
+  if (protocolLabels[1]) protocolLabels[1].lastChild.textContent = ' ARP';
+  if (protocolLabels[2]) protocolLabels[2].lastChild.textContent = ' DNS';
+  if (protocolLabels[3]) protocolLabels[3].lastChild.textContent = ` ${tr('protocolHost')}`;
+  if (protocolLabels[4]) protocolLabels[4].lastChild.textContent = ` ${tr('protocolVendor')}`;
+
+  qs('networkAliasInput').placeholder = tr('placeholderNetworkAlias');
+  qs('manualName').placeholder = tr('placeholderManualName');
+  qs('manualCategory').placeholder = tr('placeholderManualCategory');
+  qs('manualNotes').placeholder = tr('placeholderOptional');
+}
+
+function validCidr(value) {
+  const v = (value || '').trim();
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}$/.test(v)) return false;
+  const [ip, prefix] = v.split('/');
+  const octets = ip.split('.').map(Number);
+  return octets.length === 4 && octets.every(n => Number.isInteger(n) && n >= 0 && n <= 255) && Number(prefix) >= 0 && Number(prefix) <= 32;
+}
+
+function networkHostCount(cidr) {
+  const m = String(cidr || '').trim().match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d{1,2})$/);
+  if (!m) return 0;
+  const prefix = Number(m[5]);
+  const addresses = Math.pow(2, 32 - prefix);
+  return addresses <= 2 ? addresses : Math.max(0, addresses - 2);
+}
+
+function displayNetwork(cidr) {
+  const names = state.status?.network_names || {};
+  return (names[cidr] || '').trim() || cidr || '—';
+}
+
+function getNetworkStat(cidr) {
+  return (state.status?.network_stats || []).find(item => item.cidr === cidr) || null;
+}
+
+function renderNetworkManager() {
+  const mount = qs('networkManagerList');
+  const rows = state.networkDrafts || [];
+  if (!rows.length) {
+    mount.innerHTML = `<div class="empty">${tr('emptyNetworks')}</div>`;
+    return;
+  }
+  mount.innerHTML = rows.map((n, idx) => {
+    const stat = getNetworkStat(n.cidr) || {};
+    const devices = Number(stat.devices || 0);
+    const online = Number(stat.online || 0);
+    const fill = Math.min(100, Math.round((devices / Math.max(1, networkHostCount(n.cidr))) * 100));
+    return `<div class="network-row"><div class="meta"><div class="alias">${(n.alias || '').trim() || displayNetwork(n.cidr)}</div><div class="cidr">${n.cidr}</div><div class="statline"><span class="metric">${tr('range')}: ${networkHostCount(n.cidr)}</span><span class="metric">${tr('devices')}: ${devices}</span><span class="metric">${tr('online')}: ${online}</span></div><div class="meter"><div class="meter-fill" style="width:${fill}%"></div></div></div><div class="meta"><small>${tr('alias')}</small><strong>${(n.alias || '').trim() || '—'}</strong></div><div class="actions"><button class="btn" onclick="editNetworkDraft(${idx})">${tr('edit')}</button><button class="btn" onclick="removeNetworkDraft(${idx})">${tr('remove')}</button></div></div>`;
+  }).join('');
+}
+
+function addNetworkDraft() {
+  const cidr = (qs('networkCidrInput').value || '').trim();
+  const alias = (qs('networkAliasInput').value || '').trim();
+  if (!validCidr(cidr)) return showMsg('settingsMessage', tr('invalidCidr'), false);
+  const idx = (state.networkDrafts || []).findIndex(x => x.cidr === cidr);
+  if (idx >= 0) state.networkDrafts[idx].alias = alias;
+  else state.networkDrafts.push({ cidr, alias });
+  qs('networkCidrInput').value = '';
+  qs('networkAliasInput').value = '';
+  renderNetworkManager();
+  showMsg('settingsMessage', tr('networkDraftAdded'));
+}
+
+function editNetworkDraft(idx) {
+  const item = (state.networkDrafts || [])[idx];
+  if (!item) return;
+  qs('networkCidrInput').value = item.cidr || '';
+  qs('networkAliasInput').value = item.alias || '';
+  state.networkDrafts.splice(idx, 1);
+  renderNetworkManager();
+}
+
+function removeNetworkDraft(idx) {
+  state.networkDrafts.splice(idx, 1);
+  renderNetworkManager();
+}
+
+async function saveNetworksOnly() {
+  const names = {};
+  (state.networkDrafts || []).forEach(item => {
+    if ((item.alias || '').trim()) names[item.cidr] = item.alias.trim();
+  });
+  const result = await api('./api/save_networks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      networks: (state.networkDrafts || []).map(item => item.cidr).filter(Boolean),
+      network_names: names
+    })
+  });
+  state.networkDrafts = (result.networks || []).map(n => ({ cidr: n, alias: ((result.network_names || {})[n] || '').trim() }));
+  showMsg('settingsMessage', tr('networksSaved', { count: (result.networks || []).length }));
+  await refreshData();
+}
+
+async function saveNetworksAndScan() {
+  await saveNetworksOnly();
+  await api('./api/scan?mode=manual');
+  showMsg('settingsMessage', tr('scanStarted'));
+  await refreshData();
+}
+
+async function addManual() {
+  const ip = qs('manualIp').value.trim();
+  if (!ip) return showMsg('manualMessage', tr('ipRequired'), false);
+  const name = encodeURIComponent(qs('manualName').value.trim());
+  const category = encodeURIComponent(qs('manualCategory').value.trim());
+  const notes = encodeURIComponent(qs('manualNotes').value.trim());
+  await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`);
+  qs('manualIp').value = '';
+  qs('manualName').value = '';
+  qs('manualCategory').value = '';
+  qs('manualNotes').value = '';
+  showMsg('manualMessage', tr('deviceAdded'));
+  await refreshData();
+}
+
+async function saveSettings() {
+  const protocols = ['ping', 'arp', 'dns', 'special', 'vendor'].filter(p => qs(`proto_${p}`)?.checked);
+  const names = {};
+  (state.networkDrafts || []).forEach(item => {
+    if ((item.alias || '').trim()) names[item.cidr] = item.alias.trim();
+  });
+  await api('./api/save_settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      auto_refresh: qs('setRefresh').value || 30,
+      default_view: qs('setView').value,
+      dashboard_style: qs('setStyle').value,
+      theme: qs('setTheme').value,
+      status_animation: qs('setStatusAnimation').value,
+      language: qs('setLanguage').value,
+      discovery_mode: qs('setDiscoveryMode').value,
+      discovery_protocols: protocols,
+      networks: (state.networkDrafts || []).map(item => item.cidr).filter(Boolean),
+      network_names: names
+    })
+  });
+  state.settings.language = qs('setLanguage').value;
+  applyTheme(qs('setTheme').value);
+  applyTranslations();
+  showMsg('settingsMessage', tr('settingsSaved'));
+  await refreshData();
+}
+
+function triggerImportDevices() {
+  qs('importDevicesInput')?.click();
+}
+
+function triggerImportSettings() {
+  qs('importSettingsInput')?.click();
+}
+
+async function handleImportDevices(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const result = await api('./api/import/devices', { method: 'POST', body: form });
+    showMsg('systemMessage', tr('importedDevices', { count: Number(result.imported || 0) }));
+  } catch (err) {
+    showMsg('systemMessage', String(err.message || err), false);
+  } finally {
+    event.target.value = '';
+    await refreshData();
+  }
+}
+
+async function handleImportSettings(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const result = await api('./api/import/settings', { method: 'POST', body: form });
+    showMsg('systemMessage', tr('importedNetworks', { count: (result.networks || []).length }));
+  } catch (err) {
+    showMsg('systemMessage', String(err.message || err), false);
+  } finally {
+    event.target.value = '';
+    await refreshData();
+  }
+}
+
+function scanSummaryText(scan) {
+  if (!scan) return tr('idle');
+  const rawMode = scan.running ? 'running' : (scan.last_mode === 'idle' ? 'idle' : (scan.last_mode || 'idle'));
+  const base = rawMode === 'running' ? tr('running') : rawMode === 'idle' ? tr('idle') : rawMode;
+  const targets = Number(scan.target_count || 0);
+  const networks = Array.isArray(scan.target_networks) ? scan.target_networks.length : 0;
+  return (targets || networks) ? `${base} • ${targets || 0} ${tr('ipShort')} • ${networks || 0} ${tr('netShort')}` : base;
+}
+
+function workerSummaryText(workers) {
+  const monitor = workers?.monitor || {};
+  const critical = workers?.critical_monitor || {};
+  return `${tr('monitor')} ${monitor.alive ? tr('alive') : tr('stuck')} • ${tr('critical')} ${critical.alive ? tr('alive') : tr('stuck')}`;
+}
+
+function renderSettingsData(status, settingsData) {
+  state.status = status;
+  state.settings = settingsData.settings || {};
+  state.dbPath = settingsData.db_path || '';
+  qs('versionText').textContent = status.version || '5.0.0';
+  qs('setRefresh').value = state.settings.auto_refresh || 30;
+  qs('setView').value = state.settings.default_view || 'table';
+  qs('setStyle').value = state.settings.dashboard_style || 'advanced';
+  qs('setTheme').value = state.settings.theme || 'light';
+  qs('setStatusAnimation').value = state.settings.status_animation || 'blink';
+  qs('setLanguage').value = state.settings.language || 'he';
+  qs('setDiscoveryMode').value = settingsData.discovery_mode || state.settings.discovery_mode || 'auto_manual';
+  ['ping', 'arp', 'dns', 'special', 'vendor'].forEach(p => {
+    const el = qs(`proto_${p}`);
+    if (el) el.checked = (settingsData.discovery_protocols || []).includes(p);
+  });
+  state.networkDrafts = (settingsData.networks || []).map(n => ({ cidr: n, alias: ((settingsData.network_names || {})[n] || '').trim() }));
+  applyTheme(state.settings.theme || 'light');
+  applyTranslations();
+  renderNetworkManager();
+  qs('appearanceCurrent').textContent = tr('activeTheme', {
+    theme: state.settings.theme === 'dark' ? tr('themeDarkValue') : tr('themeLightValue')
+  });
+  qs('sideScanState').textContent = workerSummaryText(status.workers || {});
+  qs('sideNetworksCount').textContent = (status.networks || []).length;
+  qs('dbPath').textContent = `DB: ${state.dbPath || '/data/homeii/homeii.db'}`;
+  qs('sysVersion').textContent = status.version || '—';
+  qs('sysDb').textContent = state.dbPath || '/data/homeii/homeii.db';
+  qs('sysNetworks').textContent = (settingsData.networks || []).map(n => displayNetwork(n)).join(', ') || '—';
+  qs('sysScanMode').textContent = `${scanSummaryText(status.scan)} • ${workerSummaryText(status.workers || {})}`;
+  qs('sysScanStarted').textContent = fmtTs(status.scan?.last_started);
+  qs('sysScanFinished').textContent = fmtTs(status.scan?.last_finished);
+}
+
+async function refreshData() {
+  const [status, settingsData] = await Promise.all([api('./api/status'), api('./api/settings')]);
+  renderSettingsData(status, settingsData);
+  qs('lastRefreshText').textContent = tr('lastRefresh', {
+    time: new Date().toLocaleTimeString(currentLang() === 'he' ? 'he-IL' : 'en-US')
+  });
+  updateHeaderClock();
+}
+
+window.addEventListener('load', async () => {
+  updateHeaderClock();
+  window.setInterval(updateHeaderClock, 1000);
+  qs('setLanguage')?.addEventListener('change', () => {
+    state.settings.language = qs('setLanguage').value;
+    applyTranslations();
+    renderNetworkManager();
+    updateHeaderClock();
+  });
+  try {
+    await refreshData();
+  } catch (e) {
+    console.error(e);
+    alert(tr('loadFailed'));
+  }
+});
 </script>
 </body>
 </html>
+
