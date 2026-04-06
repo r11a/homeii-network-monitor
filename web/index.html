@@ -81,21 +81,28 @@ body.dark{
 .health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(53,211,153,.65)}
 .main{height:100vh;overflow-y:auto;overflow-x:hidden;padding:20px}
-.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start;margin-bottom:14px}
-.hero,.actionbar,.kpi,.panel,.toolbar,.tablewrap,.empty,.item,.msg{
+.top{display:block;margin-bottom:14px}
+.top-shell,.hero,.actionbar,.kpi,.panel,.toolbar,.tablewrap,.empty,.item,.msg{
   border:1px solid var(--line);
   background:
     linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01)),
     linear-gradient(180deg,var(--card),var(--card2));
   box-shadow:var(--shadow)
 }
-.hero,.actionbar,.panel,.toolbar,.tablewrap{border-radius:22px}
-.hero{padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.12),transparent 35%,rgba(34,211,238,.10));pointer-events:none}
+.top-shell,.hero,.actionbar,.panel,.toolbar,.tablewrap{border-radius:22px}
+.top-shell{padding:18px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;position:relative;overflow:hidden}
+.top-shell::before,.hero::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.12),transparent 35%,rgba(34,211,238,.10));pointer-events:none}
+.hero{padding:0;display:grid;gap:4px;position:relative;overflow:visible;border:0;background:transparent;box-shadow:none}
 .hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.04em}
 .hero-sub{margin-top:6px;color:var(--muted);font-size:13px}
-.heroRight{font-size:28px;font-weight:800;letter-spacing:-.04em}
-.actionbar{padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.heroRight{display:grid;gap:4px;justify-items:end;text-align:left}
+.hero-clock{font-size:32px;font-weight:900;letter-spacing:-.04em;line-height:1}
+.hero-date{font-size:13px;color:var(--muted)}
+.hero-sync{font-size:12px;color:var(--muted)}
+.actionbar{padding:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;border:0;background:transparent;box-shadow:none}
+.actionbar .btn{padding:9px 12px;font-size:13px}
+.actionbar .btn.primary,.actionbar .btn.green{padding-inline:16px}
+.header-status{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .btn,input,select,textarea{
   border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);font:inherit
 }
@@ -106,7 +113,7 @@ body.dark{
 .btn.red{background:linear-gradient(135deg,var(--red),#e11d48);border:none;color:#fff;box-shadow:0 10px 20px rgba(251,113,133,.22)}
 .btn.small{padding:7px 10px;border-radius:12px;font-size:12px}
 .scanState,.mini{padding:8px 11px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.03)}
-.kpis{display:grid;grid-template-columns:1.6fr repeat(5,1fr);gap:12px;margin-bottom:14px}
+.kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .kpi{border-radius:20px;padding:16px 18px;cursor:pointer;position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;inset:auto 0 0 0;height:4px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
 .kpi.active{outline:2px solid rgba(91,140,255,.32)}
@@ -272,9 +279,8 @@ th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08
 .sidebar.settings-mode .settings-side-nav{display:grid}
 .sidebar.settings-mode .brand-sub::after{content:" • Settings"}
 .settings-topnote{margin-bottom:10px;color:var(--muted);font-size:13px}
-body.settings-mode .actionbar,
-body.settings-mode .kpis,
-body.settings-mode .top{display:none;}
+body.settings-mode .kpis{display:none;}
+body.settings-mode .top-shell{display:none;}
 body.settings-mode .main{padding-top:24px;}
 body.settings-mode .hero-sub{display:none;}
 
@@ -315,6 +321,7 @@ body:not(.dark) .nav-btn.active,body:not(.dark) .nav-btn:hover{
   background:linear-gradient(180deg,rgba(50,104,245,.18),rgba(24,185,214,.08));
   box-shadow:0 12px 28px rgba(50,104,245,.16);
 }
+body:not(.dark) .top-shell,
 body:not(.dark) .hero,
 body:not(.dark) .actionbar,
 body:not(.dark) .kpi,
@@ -364,8 +371,9 @@ body.viewer-mode #tab-alerts,
 body.viewer-mode #tab-settings{display:none !important}
 body.viewer-mode .main-nav{display:grid;grid-template-columns:1fr}
 body.viewer-mode .main-nav .nav-btn:not([data-tab="viewer"]):not(.viewer-admin-link){display:none}
-body.viewer-mode .top{grid-template-columns:1fr}
-body.viewer-mode .hero{padding:18px 22px}
+body.viewer-mode .top{display:block}
+body.viewer-mode .top-shell{grid-template-columns:1fr}
+body.viewer-mode .hero{padding:0}
 body.viewer-mode .hero-sub{display:block}
 body.viewer-mode .sidebar{gap:18px}
 .viewer-admin-link{display:none;text-decoration:none}
@@ -380,10 +388,10 @@ body.viewer-mode .viewer-admin-link{display:block}
 .modal.hidden{display:none}.modal{position:fixed;inset:0;z-index:2000}.modal-backdrop{position:absolute;inset:0;background:rgba(5,10,20,.45);backdrop-filter:blur(4px)}.modal-card{position:relative;max-width:760px;margin:8vh auto;background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:20px 22px;z-index:2}.modal-card input,.modal-card select,.modal-card textarea{background:var(--bg);color:var(--text);border:1px solid var(--line2)}.modal-card label,.modal-card small,.modal-card .muted{color:var(--muted)}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px}.msg.show{display:block}.msg.ok{background:rgba(78,212,138,.08);border-color:rgba(78,212,138,.24)}.msg.err{background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.24)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
 .empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted)}
-@media (max-width:1320px){.kpis{grid-template-columns:repeat(3,1fr)} .grid.two{grid-template-columns:1fr}}
+@media (max-width:1320px){.kpis{grid-template-columns:repeat(4,1fr)} .grid.two{grid-template-columns:1fr}.journal-strip{grid-template-columns:repeat(3,minmax(220px,1fr))}}
 @media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto;overflow:visible}.toolbar{grid-template-columns:1fr 1fr} .dashboard-card{grid-template-columns:1fr;direction:rtl}.d-actions{flex-wrap:wrap}}
-@media (max-width:980px){.viewer-grid,.alert-columns{grid-template-columns:1fr}}
-@media (max-width:760px){.top{grid-template-columns:1fr}.kpis,.toolbar,.dashboard-cards,.viewer-summary{grid-template-columns:1fr}}
+@media (max-width:980px){.viewer-grid,.alert-columns,.top-shell{grid-template-columns:1fr}.heroRight{justify-items:start;text-align:right}.actionbar{justify-content:flex-start}.journal-strip{grid-template-columns:repeat(2,minmax(220px,1fr))}}
+@media (max-width:760px){.kpis,.toolbar,.dashboard-cards,.viewer-summary{grid-template-columns:1fr}.journal-strip{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -422,18 +430,24 @@ body.viewer-mode .viewer-admin-link{display:block}
 
   <main class="main">
     <div class="top">
-      <div class="hero">
-        <div>
-          <h1 class="hero-title" id="heroTitle">HOMEii Network Monitor</h1>
-          <div class="hero-sub" id="heroSub">v5.0.0 • Devices Management Pro • Sorting • Bulk Actions</div>
+      <div class="top-shell">
+        <div class="heroRight">
+          <div class="hero-clock" id="currentClock">—</div>
+          <div class="hero-date" id="currentDate">—</div>
+          <div class="hero-sync" id="lastRefreshText">—</div>
         </div>
-        <div class="heroRight"><span id="lastRefresh">—</span></div>
-      </div>
-      <div class="actionbar">
-        <button class="btn primary" onclick="runScan()" id="btnScan">סריקה עכשיו</button>
-        <button class="btn green" onclick="acceptAll()" id="btnAcceptAll">אשר את כל החדשים</button>
-        <button class="btn" onclick="refreshAll()" id="btnRefresh">רענון</button>
-        <span class="scanState" id="scanState">סטטוס סריקה: —</span>
+        <div class="hero">
+          <h1 class="hero-title" id="heroTitle">HOMEii Network Monitor</h1>
+          <div class="hero-sub" id="heroSub">v5.0.0 • מכשירים שדורשים תשומת לב • ניטור בזמן אמת</div>
+        </div>
+        <div class="actionbar">
+          <button class="btn primary" onclick="runScan()" id="btnScan">סריקה עכשיו</button>
+          <button class="btn green" onclick="acceptAll()" id="btnAcceptAll">אשר את כל החדשים</button>
+          <button class="btn" onclick="manualRefresh()" id="btnRefresh">רענון</button>
+          <div class="header-status">
+            <span class="scanState" id="scanState">סטטוס סריקה: —</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -441,14 +455,20 @@ body.viewer-mode .viewer-admin-link{display:block}
       <div class="kpi primary-alert" data-filter="offline" onclick="applyKpiFilter('offline')"><div class="label" id="kpiOfflineLabel">Offline Devices</div><div class="value offline" id="sOffline">—</div></div>
       <div class="kpi" data-filter="online" onclick="applyKpiFilter('online')"><div class="label" id="kpiOnlineLabel">Online</div><div class="value online" id="sOnline">—</div></div>
       <div class="kpi" data-filter="" onclick="applyKpiFilter('')"><div class="label" id="kpiTotalLabel">Total</div><div class="value" id="sTotal">—</div></div>
+      <div class="kpi" data-filter="unstable" onclick="applyKpiFilter('unstable')"><div class="label" id="kpiUnstableLabel">Unstable</div><div class="value alerts" id="sUnstable">—</div></div>
       <div class="kpi" data-filter="new" onclick="applyKpiFilter('new')"><div class="label" id="kpiNewLabel">New</div><div class="value new" id="sNew">—</div></div>
       <div class="kpi" data-filter="critical" onclick="applyKpiFilter('critical')"><div class="label" id="kpiCriticalLabel">Critical</div><div class="value alerts" id="sCritical">—</div></div>
       <div class="kpi" data-filter="pinned" onclick="applyKpiFilter('pinned')"><div class="label" id="kpiPinnedLabel">Pinned</div><div class="value pinned" id="sPinned">—</div></div>
     </div>
 
     <section id="tab-dashboard" class="section active">
-      <div class="grid two">
-        <div class="grid">
+      <div class="dashboard-flow">
+        <div class="panel compact-panel">
+          <div class="panel-head"><div><h2 id="eventsRecentTitle">Recent events</h2><p id="dashboardJournalSub">3-5 האירועים החשובים והחדשים ביותר ברשת.</p></div></div>
+          <div id="dashboardJournal" class="journal-strip"></div>
+        </div>
+        <div class="grid two">
+          <div class="grid">
           <div class="panel compact-panel">
             <div class="panel-head"><div><h2 id="attentionTitle">דורשים טיפול</h2><p id="attentionSub">מנותקים, קריטיים או חדשים שמומלץ לבדוק.</p></div></div>
             <div id="dashboardPriority" class="smart-list compact-scroll short"></div>
@@ -457,24 +477,17 @@ body.viewer-mode .viewer-admin-link{display:block}
             <div class="panel-head"><div><h2 id="dashboardPulseTitle">Network Pulse</h2><p id="dashboardPulseSub">Recent changes and live network composition.</p></div></div>
             <div id="dashboardPulse" class="viz-grid"></div>
           </div>
-          <div class="panel compact-panel">
-            <div class="panel-head"><div><h2 id="recentDevicesTitle">מכשירים אחרונים</h2><p id="recentDevicesSub">התקנים פעילים ושינויים אחרונים ברשת.</p></div></div>
-            <div id="dashboardDevices" class="dashboard-cards compact-cards"></div>
           </div>
-        </div>
-        <div class="grid">
-          <div class="panel compact-panel">
-            <div class="panel-head"><div><h2 id="alertsOpenTitle">Open alerts</h2></div></div>
-            <div id="dashboardAlerts" class="alert-list compact-scroll slim"></div>
-          </div>
-          <div class="panel compact-panel">
-            <div class="panel-head"><div><h2 id="eventsRecentTitle">Recent events</h2></div></div>
-            <div id="dashboardEvents" class="event-timeline compact-scroll slim"></div>
-          </div>
+          <div class="grid">
+            <div class="panel compact-panel">
+              <div class="panel-head"><div><h2 id="recentDevicesTitle">מכשירים אחרונים</h2><p id="recentDevicesSub">התקנים פעילים ושינויים אחרונים ברשת.</p></div></div>
+              <div id="dashboardDevices" class="dashboard-cards compact-cards"></div>
+            </div>
           <div class="panel compact-panel">
             <div class="panel-head"><div><h2 id="networkSummaryTitle">סיכום רשתות</h2><p id="networkSummarySub">כמות התקנים לפי רשת וסטטוס.</p></div></div>
             <div id="dashboardNetworks" class="smart-list compact-scroll short"></div>
           </div>
+        </div>
         </div>
       </div>
     </section>
@@ -703,8 +716,8 @@ const directViewerMode=(normalizedPath.endsWith('/viewer')||normalizedPath.endsW
 const I18N={
   he:{
     brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",viewerAdmin:"ממשק מלא",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
-    scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",critical:"קריטיים",pinned:"נעוצים",
-    dashboardTitle:"מכשירים שדורשים תשומת לב",dashboardSub:"דשבורד חכם עם דגש על מנותקים, קריטיים ושינויים אחרונים.",viewerTitle:"Viewer",viewerSub:"תצוגה חיה לקריאה בלבד של מצב הרשת.",viewerReadonly:"לצפייה בלבד",viewerSummaryTitle:"מצב חי",viewerSummarySub:"סיכום מהיר של מצב הרשת ללא פעולות עריכה.",viewerFocusTitle:"תצוגת צפייה",viewerFocusSub:"בחר סיכום למעלה כדי להציג רק את מה שמעניין אותך, בלי לעבור דף.",viewerAttentionTitle:"מנותקים ולא יציבים",viewerAttentionSub:"התקנים שמצריכים תשומת לב מיידית.",viewerEventsTitle:"שינויים חיים",viewerEventsSub:"נפילות, חזרות, חוסר יציבות וגילוי חדש.",viewerNewTitle:"מכשירים חדשים",viewerNewSub:"התקנים שהתגלו וממתינים לבדיקה.",recentDevicesTitle:"מכשירים אחרונים",recentDevicesSub:"התקנים פעילים ושינויים אחרונים ברשת.",networkSummaryTitle:"סיכום רשתות",networkSummarySub:"כמות התקנים לפי רשת וסטטוס.",attentionTitle:"דורשים טיפול",attentionSub:"מנותקים, קריטיים או חדשים שמומלץ לבדוק.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית. לחיצה על שם ההתקן פותחת את כל הפרטים והפעולות.",
+    scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון נתונים",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",unstableDevices:"לא יציבים",critical:"קריטיים",pinned:"נעוצים",
+    dashboardTitle:"מכשירים שדורשים תשומת לב",dashboardSub:"דשבורד חכם עם דגש על מנותקים, קריטיים ושינויים אחרונים.",dashboardJournalSub:"3-5 האירועים החשובים והחדשים ביותר ברשת.",viewerTitle:"Viewer",viewerSub:"תצוגה חיה לקריאה בלבד של מצב הרשת.",viewerReadonly:"לצפייה בלבד",viewerSummaryTitle:"מצב חי",viewerSummarySub:"סיכום מהיר של מצב הרשת ללא פעולות עריכה.",viewerFocusTitle:"תצוגת צפייה",viewerFocusSub:"בחר סיכום למעלה כדי להציג רק את מה שמעניין אותך, בלי לעבור דף.",viewerAttentionTitle:"מנותקים ולא יציבים",viewerAttentionSub:"התקנים שמצריכים תשומת לב מיידית.",viewerEventsTitle:"שינויים חיים",viewerEventsSub:"נפילות, חזרות, חוסר יציבות וגילוי חדש.",viewerNewTitle:"מכשירים חדשים",viewerNewSub:"התקנים שהתגלו וממתינים לבדיקה.",recentDevicesTitle:"מכשירים אחרונים",recentDevicesSub:"התקנים פעילים ושינויים אחרונים ברשת.",networkSummaryTitle:"סיכום רשתות",networkSummarySub:"כמות התקנים לפי רשת וסטטוס.",attentionTitle:"דורשים טיפול",attentionSub:"מנותקים, קריטיים או חדשים שמומלץ לבדוק.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית. לחיצה על שם ההתקן פותחת את כל הפרטים והפעולות.",
     search:"חיפוש",status:"סטטוס",category:"קטגוריה",networkFilter:"רשת",vendorFilter:"יצרן",sortBy:"מיון",bulkActions:"פעולות מרובות",selected:"נבחרו",bulkPin:"נעץ מסומנים",bulkUnpin:"בטל נעיצה",bulkCritical:"סמן כקריטי",bulkUncritical:"בטל סימון קריטי",bulkDelete:"מחק מסומנים",sortName:"שם",sortIp:"IP",sortStatus:"סטטוס",sortVendor:"יצרן",sortLastSeen:"נראה לאחרונה",networkNames:"שמות רשתות",view:"תצוגה",all:"הכל",clearFilters:"נקה סינונים",rescan:"סריקה מחדש",alertsTitle:"התראות",eventsTitle:"אירועים",openAlerts:"התראות פתוחות",recentEvents:"אירועים אחרונים",
     general:"כללי",generalSub:"הגדרות כלליות של הממשק ותצוגת ברירת מחדל.",language:"שפה",languageSub:"בחר שפת ממשק לכל המערכת.",theme:"ערכת נושא",autoRefresh:"רענון אוטומטי (שניות)",defaultView:"תצוגת ברירת מחדל",
     networks:"רשתות",networksSub:"הגדר את כל טווחי הרשת שברצונך לסרוק.",manualDevice:"התקן ידני",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"שם",manualCategory:"קטגוריה",manualNotes:"הערות",addDevice:"הוסף התקן",assignedNetwork:"שיוך לרשת",flags:"דגלים",save:"שמור",close:"סגור",editDeviceTitle:"עריכת התקן",appearancePreview:"תצוגה פעילה",activeTheme:"ערכת נושא פעילה",runScanNow:"שמור והפעל סריקה",
@@ -712,13 +725,13 @@ const I18N={
     statusText:"סטטוס",networksText:"רשתות",discoveryMode:"מצב גילוי",protocols:"פרוטוקולי גילוי",modeAutoManual:"אוטומטי + ידני",modeManualOnly:"ידני בלבד",modeAutoOnly:"אוטומטי בלבד",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"זיהוי שרת/שער",protoVendor:"זיהוי יצרן",scanStarted:"הסריקה התחילה",deviceAdded:"התקן נוסף",deviceApproved:"ההתקן אושר",allApproved:"כל ההתקנים החדשים אושרו",settingsSaved:"ההגדרות נשמרו",networksSaved:"הרשתות נשמרו",
     lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"פינג",pin:"נעץ",unpin:"בטל נעיצה",edit:"ערוך",remove:"הסר",accept:"אשר",addShort:"הוסף",criticalMark:"סמן קריטי",criticalUnmark:"בטל קריטי",yes:"כן",manualIp:"כתובת IP",
     status_online:"מחובר",status_offline:"מנותק",status_unstable:"לא יציב",status_new:"חדש",status_unknown:"לא ידוע",ipRequired:"חובה להזין כתובת IP",running:"רץ",idle:"מוכן",
-    noDevices:"לא נמצאו התקנים בתוצאות הסינון",noAlerts:"אין התראות פתוחות כרגע",noAlertsHint:"התראות נפתחות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",noEvents:"אין אירועים",noDashboardDevices:"אין מכשירים להצגה",noAttentionDevices:"אין התקנים שדורשים טיפול כרגע",noNetworkSummary:"אין נתוני רשת להצגה",noViewerItems:"אין כרגע פריטים להצגה",viewerFilterAll:"כל המכשירים",viewerFilterOnline:"מחוברים",viewerFilterOffline:"מנותקים",viewerFilterNew:"חדשים",viewerFilterUnstable:"לא יציבים",viewerFilterAlerts:"עם התראות פתוחות",alertsSub:"כאן יופיעו התראות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",eventsSub:"כאן יופיעו כל אירועי המערכת והשינויים האחרונים, גם אם אין התראות פתוחות.",resolve:"סגור",nameCol:"שם",ipCol:"IP",statusCol:"סטטוס",categoryCol:"קטגוריה",vendorCol:"יצרן",macCol:"MAC",lastSeenCol:"נראה לאחרונה",actionsCol:"פעולות",importDevicesDone:"ייבוא מכשירים הושלם",importSettingsDone:"ייבוא הגדרות הושלם",importFailed:"הייבוא נכשל",
+    noDevices:"לא נמצאו התקנים בתוצאות הסינון",noAlerts:"אין התראות פתוחות כרגע",noAlertsHint:"התראות נפתחות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",noEvents:"אין אירועים",noDashboardDevices:"אין מכשירים להצגה",noAttentionDevices:"אין התקנים שדורשים טיפול כרגע",noNetworkSummary:"אין נתוני רשת להצגה",noViewerItems:"אין כרגע פריטים להצגה",viewerFilterAll:"כל המכשירים",viewerFilterOnline:"מחוברים",viewerFilterOffline:"מנותקים",viewerFilterNew:"חדשים",viewerFilterUnstable:"לא יציבים",viewerFilterAlerts:"עם התראות פתוחות",alertsSub:"כאן יופיעו התראות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",eventsSub:"כאן יופיעו כל אירועי המערכת והשינויים האחרונים, גם אם אין התראות פתוחות.",resolve:"סגור",nameCol:"שם",ipCol:"IP",statusCol:"סטטוס",categoryCol:"קטגוריה",vendorCol:"יצרן",macCol:"MAC",lastSeenCol:"נראה לאחרונה",actionsCol:"פעולות",importDevicesDone:"ייבוא מכשירים הושלם",importSettingsDone:"ייבוא הגדרות הושלם",importFailed:"הייבוא נכשל",lastSync:"סנכרון אחרון",refreshedNow:"הנתונים רועננו",
     version:"גרסה",db:"מסד נתונים",scanMode:"מצב סריקה",lastScanStarted:"סריקה אחרונה התחילה",lastScanFinished:"סריקה אחרונה הסתיימה",light:"בהיר",dark:"כהה",table:"טבלה",grid:"כרטיסים",advanced:"מתקדם",compact:"קומפקטי",optional:"אופציונלי",severity:"חומרה",updatedNow:"עודכן",networkCol:"רשת",details:"פרטים",alertSearch:"חיפוש בהתראות",eventSearch:"חיפוש באירועים",systemEvent:"אירוע מערכת",dbHealth:"מצב מסד הנתונים",scanSummary:"סיכום סריקה",productPolish:"ליטוש מוצר",sysVersionLabel:"גרסת מערכת",sysDbLabel:"מסד נתונים פעיל",sysNetworksLabel:"רשתות מנוטרות",sysScanModeLabel:"מצב סריקה נוכחי",sysScanStartedLabel:"זמן התחלת הסריקה האחרונה",sysScanFinishedLabel:"זמן סיום הסריקה האחרונה",networkNamesHint:"אם יש שם רשת, הוא יוצג בממשק במקום ה-CIDR",networkEditorTitle:"שיוך שמות לרשתות",networkManagerHint:"הוסף טווח רשת וכינוי באותה שורה. ניתן גם לערוך או למחוק לפני השמירה.",networkCidr:"טווח רשת (CIDR)",networkAlias:"כינוי רשת",addNetwork:"הוסף רשת",edit:"ערוך",delete:"מחק",saveNetworksOnly:"שמור רשתות",networkEmpty:"עדיין לא הוגדרו רשתות",settingsHelperNote:"שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים",saveAppearance:"שמור מראה"
   },
   en:{
     brand:"HOMEii Network",dashboard:"Dashboard",viewer:"Viewer",devices:"Devices",alerts:"Alerts",settings:"Settings",viewerAdmin:"Full app",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
-    scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",critical:"Critical",pinned:"Pinned",
-    dashboardTitle:"Devices needing attention",dashboardSub:"Smart dashboard focused on offline, critical and recent changes.",viewerTitle:"Viewer",viewerSub:"Read-only live overview of the network state.",viewerReadonly:"Read only",viewerSummaryTitle:"Live overview",viewerSummarySub:"Quick status summary without edit actions.",viewerFocusTitle:"Watch panel",viewerFocusSub:"Use the summary cards to filter what you watch without leaving this page.",viewerAttentionTitle:"Offline and unstable",viewerAttentionSub:"Devices that need immediate attention.",viewerEventsTitle:"Live changes",viewerEventsSub:"Down, back online, unstable and new-device activity.",viewerNewTitle:"New devices",viewerNewSub:"Recently discovered devices waiting for review.",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",devicesTitle:"Devices",devicesSub:"Compact table. Click the device name to open full details and actions.",
+    scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh data",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",unstableDevices:"Unstable",critical:"Critical",pinned:"Pinned",
+    dashboardTitle:"Devices needing attention",dashboardSub:"Smart dashboard focused on offline, critical and recent changes.",dashboardJournalSub:"The 3-5 most important and recent network events.",viewerTitle:"Viewer",viewerSub:"Read-only live overview of the network state.",viewerReadonly:"Read only",viewerSummaryTitle:"Live overview",viewerSummarySub:"Quick status summary without edit actions.",viewerFocusTitle:"Watch panel",viewerFocusSub:"Use the summary cards to filter what you watch without leaving this page.",viewerAttentionTitle:"Offline and unstable",viewerAttentionSub:"Devices that need immediate attention.",viewerEventsTitle:"Live changes",viewerEventsSub:"Down, back online, unstable and new-device activity.",viewerNewTitle:"New devices",viewerNewSub:"Recently discovered devices waiting for review.",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",devicesTitle:"Devices",devicesSub:"Compact table. Click the device name to open full details and actions.",
     search:"Search",status:"Status",category:"Category",networkFilter:"Network",vendorFilter:"Vendor",sortBy:"Sort by",bulkActions:"Bulk actions",selected:"selected",bulkPin:"Pin selected",bulkUnpin:"Unpin selected",bulkCritical:"Mark critical",bulkUncritical:"Unmark critical",bulkDelete:"Delete selected",sortName:"Name",sortIp:"IP",sortStatus:"Status",sortVendor:"Vendor",sortLastSeen:"Last seen",networkNames:"Network Names",view:"View",all:"All",clearFilters:"Clear filters",rescan:"Rescan",alertsTitle:"Alerts",eventsTitle:"Events",openAlerts:"Open alerts",recentEvents:"Recent events",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",
     general:"General",generalSub:"General interface settings and default view.",language:"Language",languageSub:"Choose the interface language for the whole system.",theme:"Theme",autoRefresh:"Auto refresh (seconds)",defaultView:"Default view",
     networks:"Networks",networksSub:"Configure all network ranges you want to scan.",manualDevice:"Manual Device",manualDeviceSub:"Add a device manually if it was not detected automatically.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"Add device",assignedNetwork:"Assigned Network",flags:"Flags",save:"Save",close:"Close",editDeviceTitle:"Edit Device",appearancePreview:"Active view",activeTheme:"Active theme",runScanNow:"Run scan now",
@@ -726,7 +739,7 @@ const I18N={
     statusText:"Status",networksText:"Networks",discoveryMode:"Discovery mode",protocols:"Discovery protocols",modeAutoManual:"Auto + Manual",modeManualOnly:"Manual only",modeAutoOnly:"Auto only",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"Host/Gateway",protoVendor:"Vendor lookup",scanStarted:"Scan started",deviceAdded:"Device added",deviceApproved:"Device accepted",allApproved:"All new devices accepted",settingsSaved:"Settings saved",networksSaved:"Networks saved",
     lastSeen:"Last seen",known:"Known",pending:"Pending",ping:"Ping",pin:"Pin",unpin:"Unpin",edit:"Edit",remove:"Remove",accept:"Accept",addShort:"Add",criticalMark:"Mark critical",criticalUnmark:"Unmark critical",yes:"Yes",manualIp:"IP Address",
     status_online:"Online",status_offline:"Offline",status_unstable:"Unstable",status_new:"New",status_unknown:"Unknown",ipRequired:"IP address is required",running:"Running",idle:"Idle",
-    noDevices:"No devices found",noAlerts:"No open alerts right now",noAlertsHint:"Alerts are created for new devices, offline devices, devices back online, and unstable devices.",noEvents:"No events",noDashboardDevices:"No devices to display",noAttentionDevices:"No devices need attention right now",noNetworkSummary:"No network summary available",noViewerItems:"Nothing to show right now",viewerFilterAll:"All devices",viewerFilterOnline:"Online",viewerFilterOffline:"Offline",viewerFilterNew:"New",viewerFilterUnstable:"Unstable",viewerFilterAlerts:"Open alerts",alertsSub:"This panel shows alerts for new, offline, recovered and unstable devices.",eventsSub:"This panel shows the raw event feed, even when there are no open alerts.",resolve:"Resolve",nameCol:"Name",ipCol:"IP",statusCol:"Status",categoryCol:"Category",vendorCol:"Vendor",macCol:"MAC",lastSeenCol:"Last seen",actionsCol:"Actions",importDevicesDone:"Device import completed",importSettingsDone:"Settings import completed",importFailed:"Import failed",
+    noDevices:"No devices found",noAlerts:"No open alerts right now",noAlertsHint:"Alerts are created for new devices, offline devices, devices back online, and unstable devices.",noEvents:"No events",noDashboardDevices:"No devices to display",noAttentionDevices:"No devices need attention right now",noNetworkSummary:"No network summary available",noViewerItems:"Nothing to show right now",viewerFilterAll:"All devices",viewerFilterOnline:"Online",viewerFilterOffline:"Offline",viewerFilterNew:"New",viewerFilterUnstable:"Unstable",viewerFilterAlerts:"Open alerts",alertsSub:"This panel shows alerts for new, offline, recovered and unstable devices.",eventsSub:"This panel shows the raw event feed, even when there are no open alerts.",resolve:"Resolve",nameCol:"Name",ipCol:"IP",statusCol:"Status",categoryCol:"Category",vendorCol:"Vendor",macCol:"MAC",lastSeenCol:"Last seen",actionsCol:"Actions",importDevicesDone:"Device import completed",importSettingsDone:"Settings import completed",importFailed:"Import failed",lastSync:"Last sync",refreshedNow:"Data refreshed",
     version:"Version",db:"DB",scanMode:"Scan mode",lastScanStarted:"Last scan started",lastScanFinished:"Last scan finished",light:"Light",dark:"Dark",table:"Table",grid:"Grid",advanced:"Advanced",compact:"Compact",optional:"Optional",severity:"Severity",updatedNow:"Updated",networkCol:"Network",details:"Details",alertSearch:"Search alerts",eventSearch:"Search events",systemEvent:"System event",dbHealth:"Database health",scanSummary:"Scan summary",productPolish:"Product polish",sysVersionLabel:"System version",sysDbLabel:"Active database",sysNetworksLabel:"Monitored networks",sysScanModeLabel:"Current scan mode",sysScanStartedLabel:"Last scan start time",sysScanFinishedLabel:"Last scan finish time",networkNamesHint:"If a network has a name, it will be shown in the UI instead of the CIDR",networkEditorTitle:"Network name mapping",networkManagerHint:"Add a network range and alias in one row. You can edit or remove entries before saving.",networkCidr:"Network range (CIDR)",networkAlias:"Network alias",addNetwork:"Add network",edit:"Edit",delete:"Delete",saveNetworksOnly:"Save networks only",networkEmpty:"No networks configured yet",settingsHelperNote:"Save each section after changes so the settings are written to the database",saveAppearance:"Save appearance"
   }
 };
@@ -752,6 +765,7 @@ function switchTab(tab,btn){
   }
   const targetUrl=directViewerMode&&tab==='viewer'?location.pathname:`#${tab}`;
   if((directViewerMode&&location.pathname!==targetUrl)||(!directViewerMode&&location.hash!==`#${tab}`)) history.replaceState(null,'',targetUrl);
+  document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'});
 }
 function setTheme(theme){document.body.classList.toggle('dark',theme==='dark')}
 function applyDashboardStyle(style){document.body.classList.toggle('compact-dashboard',style==='compact')}
@@ -763,6 +777,17 @@ function scheduleAutoRefresh(){
   state.refreshTimer=setInterval(()=>{ refreshAll().catch(err=>console.error(err)); }, seconds*1000);
 }
 function showMsg(id,text,ok=true){const el=qs(id); if(!el)return; el.textContent=text; el.className=`msg show ${ok?'ok':'err'}`; clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',2500)}
+function updateHeaderClock(){
+  const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US';
+  const now=new Date();
+  const clock=qs('currentClock'); if(clock) clock.textContent=now.toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const date=qs('currentDate'); if(date) date.textContent=now.toLocaleDateString(lang,{weekday:'short',year:'numeric',month:'2-digit',day:'2-digit'});
+}
+async function manualRefresh(){
+  await refreshAll();
+  const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US';
+  const sync=qs('lastRefreshText'); if(sync) sync.textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)} • ${tr('refreshedNow')}`;
+}
 function setSidebarMode(settingsMode){
   const sb=document.querySelector('.sidebar');
   if(sb) sb.classList.toggle('settings-mode', !!settingsMode);
@@ -778,6 +803,7 @@ function switchSettingsPage(page, btn){
   if(target) target.classList.add('active');
   document.querySelectorAll('.settings-nav-btn').forEach(el=>el.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'});
 }
 
 function applyTranslations(){
@@ -786,9 +812,10 @@ function applyTranslations(){
   setText('settingsBackBtn',tr('settingsBack')); setText('sideGeneral',tr('general')); setText('sideNetworks',tr('networks')); setText('sideManual',tr('manualDevice')); setText('sideAppearance',tr('appearance')); setText('sideLanguage',tr('language')); setText('sideSystem',tr('system'));
   setText('settingsTopNote',tr('settingsTopNote')); setText('settingsHelperNote',tr('settingsHelperNote'));
   setText('btnScan',tr('scan')); setText('btnAcceptAll',tr('acceptAll')); setText('btnRefresh',tr('refresh'));
-  setText('kpiOfflineLabel',tr('offlineDevices')); setText('kpiOnlineLabel',tr('online')); setText('kpiTotalLabel',tr('total')); setText('kpiNewLabel',tr('new')); setText('kpiCriticalLabel',tr('critical')); setText('kpiPinnedLabel',tr('pinned'));
+  setText('kpiOfflineLabel',tr('offlineDevices')); setText('kpiOnlineLabel',tr('online')); setText('kpiTotalLabel',tr('total')); setText('kpiUnstableLabel',tr('unstableDevices')); setText('kpiNewLabel',tr('new')); setText('kpiCriticalLabel',tr('critical')); setText('kpiPinnedLabel',tr('pinned'));
   setText('attentionTitle',tr('attentionTitle')); setText('attentionSub',tr('attentionSub')); setText('recentDevicesTitle',tr('recentDevicesTitle')); setText('recentDevicesSub',tr('recentDevicesSub')); setText('networkSummaryTitle',tr('networkSummaryTitle')); setText('networkSummarySub',tr('networkSummarySub')); setText('alertsOpenTitle',tr('openAlerts')); setText('eventsRecentTitle',tr('recentEvents'));
   setText('dashboardPulseTitle',(state.settings.language||'he')==='he'?'דופק הרשת':'Network Pulse'); setText('dashboardPulseSub',(state.settings.language||'he')==='he'?'מגמת שינויים אחרונה והרכב מצב המכשירים.':'Recent changes and live network composition.');
+  setText('dashboardJournalSub',tr('dashboardJournalSub'));
   setText('viewerTitle',tr('viewerTitle')); setText('viewerSub',tr('viewerSub')); setText('viewerReadonly',tr('viewerReadonly')); setText('viewerFocusTitle',tr('viewerFocusTitle')); setText('viewerFocusSub',tr('viewerFocusSub')); setText('viewerAttentionTitle',tr('viewerAttentionTitle')); setText('viewerAttentionSub',tr('viewerAttentionSub')); setText('viewerEventsTitle',tr('viewerEventsTitle')); setText('viewerEventsSub',tr('viewerEventsSub')); setText('viewerNewTitle',tr('viewerNewTitle')); setText('viewerNewSub',tr('viewerNewSub'));
   setText('devicesTitle',tr('devicesTitle')); setText('devicesSub',tr('devicesSub'));
   setText('lblSearch',tr('search')); setPlaceholder('searchText',(state.settings.language||'he')==='he'?'שם, IP, hostname, vendor, mac...':'Name, IP, hostname, vendor, mac...');
@@ -976,7 +1003,7 @@ function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().t
 function renderViewer(){const online=(state.devices||[]).filter(d=>d.status==='online'); const offline=(state.devices||[]).filter(d=>d.status==='offline'); const unstable=(state.devices||[]).filter(d=>d.status==='unstable'); const newcomers=(state.devices||[]).filter(d=>d.status==='new'); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const liveEvents=(state.events||[]).filter(e=>['device_offline','device_online','device_unstable','device_stable','new_device'].includes(e.event_type||'')).slice(0,10); const viewerStats=[{key:'all',label:tr('viewerFilterAll'),value:(state.devices||[]).length,color:'var(--text)'},{key:'online',label:tr('viewerFilterOnline'),value:online.length,color:'var(--green)'},{key:'offline',label:tr('viewerFilterOffline'),value:offline.length,color:'var(--red)'},{key:'new',label:tr('viewerFilterNew'),value:newcomers.length,color:'var(--blue)'},{key:'unstable',label:tr('viewerFilterUnstable'),value:unstable.length,color:'var(--orange)'},{key:'alerts',label:tr('viewerFilterAlerts'),value:openAlerts.length,color:'var(--gold)'}]; qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div></button>`).join(''); const focusDevices=viewerDevicesForFilter(); qs('viewerFilterTag').textContent=viewerFilterLabel(state.viewerFilter); qs('viewerDevices').innerHTML=focusDevices.length?focusDevices.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; const attention=[...offline,...unstable].sort((a,b)=>Number(b.last_seen||0)-Number(a.last_seen||0)).slice(0,12); qs('viewerAttention').innerHTML=attention.length?attention.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerEvents').innerHTML=liveEvents.length?liveEvents.map(viewerEventRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerNew').innerHTML=newcomers.length?newcomers.slice(0,12).map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`}
 function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
 function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setStatusAnimation').value=st.settings?.status_animation||'blink'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'—'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(`${scanSummaryText(st.scan)} • ${workerSummaryText(st.workers||state.status?.workers||{})}`)}
-async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'5.0.0'; qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardTitle')} • ${tr('devicesTitle')} • ${tr('settings')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${scanSummaryText(status.scan)} • ${workerSummaryText(status.workers||{})}`; qs('sideScanState').textContent=workerSummaryText(status.workers||{}); qs('sideNetworksCount').textContent=(status.networks||[]).length; qs('lastRefresh').textContent=`${new Date().toLocaleTimeString((state.settings.language||'he')==='he'?'he-IL':'en-US')}`; qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
+async function refreshAll(){const [status,devices,alerts,events,settings]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.dbPath=settings.db_path||''; applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); qs('versionText').textContent=status.version||'5.0.0'; qs('heroSub').textContent=`v${status.version||'5.0.0'} • ${tr('dashboardSub')}`; qs('sTotal').textContent=status.total??0; qs('sOnline').textContent=status.online??0; qs('sOffline').textContent=status.offline??0; qs('sUnstable').textContent=status.unstable??0; qs('sNew').textContent=status.new??0; qs('sCritical').textContent=status.critical??0; qs('sPinned').textContent=status.pinned??0; qs('scanState').textContent=`${tr('statusText')}: ${scanSummaryText(status.scan)} • ${workerSummaryText(status.workers||{})}`; qs('sideScanState').textContent=workerSummaryText(status.workers||{}); qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`}
 async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
 async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage',tr('deviceAdded')); await refreshAll()}
 async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); await refreshAll()}
@@ -1091,6 +1118,30 @@ function alertSeverityCard(alerts){
   const parts=[['critical','#f43f5e'],['high','var(--red)'],['medium','var(--orange)'],['info','var(--blue)']];
   return `<div class="viz-card"><h3>${escapeHtml(localText('חומרת התראות','Alert severity'))}</h3><p>${escapeHtml(localText('איך ההתראות הפתוחות מתחלקות לפי חומרה.','How open alerts are distributed by severity.'))}</p><div class="viz-stack">${parts.map(([key,color])=>`<span style="width:${(counts[key]/total)*100}%;background:${color}"></span>`).join('')}</div><div class="viz-legend">${parts.map(([key,color])=>`<div class="viz-legend-row"><div><span class="viz-dot" style="background:${color}"></span><strong>${escapeHtml(key)}</strong></div><span>${counts[key]}</span></div>`).join('')}</div></div>`;
 }
+function dashboardJournalEntries(){
+  const openAlerts=(state.alerts||[]).filter(a=>a.status==='open').map(a=>({
+    ts:Number(a.created_at||0),
+    kind:'alert',
+    severity:String(a.severity||'info').toLowerCase(),
+    title:a.title||tr('alertsTitle'),
+    body:a.message||'',
+    ip:a.ip||'',
+  }));
+  const recentEvents=relevantStatusEvents().map(e=>({
+    ts:Number(e.ts||0),
+    kind:'event',
+    severity:e.event_type==='device_offline'?'high':(e.event_type==='device_unstable'?'medium':'info'),
+    title:e.message||e.event_type||tr('eventsTitle'),
+    body:localText('אירוע רשת חי','Live network event'),
+    ip:e.ip||'',
+  }));
+  return [...openAlerts,...recentEvents].sort((a,b)=>b.ts-a.ts).slice(0,5);
+}
+function journalCard(item){
+  const severity=item.severity==='critical'?'high':(item.severity||'info');
+  const kindLabel=item.kind==='alert'?tr('alertsTitle'):tr('eventsTitle');
+  return `<div class="journal-card ${escapeHtml(severity)}"><div class="journal-top"><div class="journal-title">${escapeHtml(item.title||kindLabel)}</div><span class="journal-kind">${escapeHtml(kindLabel)}</span></div><div class="journal-body">${escapeHtml(item.body||'')}</div><div class="journal-meta"><span><strong>${escapeHtml(item.ip||'—')}</strong></span><span>${escapeHtml(fmtTs(item.ts))}</span></div></div>`;
+}
 function alertCardV2(a,link){return `<div class="alert-item ${escapeHtml(String(a.severity||'info').toLowerCase())}"><div class="alert-item-top"><strong>${link(a.ip,a.title||tr('alertsTitle'))}</strong><span class="alert-severity">${escapeHtml(a.severity||tr('severity'))}</span></div><div>${escapeHtml(a.message||'')}</div><div class="alert-meta"><span>${link(a.ip,a.ip||'')}</span><span>${fmtTs(a.created_at)}</span></div><div class="quick-actions" style="margin-top:10px"><button class="btn small" onclick="resolveAlert(${a.id})">${escapeHtml(tr('resolve'))}</button></div></div>`}
 function eventLineV2(e,link){return `<div class="event-line"><div class="event-pill">${escapeHtml(e.level||'info')}</div><div class="event-body"><strong>${link(e.ip,e.message||e.event_type||tr('eventsTitle'))}</strong><small>${link(e.ip,e.ip||'')} • ${fmtTs(e.ts)}</small></div></div>`}
 renderDashboard=function(){
@@ -1099,11 +1150,8 @@ renderDashboard=function(){
   qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`;
   qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`;
   const pulse=qs('dashboardPulse'); if(pulse) pulse.innerHTML=`${stackedStatusBar(state.devices||[])}${eventBarsCard()}`;
-  const link=(ip,label)=>ip?`<button class="name-link" onclick="openEditDevice('${ip}')">${escapeHtml(label||ip)}</button>`:escapeHtml(label||'');
-  const openAlerts=(state.alerts||[]).filter(a=>a.status==='open').slice(0,4);
-  const recentEvents=relevantStatusEvents().slice(0,5);
-  qs('dashboardAlerts').innerHTML=openAlerts.length?openAlerts.map(a=>alertCardV2(a,link)).join(''):`<div class="empty">${escapeHtml(tr('noAlerts'))}</div>`;
-  qs('dashboardEvents').innerHTML=recentEvents.length?recentEvents.map(e=>eventLineV2(e,link)).join(''):`<div class="empty">${escapeHtml(tr('noEvents'))}</div>`;
+  const journal=dashboardJournalEntries();
+  const journalMount=qs('dashboardJournal'); if(journalMount) journalMount.innerHTML=journal.length?journal.map(journalCard).join(''):`<div class="empty">${escapeHtml(tr('noEvents'))}</div>`;
 }
 renderViewer=function(){
   const devices=state.devices||[];
@@ -1151,7 +1199,19 @@ renderAlerts=function(){
   const eventHtml=events.length?events.map(e=>eventLineV2(e,link)).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`;
   qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml;
 }
-window.addEventListener('load', async()=>{qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
+window.addEventListener('load', async()=>{qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); updateHeaderClock(); window.setInterval(updateHeaderClock,1000); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
 </script>
 </body>
 </html>
+.dashboard-flow{display:grid;gap:14px}
+.journal-strip{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:12px;overflow:auto;padding-bottom:4px}
+.journal-card{padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));min-height:132px;display:grid;gap:10px;align-content:start}
+.journal-card.high{border-color:rgba(251,113,133,.34);box-shadow:inset 0 1px 0 rgba(251,113,133,.08)}
+.journal-card.medium{border-color:rgba(245,158,11,.28);box-shadow:inset 0 1px 0 rgba(245,158,11,.08)}
+.journal-card.info{border-color:rgba(91,140,255,.22);box-shadow:inset 0 1px 0 rgba(91,140,255,.08)}
+.journal-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.journal-title{font-size:14px;font-weight:900}
+.journal-kind{padding:5px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted)}
+.journal-body{font-size:13px;color:var(--text);line-height:1.45}
+.journal-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.journal-meta strong{color:var(--text)}
