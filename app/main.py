@@ -17,7 +17,9 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-APP_VERSION = "4.9.2"
+from app.vendor_lookup import lookup_vendor
+
+APP_VERSION = "5.0.0"
 BASE_DIR = Path("/data/homeii")
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -57,7 +59,6 @@ scan_state = {
     "last_error": "",
 }
 _dns_cache: Dict[str, str] = {}
-_vendor_cache: Dict[str, str] = {}
 
 def try_command_output(cmd: list[str], timeout: int = 2) -> str:
     try:
@@ -409,67 +410,7 @@ def normalize_mac(mac: str) -> str:
 
 
 def vendor_from_mac(mac: str) -> str:
-    mac = normalize_mac(mac)
-    if not mac:
-        return ""
-    prefix = ":".join(mac.split(":")[:3])
-    if prefix in _vendor_cache:
-        return _vendor_cache[prefix]
-    if is_local_admin_mac(mac):
-        _vendor_cache[prefix] = "Private / Randomized"
-        return _vendor_cache[prefix]
-    vendors = {
-        "b8:27:eb": "Raspberry Pi",
-        "dc:a6:32": "Raspberry Pi",
-        "e4:5f:01": "Xiaomi",
-        "64:09:80": "Ubiquiti",
-        "24:5a:4c": "Ubiquiti",
-        "f4:f2:6d": "Ubiquiti",
-        "00:17:88": "Philips",
-        "3c:52:82": "Google",
-        "f4:f5:d8": "Google",
-        "00:1b:63": "Apple",
-        "ac:bc:32": "Apple",
-        "f0:18:98": "Apple",
-        "d0:03:4b": "Apple",
-        "ec:fa:bc": "Samsung",
-        "70:4f:57": "Samsung",
-        "44:65:0d": "Amazon",
-        "fc:a6:67": "Amazon",
-        "1c:5f:2b": "Hikvision",
-        "bc:ad:28": "Hikvision",
-        "00:40:8c": "Axis",
-        "00:1a:79": "Cisco",
-        "c8:5b:76": "Apple",
-        "9c:20:7b": "Apple",
-        "48:3f:da": "HUAWEI",
-        "28:6d:cd": "TP-Link",
-        "a0:b5:3c": "Intel",
-        "f8:3b:09": "Intel",
-        "1c:69:7a": "Intel",
-        "f4:cf:a2": "Espressif",
-        "e4:60:17": "Espressif",
-        "7c:dd:90": "Apple",
-        "d8:96:95": "Apple",
-        "10:27:f5": "Apple",
-        "b0:95:75": "Samsung",
-        "2c:54:cf": "Samsung",
-        "cc:2d:e0": "Huawei",
-        "50:d4:f7": "Xiaomi",
-        "64:16:66": "Xiaomi",
-        "84:16:f9": "Sonos",
-        "b8:e9:37": "Sonos",
-        "18:b4:30": "Nest",
-        "d4:f5:47": "Amazon",
-        "44:65:0d": "Amazon",
-        "08:66:98": "TP-Link",
-        "50:c7:bf": "TP-Link",
-        "00:e0:4c": "Realtek",
-        "3c:84:6a": "Hon Hai / Foxconn",
-    }
-    vendor = vendors.get(prefix, "")
-    _vendor_cache[prefix] = vendor
-    return vendor
+    return lookup_vendor(normalize_mac(mac))
 
 
 
@@ -1226,6 +1167,106 @@ def status_payload() -> Dict[str, Any]:
     }
 
 
+def ha_summary_payload() -> Dict[str, Any]:
+    status = status_payload()
+    conn = db()
+    try:
+        open_alerts_row = conn.execute("SELECT COUNT(*) FROM alerts WHERE status='open'").fetchone()
+        event_count_row = conn.execute("SELECT COUNT(*) FROM events").fetchone()
+    finally:
+        conn.close()
+    return {
+        "product": {
+            "name": "HOMEii Network Monitor",
+            "version": APP_VERSION,
+            "integration_target": "home_assistant",
+        },
+        "scan": status["scan"],
+        "counts": {
+            "total": status["total"],
+            "online": status["online"],
+            "offline": status["offline"],
+            "unstable": status["unstable"],
+            "new": status["new"],
+            "critical": status["critical"],
+            "pinned": status["pinned"],
+            "manual": status["manual"],
+            "open_alerts": int(open_alerts_row[0] if open_alerts_row else 0),
+            "events": int(event_count_row[0] if event_count_row else 0),
+        },
+        "networks": status["networks"],
+        "network_names": status["network_names"],
+        "db": {
+            "ok": status["db_ok"],
+            "path": status["db_path"],
+        },
+    }
+
+
+def ha_entities_payload() -> Dict[str, Any]:
+    devices = get_devices()
+    summary = ha_summary_payload()
+    counters = []
+    for key, name, icon in [
+        ("online", "Connected devices", "mdi:lan-connect"),
+        ("offline", "Disconnected devices", "mdi:lan-disconnect"),
+        ("new", "New devices", "mdi:new-box"),
+        ("critical", "Critical devices", "mdi:alert"),
+        ("open_alerts", "Open alerts", "mdi:alert-circle-outline"),
+        ("total", "Total devices", "mdi:counter"),
+    ]:
+        counters.append(
+            {
+                "entity_id": f"sensor.homeii_{key}",
+                "unique_id": f"homeii_{key}",
+                "name": name,
+                "icon": icon,
+                "state": summary["counts"][key],
+                "kind": "sensor",
+            }
+        )
+
+    availability = []
+    for device in devices:
+        safe_ip = device["ip"].replace(".", "_")
+        unique_suffix = normalize_mac(device.get("mac", "")) or device["ip"]
+        availability.append(
+            {
+                "entity_id": f"binary_sensor.homeii_{safe_ip}_availability",
+                "unique_id": f"homeii_device_{unique_suffix}_availability",
+                "name": device["display_name"],
+                "kind": "binary_sensor",
+                "device_class": "connectivity",
+                "state": device["status"] in ("online", "unstable"),
+                "status": device["status"],
+                "ip": device["ip"],
+                "mac": device["mac"],
+                "vendor": device["vendor"],
+                "network": device["assigned_network"],
+                "category": device["category"],
+                "last_seen": device["last_seen"],
+            }
+        )
+
+    return {
+        "summary": summary,
+        "entities": {
+            "counters": counters,
+            "availability": availability,
+        },
+    }
+
+
+def ha_diagnostics_payload() -> Dict[str, Any]:
+    return {
+        "summary": ha_summary_payload(),
+        "devices": get_devices(),
+        "alerts": api_alerts(limit=200)["alerts"],
+        "events": api_events(limit=200)["events"],
+        "settings": api_settings(),
+    }
+
+
 @app.get("/")
 def root():
     return FileResponse("/app/web/index.html")
@@ -1288,6 +1329,21 @@ def api_settings():
         return {"settings": {r["key"]: r["value"] for r in rows}, "networks": get_networks(), "network_names": get_network_names(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "db_path": str(DB_PATH)}
     finally:
         conn.close()
+
+
+@app.get("/api/ha/summary")
+def api_ha_summary():
+    return ha_summary_payload()
+
+
+@app.get("/api/ha/entities")
+def api_ha_entities():
+    return ha_entities_payload()
+
+
+@app.get("/api/ha/diagnostics")
+def api_ha_diagnostics():
+    return ha_diagnostics_payload()
 
 
 @app.get("/api/scan")
