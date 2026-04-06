@@ -17,7 +17,10 @@ from urllib.parse import unquote
 from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
-from app.vendor_lookup import lookup_vendor
+try:
+    from app.vendor_lookup import lookup_vendor
+except ModuleNotFoundError:
+    from vendor_lookup import lookup_vendor
 
 APP_VERSION = "5.0.0"
 BASE_DIR = Path("/data/homeii")
