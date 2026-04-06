@@ -1,4 +1,6 @@
+import csv
 import ipaddress
+import io
 import json
 import os
 import shlex
@@ -15,7 +17,7 @@ from typing import Any, Dict, List
 from urllib.parse import unquote
 
 from fastapi import FastAPI, Query, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 try:
     from app.vendor_lookup import lookup_vendor
@@ -208,6 +210,7 @@ DEFAULT_SETTINGS = {
     "auto_refresh": "30",
     "default_view": "table",
     "dashboard_style": "advanced",
+    "status_animation": "blink",
     "networks_json": json.dumps(HOMEII_NETWORKS),
     "network_names_json": json.dumps({}),
     "discovery_mode": "auto_manual",
@@ -1511,6 +1514,54 @@ def api_settings():
         conn.close()
 
 
+@app.get("/api/export/devices.csv")
+def api_export_devices_csv():
+    rows = get_devices(include_ignored=True)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ip", "display_name", "hostname", "vendor", "category", "status", "assigned_network", "mac", "last_seen", "approved", "manual", "critical", "pinned", "notes"])
+    for device in rows:
+        writer.writerow([
+            device.get("ip", ""),
+            device.get("display_name", ""),
+            device.get("hostname", ""),
+            device.get("vendor", ""),
+            device.get("category", ""),
+            device.get("status", ""),
+            device.get("assigned_network", ""),
+            device.get("mac", ""),
+            device.get("last_seen", ""),
+            1 if device.get("approved") else 0,
+            1 if device.get("manual") else 0,
+            1 if device.get("critical") else 0,
+            1 if device.get("pinned") else 0,
+            device.get("notes", ""),
+        ])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="homeii_devices.csv"'},
+    )
+
+
+@app.get("/api/export/settings.json")
+def api_export_settings_json():
+    payload = {
+        "version": APP_VERSION,
+        "exported_at": now_ts(),
+        "settings": {k: get_setting(k, v) for k, v in DEFAULT_SETTINGS.items()},
+        "networks": get_networks(),
+        "network_names": get_network_names(),
+        "discovery_mode": get_discovery_mode(),
+        "discovery_protocols": get_discovery_protocols(),
+    }
+    return Response(
+        content=json.dumps(payload, ensure_ascii=False, indent=2),
+        media_type="application/json; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="homeii_settings.json"'},
+    )
+
+
 @app.get("/api/ha/summary")
 def api_ha_summary():
     return ha_summary_payload()
@@ -1780,12 +1831,13 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", status_animation: str = "blink", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
     set_setting("auto_refresh", auto_refresh or "30")
     set_setting("default_view", default_view or "table")
     set_setting("dashboard_style", dashboard_style or "advanced")
     set_setting("theme", theme if theme in ("light", "dark") else "light")
     set_setting("language", language if language in ("he", "en") else "he")
+    set_setting("status_animation", status_animation if status_animation in ("blink", "static") else "blink")
     set_setting("discovery_mode", discovery_mode if discovery_mode in ("auto_manual", "manual_only", "auto_only") else "auto_manual")
     set_discovery_protocols(discovery_protocols or KNOWN_PROTOCOLS)
     saved_networks = get_networks()
@@ -1815,6 +1867,7 @@ async def api_save_settings_post(request: Request):
         dashboard_style=str(payload.get("dashboard_style", "advanced") or "advanced"),
         theme=str(payload.get("theme", "light") or "light"),
         language=str(payload.get("language", "he") or "he"),
+        status_animation=str(payload.get("status_animation", "blink") or "blink"),
         networks="\n".join(networks_raw) if isinstance(networks_raw, list) else str(networks_raw),
         network_names=json.dumps(payload.get("network_names", {}) or {}, ensure_ascii=False),
         discovery_mode=str(payload.get("discovery_mode", "auto_manual") or "auto_manual"),
