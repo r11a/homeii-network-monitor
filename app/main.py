@@ -161,6 +161,27 @@ def mark_device_recovered(ip: str, name: str, prev_state: str) -> None:
         log_event("success", f"{name or ip} is stable again", "device_stable", ip)
 
 
+def alerts_enabled_for_device(device: Dict[str, Any]) -> bool:
+    return not bool(device.get("maintenance")) and not bool(device.get("mute_alerts"))
+
+
+def create_alert_for_device(device: Dict[str, Any], severity: str, title: str, message: str) -> None:
+    if alerts_enabled_for_device(device):
+        create_alert(device.get("ip", ""), severity, title, message)
+
+
+def mark_device_recovered_with_policy(device: Dict[str, Any], prev_state: str) -> None:
+    ip = device.get("ip", "")
+    name = device.get("name") or ip
+    log_event("success", f"{name} is online", "device_online", ip)
+    resolve_alerts_for_ip(ip, ALERT_TITLE_OFFLINE)
+    resolve_alerts_for_ip(ip, ALERT_TITLE_UNSTABLE)
+    if prev_state == "offline":
+        create_alert_for_device(device, "info", ALERT_TITLE_BACK_ONLINE, f"{name} is back online")
+    elif prev_state == "unstable":
+        log_event("success", f"{name} is stable again", "device_stable", ip)
+
+
 def probe_device(ip: str) -> tuple[bool, str, dict[str, str]]:
     ok = ping(ip)
     ident = arp_identity_for_ip(ip)
@@ -229,6 +250,8 @@ CREATE TABLE IF NOT EXISTS devices (
   source TEXT DEFAULT 'ping',
   notes TEXT DEFAULT '',
   assigned_network TEXT DEFAULT '',
+  maintenance INTEGER DEFAULT 0,
+  mute_alerts INTEGER DEFAULT 0,
   scan_profile TEXT DEFAULT 'normal',
   tags_json TEXT DEFAULT '[]'
 );
@@ -300,6 +323,8 @@ def init_db() -> None:
             conn.executescript(SCHEMA)
             ensure_column(conn, "devices", "approved", "approved INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "assigned_network", "assigned_network TEXT DEFAULT ''")
+            ensure_column(conn, "devices", "maintenance", "maintenance INTEGER DEFAULT 0")
+            ensure_column(conn, "devices", "mute_alerts", "mute_alerts INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "scan_profile", "scan_profile TEXT DEFAULT 'normal'")
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
@@ -546,6 +571,8 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "source": row["source"] or "",
         "notes": row["notes"] or "",
         "assigned_network": row["assigned_network"] if "assigned_network" in row.keys() else "",
+        "maintenance": bool(row["maintenance"]) if "maintenance" in row.keys() else False,
+        "mute_alerts": bool(row["mute_alerts"]) if "mute_alerts" in row.keys() else False,
         "scan_profile": row["scan_profile"] if "scan_profile" in row.keys() and (row["scan_profile"] or "").strip() in ("slow", "normal", "fast") else "normal",
         "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
@@ -987,7 +1014,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "scan_profile": "normal", "tags": []
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "maintenance": False, "mute_alerts": False, "scan_profile": "normal", "tags": []
         }
         base.update(fields)
         base["scan_profile"] = normalize_scan_profile(base.get("scan_profile"))
@@ -995,8 +1022,8 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,scan_profile,tags_json
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,maintenance,mute_alerts,scan_profile,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
@@ -1004,7 +1031,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
               updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network,
-              scan_profile=excluded.scan_profile, tags_json=excluded.tags_json
+              maintenance=excluded.maintenance, mute_alerts=excluded.mute_alerts, scan_profile=excluded.scan_profile, tags_json=excluded.tags_json
             """,
             (
                 ip,
@@ -1013,7 +1040,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
                 1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
                 int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
                 int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
-                base["notes"], base.get("assigned_network", ""), base["scan_profile"], json.dumps(base["tags"]),
+                base["notes"], base.get("assigned_network", ""), 1 if base.get("maintenance") else 0, 1 if base.get("mute_alerts") else 0, base["scan_profile"], json.dumps(base["tags"]),
             ),
         )
         conn.commit()
@@ -1210,7 +1237,9 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         log_event("info", f"New device detected: {name or ip}", "new_device", ip)
         create_alert(ip, "medium", ALERT_TITLE_NEW, f"{name or ip} was discovered and awaits review")
     if row and is_managed and prev_status in ("offline", "unstable"):
-        mark_device_recovered(ip, name, prev_status)
+        managed_device = row_to_device(row)
+        managed_device["name"] = managed_device.get("name") or name or ip
+        mark_device_recovered_with_policy(managed_device, prev_status)
 
 
 
@@ -1371,23 +1400,23 @@ def monitor_one(ip: str) -> None:
                 d["status"] = "unstable"
             if d["status"] == "offline":
                 log_event("error", f"{d['name'] or ip} went offline", "device_offline", ip)
-                create_alert(ip, "high", ALERT_TITLE_OFFLINE, f"{d['name'] or ip} is offline")
+                create_alert_for_device(d, "high", ALERT_TITLE_OFFLINE, f"{d['name'] or ip} is offline")
             elif d["status"] == "unstable":
                 msg = f"{d['name'] or ip} is unstable"
                 log_event("warning", msg, "device_unstable", ip)
-                create_alert(ip, "medium", ALERT_TITLE_UNSTABLE, msg)
+                create_alert_for_device(d, "medium", ALERT_TITLE_UNSTABLE, msg)
             elif d["status"] == "online":
-                mark_device_recovered(ip, d["name"] or ip, prev_state)
+                mark_device_recovered_with_policy(d, prev_state)
 
         d["updated_at"] = ts
         conn.execute(
             """
             UPDATE devices SET hostname=?, category=?, vendor=?, mac=?, status=?, last_seen=?, fail_count=?,
-                success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=? WHERE ip=?
+                success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=?, maintenance=?, mute_alerts=?, scan_profile=? WHERE ip=?
             """,
             (
                 d["hostname"], d["category"], d["vendor"], d["mac"], d["status"], int(d["last_seen"] or 0),
-                d["fail_count"], d["success_count"], d["state_changes_today"], d["updated_at"], d["name"], d["source"], 1 if d.get("approved") else 0, ip,
+                d["fail_count"], d["success_count"], d["state_changes_today"], d["updated_at"], d["name"], d["source"], 1 if d.get("approved") else 0, 1 if d.get("maintenance") else 0, 1 if d.get("mute_alerts") else 0, d.get("scan_profile", "normal"), ip,
             ),
         )
         conn.commit()
@@ -1485,12 +1514,12 @@ def monitor_one_safe(ip: str) -> None:
             conn.execute(
                 """
                 UPDATE devices SET hostname=?, category=?, vendor=?, mac=?, status=?, last_seen=?, fail_count=?,
-                    success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=?, assigned_network=? WHERE ip=?
+                    success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=?, assigned_network=?, maintenance=?, mute_alerts=?, scan_profile=? WHERE ip=?
                 """,
                 (
                     d["hostname"], d["category"], d["vendor"], d["mac"], d["status"], int(d["last_seen"] or 0),
                     d["fail_count"], d["success_count"], d["state_changes_today"], d["updated_at"], d["name"], d["source"],
-                    1 if d.get("approved") else 0, d.get("assigned_network", ""), ip,
+                    1 if d.get("approved") else 0, d.get("assigned_network", ""), 1 if d.get("maintenance") else 0, 1 if d.get("mute_alerts") else 0, d.get("scan_profile", "normal"), ip,
                 ),
             )
             conn.commit()
@@ -1501,13 +1530,13 @@ def monitor_one_safe(ip: str) -> None:
         action, name, prev_state = post_action
         if action == "offline":
             log_event("error", f"{name} went offline", "device_offline", ip)
-            create_alert(ip, "high", ALERT_TITLE_OFFLINE, f"{name} is offline")
+            create_alert_for_device(d, "high", ALERT_TITLE_OFFLINE, f"{name} is offline")
         elif action == "unstable":
             msg = f"{name} is unstable"
             log_event("warning", msg, "device_unstable", ip)
-            create_alert(ip, "medium", ALERT_TITLE_UNSTABLE, msg)
+            create_alert_for_device(d, "medium", ALERT_TITLE_UNSTABLE, msg)
         elif action == "online":
-            mark_device_recovered(ip, name, prev_state)
+            mark_device_recovered_with_policy(d, prev_state)
 
 
 def run_monitor_pass(critical_only: bool = False) -> None:
@@ -1641,6 +1670,37 @@ def status_payload() -> Dict[str, Any]:
         "db_ok": DB_PATH.exists(),
         "db_path": str(DB_PATH),
     }
+
+
+def device_detail_payload(ip: str) -> Dict[str, Any]:
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+        if not row:
+            return {"device": None, "history": [], "alerts": [], "events": []}
+        device = row_to_device(row)
+        history = [
+            {
+                "ts": int(item["ts"] or 0),
+                "old_status": item["old_status"] or "unknown",
+                "new_status": item["new_status"] or "unknown",
+            }
+            for item in conn.execute(
+                "SELECT ts, old_status, new_status FROM device_history WHERE ip=? AND kind='status' ORDER BY ts DESC LIMIT 32",
+                (ip,),
+            ).fetchall()
+        ]
+        alerts = [dict(item) for item in conn.execute(
+            "SELECT id, ip, severity, title, message, status, created_at, updated_at FROM alerts WHERE ip=? ORDER BY id DESC LIMIT 16",
+            (ip,),
+        ).fetchall()]
+        events = [dict(item) for item in conn.execute(
+            "SELECT id, ts, level, event_type, ip, message FROM events WHERE ip=? ORDER BY id DESC LIMIT 20",
+            (ip,),
+        ).fetchall()]
+        return {"device": device, "history": history, "alerts": alerts, "events": events}
+    finally:
+        conn.close()
 
 
 def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, Any]:
@@ -2008,6 +2068,12 @@ def api_devices():
     return {"devices": get_devices()}
 
 
+@app.get("/api/device/{ip}/detail")
+def api_device_detail(ip: str):
+    ensure_background_workers()
+    return device_detail_payload(ip)
+
+
 @app.get("/api/alerts")
 def api_alerts(limit: int = 50):
     conn = db()
@@ -2050,7 +2116,7 @@ def api_export_devices_csv():
     rows = get_devices(include_ignored=True)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ip", "display_name", "hostname", "vendor", "category", "status", "assigned_network", "mac", "last_seen", "approved", "manual", "critical", "pinned", "notes"])
+    writer.writerow(["ip", "display_name", "hostname", "vendor", "category", "status", "assigned_network", "mac", "last_seen", "approved", "manual", "critical", "pinned", "maintenance", "mute_alerts", "scan_profile", "notes"])
     for device in rows:
         writer.writerow([
             device.get("ip", ""),
@@ -2066,6 +2132,9 @@ def api_export_devices_csv():
             1 if device.get("manual") else 0,
             1 if device.get("critical") else 0,
             1 if device.get("pinned") else 0,
+            1 if device.get("maintenance") else 0,
+            1 if device.get("mute_alerts") else 0,
+            device.get("scan_profile", "normal"),
             device.get("notes", ""),
         ])
     return Response(
@@ -2138,6 +2207,9 @@ async def api_import_devices(file: UploadFile = File(...)):
             "manual": csv_bool(row.get("manual")),
             "critical": csv_bool(row.get("critical")),
             "pinned": csv_bool(row.get("pinned")),
+            "maintenance": csv_bool(row.get("maintenance")),
+            "mute_alerts": csv_bool(row.get("mute_alerts")),
+            "scan_profile": normalize_scan_profile(row.get("scan_profile")),
             "notes": str(row.get("notes", "")).strip(),
             "updated_at": now_ts(),
             "source": "import",
@@ -2299,7 +2371,7 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", scan_profile: str = "normal", pinned: int = -1, critical: int = -1):
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", scan_profile: str = "normal", maintenance: int = -1, mute_alerts: int = -1, pinned: int = -1, critical: int = -1):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -2311,12 +2383,18 @@ def api_update(ip: str, name: str = "", category: str = "", tags: str = "", note
             d["assigned_network"] = unquote(assigned_network)
             d["scan_profile"] = normalize_scan_profile(unquote(scan_profile))
             d["tags"] = [x.strip() for x in unquote(tags).split(",") if x.strip()]
+            if maintenance in (0,1):
+                d["maintenance"] = bool(maintenance)
+            if mute_alerts in (0,1):
+                d["mute_alerts"] = bool(mute_alerts)
             if pinned in (0,1):
                 d["pinned"] = bool(pinned)
             if critical in (0,1):
                 d["critical"] = bool(critical)
             d["updated_at"] = now_ts()
             upsert_device(ip, d)
+            if d.get("maintenance") or d.get("mute_alerts"):
+                resolve_alerts_for_ip(ip)
         return {"ok": True}
     finally:
         conn.close()
@@ -2442,6 +2520,8 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
         "source": "manual",
         "notes": notes,
         "assigned_network": infer_assigned_network(ip),
+        "maintenance": False,
+        "mute_alerts": False,
         "scan_profile": "normal",
         "tags": [],
     }
