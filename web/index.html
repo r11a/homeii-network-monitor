@@ -454,23 +454,55 @@ body.viewer-mode .viewer-close{display:inline-flex}
 }
 
 .modal.hidden{display:none}.modal{position:fixed;inset:0;z-index:2000}.modal-backdrop{position:absolute;inset:0;background:rgba(5,10,20,.45);backdrop-filter:blur(4px)}.modal-card{position:relative;max-width:760px;margin:8vh auto;background:var(--card2);color:var(--text);border:1px solid var(--line2);border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:20px 22px;z-index:2}.modal-card input,.modal-card select,.modal-card textarea{background:var(--bg);color:var(--text);border:1px solid var(--line2)}.modal-card label,.modal-card small,.modal-card .muted{color:var(--muted)}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.msg{display:none;margin-top:12px;padding:12px 14px;border-radius:16px}.msg.show{display:block}.msg.ok{background:rgba(78,212,138,.08);border-color:rgba(78,212,138,.24)}.msg.err{background:rgba(255,107,120,.08);border-color:rgba(255,107,120,.24)}
-.modal.drawer .modal-card{position:absolute;inset:16px 16px 16px auto;margin:0;width:min(620px,calc(100vw - 32px));max-width:none;height:calc(100vh - 32px);overflow:auto;border-radius:28px;padding:18px 18px 20px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),linear-gradient(180deg,var(--card),var(--card2))}
-.edit-drawer-top{display:grid;gap:12px}
-.edit-summary{display:grid;gap:10px;padding:14px 16px;border-radius:22px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))}
-.edit-summary-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.edit-summary-title{margin:0;font-size:26px;font-weight:900;letter-spacing:-.04em}
-.edit-summary-sub{margin:6px 0 0;color:var(--muted);font-size:13px}
-.edit-summary-meta{display:flex;gap:8px;flex-wrap:wrap}
-.drawer-sections{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:14px}
-.drawer-section{display:grid;gap:10px;padding:14px 16px;border-radius:22px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.012))}
-.drawer-section h4{margin:0;font-size:15px;font-weight:900}
-.drawer-list{display:grid;gap:8px;max-height:250px;overflow:auto;padding-inline-end:4px}
-.drawer-list-item{padding:10px 12px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:6px}
+.modal.drawer .modal-card{position:absolute;inset:28px;max-width:none;margin:0;width:auto;height:auto;overflow:hidden;border-radius:32px;padding:24px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),linear-gradient(180deg,var(--card),var(--card2));display:grid;grid-template-rows:auto auto minmax(0,1fr) auto}
+.edit-drawer{display:grid;gap:18px}
+.edit-drawer .modal-head{margin-bottom:0;align-items:flex-start}
+.edit-head-copy{display:grid;gap:6px}
+.edit-head-copy p{margin:0;color:var(--muted);font-size:14px}
+.edit-summary{display:grid;gap:12px;padding:18px 20px;border-radius:26px;border:1px solid rgba(91,140,255,.22);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px rgba(6,10,20,.12)}
+.edit-summary-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.edit-summary-title{margin:0;font-size:32px;font-weight:950;letter-spacing:-.05em;line-height:1.05}
+.edit-summary-sub{margin:6px 0 0;color:var(--muted);font-size:14px}
+.edit-summary-meta{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.edit-workspace{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);gap:16px;min-height:0}
+.edit-primary-card,.edit-secondary-card{min-height:0;border-radius:26px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,.01));padding:18px 18px 16px}
+.edit-primary-card{display:grid;grid-template-rows:auto auto auto minmax(0,1fr)}
+.edit-secondary-card{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);gap:14px}
+.edit-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.edit-card-head h4{margin:0;font-size:18px;font-weight:900}
+.edit-card-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.drawer-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.edit-toggle-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.edit-toggle-box{display:grid;gap:10px;padding:14px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.025)}
+.edit-toggle-box label{font-size:13px;color:var(--muted)}
+.edit-toggle-row{display:flex;gap:10px;flex-wrap:wrap}
+.edit-toggle-btn{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--text);padding:12px 16px;border-radius:999px;font-weight:800;font-size:13px;cursor:pointer;transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}
+.edit-toggle-btn:hover{transform:translateY(-1px);border-color:rgba(91,140,255,.3)}
+.edit-toggle-btn.active{background:linear-gradient(180deg,rgba(91,140,255,.2),rgba(91,140,255,.1));border-color:rgba(91,140,255,.44);box-shadow:0 0 0 1px rgba(91,140,255,.16),0 12px 26px rgba(34,60,160,.15)}
+.edit-toggle-btn.warn.active{background:linear-gradient(180deg,rgba(250,204,21,.18),rgba(250,204,21,.09));border-color:rgba(250,204,21,.4);box-shadow:0 0 0 1px rgba(250,204,21,.14),0 12px 26px rgba(120,96,12,.14)}
+.edit-toggle-btn.hidden-input{display:none}
+.edit-notes-wrap{display:grid;gap:8px;margin-top:14px}
+.edit-notes-wrap textarea{min-height:118px;resize:vertical}
+.edit-more{border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.024);overflow:hidden}
+.edit-more summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;font-weight:900}
+.edit-more summary::-webkit-details-marker{display:none}
+.edit-more-sub{color:var(--muted);font-size:12px;font-weight:600}
+.edit-more-body{padding:0 16px 16px;display:grid;gap:12px}
+.edit-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.edit-info-card{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.02);display:grid;gap:6px;min-height:76px}
+.edit-info-card .label{color:var(--muted);font-size:12px}
+.edit-info-card .value{font-weight:800;font-size:16px;line-height:1.25;word-break:break-word}
+.edit-panel-tabs{display:flex;gap:10px;flex-wrap:wrap}
+.edit-panel-tab{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--muted);padding:10px 14px;border-radius:999px;font-weight:800;font-size:13px;cursor:pointer;transition:all .16s ease}
+.edit-panel-tab.active{background:linear-gradient(180deg,rgba(91,140,255,.18),rgba(91,140,255,.08));border-color:rgba(91,140,255,.36);color:var(--text)}
+.drawer-list{display:grid;gap:8px;overflow:auto;padding-inline-end:4px;min-height:0}
+.drawer-list.hidden{display:none}
+.drawer-list-item{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:8px}
 .drawer-list-item-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
-.drawer-empty{padding:14px 10px;text-align:center;color:var(--muted);font-size:12px}
-.drawer-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.drawer-toggle-group{display:flex;gap:10px;flex-wrap:wrap}
-.drawer-toggle-group label{display:inline-flex;align-items:center;gap:6px}
+.drawer-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:12px}
+.edit-footer{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
+.edit-footer .quick-actions{margin-top:0}
+.edit-footer .btn.red{margin-inline-start:auto}
 .drawer-highlight{border-color:rgba(91,140,255,.3);box-shadow:0 0 0 1px rgba(91,140,255,.12)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
 .empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted)}
@@ -500,7 +532,8 @@ body.settings-mode .settings-page .panel{max-width:1320px}
 @media (max-width:1320px){.kpis{grid-template-columns:repeat(4,1fr)} .grid.two{grid-template-columns:1fr}.alert-hub{grid-template-columns:1fr auto}}
 @media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto;overflow:visible}.toolbar{grid-template-columns:1fr 1fr} .dashboard-card{grid-template-columns:1fr;direction:rtl}.d-actions{flex-wrap:wrap}}
 @media (max-width:980px){.viewer-grid,.alert-columns,.top-shell,.alert-center-grid{grid-template-columns:1fr}.actionbar{justify-content:flex-start}.alert-hub{grid-template-columns:1fr}}
-@media (max-width:760px){.kpis,.toolbar,.dashboard-cards,.viewer-summary,.drawer-sections,.drawer-form-grid{grid-template-columns:1fr}.modal.drawer .modal-card{inset:8px;width:calc(100vw - 16px);height:calc(100vh - 16px)}}
+@media (max-width:980px){.edit-workspace,.edit-toggle-sections,.edit-info-grid{grid-template-columns:1fr}.edit-secondary-card{grid-template-rows:auto auto auto minmax(240px,1fr)}}
+@media (max-width:760px){.kpis,.toolbar,.dashboard-cards,.viewer-summary,.drawer-form-grid{grid-template-columns:1fr}.modal.drawer .modal-card{inset:10px;padding:16px;border-radius:26px}.edit-summary-title{font-size:26px}.edit-summary-head,.edit-card-head,.edit-footer{grid-template-columns:1fr;display:grid}.edit-summary-meta,.edit-footer .quick-actions{justify-content:flex-start}.edit-primary-card,.edit-secondary-card{padding:16px}}
 </style>
 </head>
 <body>
@@ -829,67 +862,110 @@ body.settings-mode .settings-page .panel{max-width:1320px}
     <div class="modal-backdrop" onclick="closeEditModal()"></div>
     <div class="modal-card edit-drawer">
       <div class="modal-head">
-        <div>
+        <div class="edit-head-copy">
           <h3 id="editModalTitle">עריכת התקן</h3>
-          <div class="muted" id="editModalSub">שליטה מלאה על זיהוי, ניטור והתראות של ההתקן.</div>
+          <p id="editModalSub">שליטה מלאה על זיהוי, ניטור והתראות של ההתקן.</p>
         </div>
         <button class="btn small" onclick="closeEditModal()" id="editCloseTopBtn">סגור</button>
       </div>
-      <div class="edit-drawer-top">
-        <div class="edit-summary drawer-highlight">
-          <div class="edit-summary-head">
-            <div>
-              <h4 class="edit-summary-title" id="editSummaryTitle">—</h4>
-              <div class="edit-summary-sub" id="editSummarySub">—</div>
-            </div>
-            <div class="edit-summary-meta" id="editSummaryChips"></div>
+      <div class="edit-summary drawer-highlight">
+        <div class="edit-summary-head">
+          <div>
+            <h4 class="edit-summary-title" id="editSummaryTitle">—</h4>
+            <div class="edit-summary-sub" id="editSummarySub">—</div>
           </div>
-          <div id="editAvailabilityMount"></div>
+          <div class="edit-summary-meta" id="editSummaryChips"></div>
         </div>
+        <div id="editAvailabilityMount"></div>
       </div>
-      <div class="drawer-form-grid" style="margin-top:14px">
-        <div class="field"><label id="editNameLabel">שם ההתקן</label><input id="editName"></div>
-        <div class="field"><label id="editCategoryLabel">קטגוריה</label><input id="editCategory"></div>
-        <div class="field"><label id="editNetworkLabel">שיוך לרשת</label><select id="editAssignedNetwork"></select></div>
-        <div class="field">
-          <label id="editScanProfileLabel">פרופיל סריקה</label>
-          <select id="editScanProfile">
-            <option value="slow">איטי</option>
-            <option value="normal">רגיל</option>
-            <option value="fast">מהיר</option>
-          </select>
+      <div class="edit-workspace">
+        <div class="edit-primary-card">
+          <div class="edit-card-head">
+            <div>
+              <h4 id="editPrimaryTitle">עריכה מהירה</h4>
+              <p id="editPrimarySub">שדות הפעולה בלבד, בלי לערבב פרטי מידע והיסטוריה.</p>
+            </div>
+          </div>
+          <div class="drawer-form-grid">
+            <div class="field"><label id="editNameLabel">שם ההתקן</label><input id="editName"></div>
+            <div class="field"><label id="editCategoryLabel">קטגוריה</label><input id="editCategory"></div>
+            <div class="field"><label id="editNetworkLabel">שיוך לרשת</label><select id="editAssignedNetwork"></select></div>
+            <div class="field">
+              <label id="editScanProfileLabel">פרופיל סריקה</label>
+              <select id="editScanProfile">
+                <option value="slow">איטי</option>
+                <option value="normal">רגיל</option>
+                <option value="fast">מהיר</option>
+              </select>
+            </div>
+          </div>
+          <div class="edit-toggle-sections">
+            <div class="edit-toggle-box">
+              <label id="editFlagsLabel">דגלים</label>
+              <div class="edit-toggle-row">
+                <input type="checkbox" id="editPinned" style="display:none">
+                <button type="button" class="edit-toggle-btn" data-target="editPinned" onclick="toggleEditFlag('editPinned')"><span id="editPinnedLabel">נעוץ</span></button>
+                <input type="checkbox" id="editCritical" style="display:none">
+                <button type="button" class="edit-toggle-btn warn" data-target="editCritical" onclick="toggleEditFlag('editCritical')"><span id="editCriticalLabel">קריטי</span></button>
+              </div>
+            </div>
+            <div class="edit-toggle-box">
+              <label id="editBehaviorLabel">התנהגות</label>
+              <div class="edit-toggle-row">
+                <input type="checkbox" id="editMaintenance" style="display:none">
+                <button type="button" class="edit-toggle-btn warn" data-target="editMaintenance" onclick="toggleEditFlag('editMaintenance')"><span id="editMaintenanceLabel">תחזוקה</span></button>
+                <input type="checkbox" id="editMuteAlerts" style="display:none">
+                <button type="button" class="edit-toggle-btn" data-target="editMuteAlerts" onclick="toggleEditFlag('editMuteAlerts')"><span id="editMuteAlertsLabel">השתק התראות</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="edit-notes-wrap">
+            <label id="editNotesLabel">הערות</label>
+            <textarea id="editNotes"></textarea>
+          </div>
         </div>
-        <div class="field"><label id="editFlagsLabel">דגלים</label><div class="quick-actions"><label><input type="checkbox" id="editPinned"> <span id="editPinnedLabel">נעוץ</span></label><label><input type="checkbox" id="editCritical"> <span id="editCriticalLabel">קריטי</span></label></div></div>
-        <div class="field"><label id="editBehaviorLabel">התנהגות</label><div class="drawer-toggle-group"><label><input type="checkbox" id="editMaintenance"> <span id="editMaintenanceLabel">תחזוקה</span></label><label><input type="checkbox" id="editMuteAlerts"> <span id="editMuteAlertsLabel">השתק התראות</span></label></div></div>
-      </div>
-      <div class="field" style="margin-top:12px"><label id="editNotesLabel">הערות</label><textarea id="editNotes"></textarea></div>
-      <div class="drawer-form-grid" style="margin-top:12px">
-        <div class="field"><label id="editIpLabel">IP</label><input id="editIp" disabled></div>
-        <div class="field"><label id="editMacLabel">MAC</label><input id="editMac" disabled></div>
-        <div class="field"><label id="editHostnameLabel">Hostname</label><input id="editHostname" disabled></div>
-        <div class="field"><label id="editVendorLabel">יצרן</label><input id="editVendor" disabled></div>
-      </div>
-      <div class="drawer-sections">
-        <div class="drawer-section">
-          <h4 id="editTimelineTitle">ציר זמן</h4>
+        <div class="edit-secondary-card">
+          <div class="edit-card-head">
+            <div>
+              <h4 id="editSecondaryTitle">מידע ומעקב</h4>
+              <p id="editSecondarySub">מידע מפורט, היסטוריה והתראות תחת אזור נפרד וצפוי.</p>
+            </div>
+          </div>
+          <details class="edit-more">
+            <summary>
+              <span id="editMoreInfoTitle">פרטי זיהוי וחיבור</span>
+              <span class="edit-more-sub" id="editMoreInfoSub">לחץ להצגת מידע נוסף</span>
+            </summary>
+            <div class="edit-more-body">
+              <div class="edit-info-grid">
+                <div class="edit-info-card"><div class="label" id="editIpLabel">IP</div><div class="value" id="editIp">—</div></div>
+                <div class="edit-info-card"><div class="label" id="editMacLabel">MAC</div><div class="value" id="editMac">—</div></div>
+                <div class="edit-info-card"><div class="label" id="editHostnameLabel">Hostname</div><div class="value" id="editHostname">—</div></div>
+                <div class="edit-info-card"><div class="label" id="editVendorLabel">יצרן</div><div class="value" id="editVendor">—</div></div>
+              </div>
+            </div>
+          </details>
+          <div class="edit-panel-tabs">
+            <button type="button" class="edit-panel-tab active" data-edit-tab="timeline" onclick="switchEditPanelTab('timeline')" id="editTimelineTitle">ציר זמן</button>
+            <button type="button" class="edit-panel-tab" data-edit-tab="activity" onclick="switchEditPanelTab('activity')" id="editActivityTitle">התראות ופעילות</button>
+          </div>
           <div id="editHistoryMount" class="drawer-list"></div>
+          <div id="editEventsMount" class="drawer-list hidden"></div>
         </div>
-        <div class="drawer-section">
-          <h4 id="editActivityTitle">התראות ופעילות</h4>
-          <div id="editEventsMount" class="drawer-list"></div>
-        </div>
-      </div>
-      <div class="quick-actions" style="margin-top:14px" id="editActionBar">
-        <button class="btn" onclick="pingNow(editState.ip)" id="editPingBtn">פינג</button>
-        <button class="btn" onclick="openInBrowser(editState.ip)" id="editBrowserBtn">פתח בדפדפן</button>
-        <button class="btn" onclick="togglePin(editState.ip)" id="editPinBtn">נעץ</button>
-        <button class="btn" onclick="toggleCritical(editState.ip)" id="editCriticalBtn2">סמן כקריטי</button>
-        <button class="btn red" onclick="removeDevice(editState.ip)" id="editRemoveBtn">הסר</button>
       </div>
       <div id="editMessage" class="msg"></div>
-      <div class="quick-actions" style="margin-top:14px">
-        <button class="btn primary" onclick="saveEditDevice()" id="editSaveBtn">שמור</button>
-        <button class="btn" onclick="closeEditModal()" id="editCloseBtn">סגור</button>
+      <div class="edit-footer">
+        <div class="quick-actions" id="editActionBar">
+          <button class="btn" onclick="pingNow(editState.ip)" id="editPingBtn">פינג</button>
+          <button class="btn" onclick="openInBrowser(editState.ip)" id="editBrowserBtn">פתח בדפדפן</button>
+          <button class="btn" onclick="togglePin(editState.ip)" id="editPinBtn">נעץ</button>
+          <button class="btn" onclick="toggleCritical(editState.ip)" id="editCriticalBtn2">סמן כקריטי</button>
+          <button class="btn red" onclick="removeDevice(editState.ip)" id="editRemoveBtn">הסר</button>
+        </div>
+        <div class="quick-actions">
+          <button class="btn" onclick="closeEditModal()" id="editCloseBtn">סגור</button>
+          <button class="btn primary" onclick="saveEditDevice()" id="editSaveBtn">שמור</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1374,8 +1450,27 @@ function removeNetworkDraft(idx){
 }
 
 function renderNetworkNamesEditor(networks,names){ /* handled by renderNetworkManager */ }
-const editState={ip:'',detail:null};
+const editState={ip:'',detail:null,tab:'timeline'};
 function currentEditDevice(){return (state.devices||[]).find(x=>x.ip===editState.ip)||null}
+function renderEditToggleButtons(){
+  document.querySelectorAll('[data-target]').forEach(btn=>{
+    const target=qs(btn.dataset.target);
+    if(!target) return;
+    btn.classList.toggle('active', !!target.checked);
+  });
+}
+function toggleEditFlag(id){
+  const input=qs(id);
+  if(!input) return;
+  input.checked=!input.checked;
+  renderEditToggleButtons();
+}
+function switchEditPanelTab(tab){
+  editState.tab=tab==='activity'?'activity':'timeline';
+  document.querySelectorAll('[data-edit-tab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.editTab===editState.tab));
+  qs('editHistoryMount')?.classList.toggle('hidden', editState.tab!=='timeline');
+  qs('editEventsMount')?.classList.toggle('hidden', editState.tab!=='activity');
+}
 function renderEditDetail(detail){
   const d=detail?.device || currentEditDevice();
   if(!d) return;
@@ -1389,6 +1484,11 @@ function renderEditDetail(detail){
   qs('editHistoryMount').innerHTML=history.length?history.map(item=>`<div class="drawer-list-item"><div class="drawer-list-item-top"><strong>${escapeHtml(statusLabel(item.new_status||'unknown'))}</strong><small>${escapeHtml(fmtTs(item.ts))}</small></div><div class="smart-sub"><span>${escapeHtml(tr('timelineChanged'))}</span><span>${escapeHtml(statusLabel(item.old_status||'unknown'))} → ${escapeHtml(statusLabel(item.new_status||'unknown'))}</span></div></div>`).join(''):`<div class="drawer-empty">${escapeHtml(tr('drawerNoHistory'))}</div>`;
   const activity=[...(detail?.alerts||[]).map(item=>({ts:item.updated_at||item.created_at||0,title:item.title||tr('alertsTitle'),sub:item.message||'',tag:(item.severity||'info').toUpperCase()})),...(detail?.events||[]).map(item=>({ts:item.ts||0,title:item.message||item.event_type||tr('eventsTitle'),sub:item.event_type||'',tag:item.level||'info'}))].sort((a,b)=>Number(b.ts||0)-Number(a.ts||0)).slice(0,12);
   qs('editEventsMount').innerHTML=activity.length?activity.map(item=>`<div class="drawer-list-item"><div class="drawer-list-item-top"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(fmtTs(item.ts))}</small></div><div class="smart-sub"><span>${escapeHtml(item.tag)}</span>${item.sub?`<span>${escapeHtml(item.sub)}</span>`:''}</div></div>`).join(''):`<div class="drawer-empty">${escapeHtml(tr('drawerNoActivity'))}</div>`;
+  qs('editIp').textContent=d.ip||'—';
+  qs('editMac').textContent=d.mac||'—';
+  qs('editHostname').textContent=d.hostname||'—';
+  qs('editVendor').textContent=d.vendor||'—';
+  switchEditPanelTab(editState.tab);
 }
 async function loadEditDeviceDetail(ip){
   qs('editHistoryMount').innerHTML=`<div class="drawer-empty">${escapeHtml(localText('טוען היסטוריה...','Loading timeline...'))}</div>`;
@@ -1402,7 +1502,7 @@ async function loadEditDeviceDetail(ip){
     qs('editEventsMount').innerHTML=`<div class="drawer-empty">${escapeHtml(localText('לא הצלחתי לטעון פעילות','Failed to load activity'))}</div>`;
   }
 }
-async function openEditDevice(ip){const d=(state.devices||[]).find(x=>x.ip===ip); if(!d) return; editState.ip=ip; editState.detail=null; qs('editName').value=d.name||d.display_name||''; qs('editCategory').value=d.category||''; qs('editNotes').value=d.notes||''; qs('editPinned').checked=!!d.pinned; qs('editCritical').checked=!!d.critical; qs('editMaintenance').checked=!!d.maintenance; qs('editMuteAlerts').checked=!!d.mute_alerts; qs('editIp').value=d.ip||''; qs('editMac').value=d.mac||''; qs('editHostname').value=d.hostname||''; qs('editVendor').value=d.vendor||''; const networks=(state.status?.networks||[]); qs('editAssignedNetwork').innerHTML=`<option value="">-</option>`+networks.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); qs('editAssignedNetwork').value=d.assigned_network||''; qs('editScanProfile').value=d.scan_profile||'normal'; qs('editScanProfileLabel').textContent=tr('scanProfile'); qs('editBehaviorLabel').textContent=tr('deviceBehavior'); qs('editMaintenanceLabel').textContent=tr('maintenanceMode'); qs('editMuteAlertsLabel').textContent=tr('muteAlerts'); qs('editTimelineTitle').textContent=tr('deviceTimeline'); qs('editActivityTitle').textContent=tr('deviceActivity'); qs('editModalSub').textContent=tr('drawerDeviceSub'); const scanProfileOptions=qs('editScanProfile').options; if(scanProfileOptions[0]) scanProfileOptions[0].text=tr('scanProfileSlow'); if(scanProfileOptions[1]) scanProfileOptions[1].text=tr('scanProfileNormal'); if(scanProfileOptions[2]) scanProfileOptions[2].text=tr('scanProfileFast'); qs('editPinBtn').textContent=tr(d.pinned?'unpin':'pin'); qs('editCriticalBtn2').textContent=tr(d.critical?'criticalUnmark':'criticalMark'); renderEditDetail({device:d,history:[],alerts:[],events:[]}); qs('editModal').classList.remove('hidden'); await loadEditDeviceDetail(ip)}
+async function openEditDevice(ip){const d=(state.devices||[]).find(x=>x.ip===ip); if(!d) return; editState.ip=ip; editState.detail=null; editState.tab='timeline'; qs('editModalTitle').textContent=tr('editDeviceTitle'); qs('editCloseTopBtn').textContent=tr('close'); qs('editCloseBtn').textContent=tr('close'); qs('editSaveBtn').textContent=tr('save'); qs('editNameLabel').textContent=localText('שם ההתקן','Device name'); qs('editCategoryLabel').textContent=tr('category'); qs('editNetworkLabel').textContent=tr('assignedNetwork'); qs('editNotesLabel').textContent=localText('הערות','Notes'); qs('editFlagsLabel').textContent=tr('flags'); qs('editIpLabel').textContent='IP'; qs('editMacLabel').textContent='MAC'; qs('editHostnameLabel').textContent='Hostname'; qs('editVendorLabel').textContent=tr('vendorFilter'); qs('editPingBtn').textContent=tr('ping'); qs('editBrowserBtn').textContent=localText('פתח בדפדפן','Open in browser'); qs('editRemoveBtn').textContent=tr('remove'); qs('editName').value=d.name||d.display_name||''; qs('editCategory').value=d.category||''; qs('editNotes').value=d.notes||''; qs('editPinned').checked=!!d.pinned; qs('editCritical').checked=!!d.critical; qs('editMaintenance').checked=!!d.maintenance; qs('editMuteAlerts').checked=!!d.mute_alerts; qs('editIp').textContent=d.ip||'—'; qs('editMac').textContent=d.mac||'—'; qs('editHostname').textContent=d.hostname||'—'; qs('editVendor').textContent=d.vendor||'—'; const networks=(state.status?.networks||[]); qs('editAssignedNetwork').innerHTML=`<option value="">-</option>`+networks.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); qs('editAssignedNetwork').value=d.assigned_network||''; qs('editScanProfile').value=d.scan_profile||'normal'; qs('editPrimaryTitle').textContent=localText('עריכה מהירה','Quick edit'); qs('editPrimarySub').textContent=localText('רק השדות שמשנים את אופן ההתנהגות של ההתקן.','Only the controls that change how this device behaves.'); qs('editSecondaryTitle').textContent=localText('מידע ומעקב','Details and activity'); qs('editSecondarySub').textContent=localText('הפרטים לקריאה בלבד והיסטוריית השינויים במקום נפרד מהעריכה.','Read-only metadata and change history are separated from edit controls.'); qs('editMoreInfoTitle').textContent=localText('פרטי זיהוי וחיבור','Identity and network details'); qs('editMoreInfoSub').textContent=localText('לחץ להצגת מידע נוסף','Click to show more details'); qs('editScanProfileLabel').textContent=tr('scanProfile'); qs('editBehaviorLabel').textContent=tr('deviceBehavior'); qs('editMaintenanceLabel').textContent=tr('maintenanceMode'); qs('editMuteAlertsLabel').textContent=tr('muteAlerts'); qs('editPinnedLabel').textContent=tr('pinned'); qs('editCriticalLabel').textContent=tr('critical'); qs('editTimelineTitle').textContent=tr('deviceTimeline'); qs('editActivityTitle').textContent=tr('deviceActivity'); qs('editModalSub').textContent=tr('drawerDeviceSub'); const scanProfileOptions=qs('editScanProfile').options; if(scanProfileOptions[0]) scanProfileOptions[0].text=tr('scanProfileSlow'); if(scanProfileOptions[1]) scanProfileOptions[1].text=tr('scanProfileNormal'); if(scanProfileOptions[2]) scanProfileOptions[2].text=tr('scanProfileFast'); qs('editPinBtn').textContent=tr(d.pinned?'unpin':'pin'); qs('editCriticalBtn2').textContent=tr(d.critical?'criticalUnmark':'criticalMark'); renderEditToggleButtons(); switchEditPanelTab('timeline'); renderEditDetail({device:d,history:[],alerts:[],events:[]}); qs('editModal').classList.remove('hidden'); await loadEditDeviceDetail(ip)}
 function closeEditModal(){editState.detail=null; qs('editModal').classList.add('hidden')}
 async function saveEditDevice(){if(!editState.ip) return; await api(`./api/update?ip=${encodeURIComponent(editState.ip)}&name=${encodeURIComponent(qs('editName').value)}&category=${encodeURIComponent(qs('editCategory').value)}&notes=${encodeURIComponent(qs('editNotes').value)}&assigned_network=${encodeURIComponent(qs('editAssignedNetwork').value)}&scan_profile=${encodeURIComponent(qs('editScanProfile').value)}&maintenance=${qs('editMaintenance').checked?1:0}&mute_alerts=${qs('editMuteAlerts').checked?1:0}&pinned=${qs('editPinned').checked?1:0}&critical=${qs('editCritical').checked?1:0}`); showMsg('editMessage',tr('settingsSaved')); showMsg('deviceMessage',tr('settingsSaved')); await refreshAll()}
 
