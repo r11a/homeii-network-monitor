@@ -35,10 +35,13 @@ LEGACY_EVENTS = Path("/data/events.json")
 
 THREADS = 40
 PING_INTERVAL = 30
-FAIL_THRESHOLD = 1
+FAIL_THRESHOLD = 2
+CRITICAL_FAIL_THRESHOLD = 1
 RECOVER_THRESHOLD = 1
-UNSTABLE_WINDOW = 600
-UNSTABLE_THRESHOLD = 4
+UNSTABLE_WINDOW = 1800
+UNSTABLE_CHANGE_THRESHOLD = 6
+UNSTABLE_OFFLINE_THRESHOLD = 3
+UNSTABLE_RECOVERY_THRESHOLD = 3
 MAX_EVENTS = 300
 SCAN_RESCHEDULE_SECONDS = 180
 KNOWN_PROTOCOLS = ["ping", "arp", "dns", "special", "vendor"]
@@ -226,6 +229,7 @@ CREATE TABLE IF NOT EXISTS devices (
   source TEXT DEFAULT 'ping',
   notes TEXT DEFAULT '',
   assigned_network TEXT DEFAULT '',
+  scan_profile TEXT DEFAULT 'normal',
   tags_json TEXT DEFAULT '[]'
 );
 
@@ -296,6 +300,7 @@ def init_db() -> None:
             conn.executescript(SCHEMA)
             ensure_column(conn, "devices", "approved", "approved INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "assigned_network", "assigned_network TEXT DEFAULT ''")
+            ensure_column(conn, "devices", "scan_profile", "scan_profile TEXT DEFAULT 'normal'")
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
                     "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v)
@@ -541,6 +546,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "source": row["source"] or "",
         "notes": row["notes"] or "",
         "assigned_network": row["assigned_network"] if "assigned_network" in row.keys() else "",
+        "scan_profile": row["scan_profile"] if "scan_profile" in row.keys() and (row["scan_profile"] or "").strip() in ("slow", "normal", "fast") else "normal",
         "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
         "display_name": choose_display_name(row["name"] or "", row["hostname"] or "", row["vendor"] or "", row["ip"]),
@@ -923,6 +929,55 @@ def recent_history_count(conn: sqlite3.Connection, ip: str) -> int:
     return int(row[0] if row else 0)
 
 
+def normalize_scan_profile(value: Any) -> str:
+    profile = str(value or "").strip().lower()
+    return profile if profile in ("slow", "normal", "fast") else "normal"
+
+
+def failure_threshold_for_device(device: Dict[str, Any]) -> int:
+    if device.get("critical"):
+        return CRITICAL_FAIL_THRESHOLD
+    profile = normalize_scan_profile(device.get("scan_profile"))
+    if profile == "fast":
+        return 1
+    if profile == "slow":
+        return 3
+    return FAIL_THRESHOLD
+
+
+def unstable_thresholds_for_device(device: Dict[str, Any]) -> tuple[int, int, int, int]:
+    profile = normalize_scan_profile(device.get("scan_profile"))
+    if device.get("critical") or profile == "fast":
+        return (1200, 5, 2, 2)
+    if profile == "slow":
+        return (3600, 8, 4, 4)
+    return (
+        UNSTABLE_WINDOW,
+        UNSTABLE_CHANGE_THRESHOLD,
+        UNSTABLE_OFFLINE_THRESHOLD,
+        UNSTABLE_RECOVERY_THRESHOLD,
+    )
+
+
+def should_mark_unstable(conn: sqlite3.Connection, ip: str, device: Dict[str, Any]) -> bool:
+    unstable_window, change_threshold, offline_threshold, recovery_threshold = unstable_thresholds_for_device(device)
+    cutoff = now_ts() - unstable_window
+    rows = conn.execute(
+        "SELECT old_status, new_status FROM device_history WHERE ip=? AND ts>=? AND kind='status' ORDER BY ts ASC",
+        (ip, cutoff),
+    ).fetchall()
+    if not rows:
+        return False
+    total_changes = len(rows)
+    offline_changes = sum(1 for row in rows if (row["new_status"] or "") == "offline")
+    recovery_changes = sum(1 for row in rows if (row["new_status"] or "") == "online")
+    return (
+        total_changes >= change_threshold
+        and offline_changes >= offline_threshold
+        and recovery_changes >= recovery_threshold
+    )
+
+
 
 def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
     conn = db()
@@ -932,22 +987,24 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "tags": []
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "scan_profile": "normal", "tags": []
         }
         base.update(fields)
+        base["scan_profile"] = normalize_scan_profile(base.get("scan_profile"))
         conn.execute(
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,tags_json
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,scan_profile,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
               pinned=excluded.pinned, manual=excluded.manual, ignored=excluded.ignored, approved=excluded.approved,
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
-              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network, tags_json=excluded.tags_json
+              updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network,
+              scan_profile=excluded.scan_profile, tags_json=excluded.tags_json
             """,
             (
                 ip,
@@ -956,7 +1013,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
                 1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
                 int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
                 int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
-                base["notes"], base.get("assigned_network", ""), json.dumps(base["tags"]),
+                base["notes"], base.get("assigned_network", ""), base["scan_profile"], json.dumps(base["tags"]),
             ),
         )
         conn.commit()
@@ -1257,6 +1314,7 @@ def monitor_one(ip: str) -> None:
         if not row:
             return
         d = row_to_device(row)
+        fail_threshold = failure_threshold_for_device(d)
         if d["ignored"]:
             return
         ok, detected_source, ident = probe_device(ip)
@@ -1299,7 +1357,7 @@ def monitor_one(ip: str) -> None:
             d["fail_count"] += 1
             if not d.get("approved") and not d.get("manual"):
                 d["status"] = "new"
-            elif d["fail_count"] >= FAIL_THRESHOLD and prev_state != "offline":
+            elif d["fail_count"] >= fail_threshold and prev_state != "offline":
                 d["status"] = "offline"
                 changed = True
 
@@ -1309,7 +1367,7 @@ def monitor_one(ip: str) -> None:
                 "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
                 (ip, ts, prev_state, d["status"], "status"),
             )
-            if recent_history_count(conn, ip) >= UNSTABLE_THRESHOLD and d["status"] == "online":
+            if should_mark_unstable(conn, ip, d) and d["status"] == "online":
                 d["status"] = "unstable"
             if d["status"] == "offline":
                 log_event("error", f"{d['name'] or ip} went offline", "device_offline", ip)
@@ -1363,6 +1421,7 @@ def monitor_one_safe(ip: str) -> None:
             if not row:
                 return
             d = row_to_device(row)
+            fail_threshold = failure_threshold_for_device(d)
             if d["ignored"]:
                 return
             prev_state = d["status"] or "unknown"
@@ -1402,7 +1461,7 @@ def monitor_one_safe(ip: str) -> None:
                 d["fail_count"] += 1
                 if not d.get("approved") and not d.get("manual"):
                     d["status"] = "new"
-                elif d["fail_count"] >= FAIL_THRESHOLD and prev_state != "offline":
+                elif d["fail_count"] >= fail_threshold and prev_state != "offline":
                     d["status"] = "offline"
                     changed = True
 
@@ -1413,8 +1472,8 @@ def monitor_one_safe(ip: str) -> None:
                     "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
                     (ip, ts, prev_state, next_state, "status"),
                 )
-                if recent_history_count(conn, ip) >= UNSTABLE_THRESHOLD and d["status"] == "online":
-                    d["status"] = "unstable"
+            if should_mark_unstable(conn, ip, d) and d["status"] == "online":
+                d["status"] = "unstable"
                 if d["status"] == "offline":
                     post_action = ("offline", d["name"] or ip, prev_state)
                 elif d["status"] == "unstable":
@@ -2240,7 +2299,7 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", pinned: int = -1, critical: int = -1):
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", scan_profile: str = "normal", pinned: int = -1, critical: int = -1):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -2250,6 +2309,7 @@ def api_update(ip: str, name: str = "", category: str = "", tags: str = "", note
             d["category"] = unquote(category)
             d["notes"] = unquote(notes)
             d["assigned_network"] = unquote(assigned_network)
+            d["scan_profile"] = normalize_scan_profile(unquote(scan_profile))
             d["tags"] = [x.strip() for x in unquote(tags).split(",") if x.strip()]
             if pinned in (0,1):
                 d["pinned"] = bool(pinned)
@@ -2382,6 +2442,7 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
         "source": "manual",
         "notes": notes,
         "assigned_network": infer_assigned_network(ip),
+        "scan_profile": "normal",
         "tags": [],
     }
     upsert_device(ip, d)
