@@ -572,6 +572,16 @@ const I18N = {
     toolInterfaces: 'ממשקים',
     toolRx: 'כניסה',
     toolTx: 'יציאה',
+    toolPingScore: 'ציון פינג',
+    toolPingExplain: 'פירוש',
+    toolPingExcellent: 'מעולה',
+    toolPingGood: 'טוב',
+    toolPingFair: 'סביר',
+    toolPingPoor: 'חלש',
+    toolPingExcellentDesc: 'זמן תגובה נמוך וללא איבוד. מתאים לשירותים רגישים.',
+    toolPingGoodDesc: 'התגובה יציבה וטובה לשימוש יומיומי.',
+    toolPingFairDesc: 'יש השהיה או איבוד מסוים. מומלץ לעקוב.',
+    toolPingPoorDesc: 'הקישור חלש או לא יציב. כדאי לבדוק עומס או ניתוקים.',
     toolLivePing: 'פינג מתמשך',
     toolStartPing: 'התחל',
     toolPausePing: 'השהה',
@@ -601,6 +611,17 @@ const I18N = {
     toolLiveState: 'חי',
     toolMbps: 'Mbps',
     toolLatencySeries: 'מדידות אחרונות',
+    toolTrafficNow: 'תעבורה נוכחית',
+    toolTrafficPeak: 'שיא בסשן',
+    toolTrafficAverage: 'ממוצע בסשן',
+    toolTrafficStability: 'יציבות',
+    toolTrafficAnomaly: 'חריגה',
+    toolTrafficStable: 'יציב',
+    toolTrafficNormal: 'תקין',
+    toolTrafficVolatile: 'תנודתי',
+    toolTrafficHighSpike: 'זוהתה קפיצה חריגה',
+    toolTrafficNoSpike: 'ללא חריגות בולטות',
+    toolTrafficHistoryNote: 'הסיכומים כרגע מבוססים על הסשן הנוכחי של עמוד הכלים.',
     toolInventoryCount: 'סה״כ התקנים',
     toolUnavailableCount: 'לא זמינים',
     toolSlowCount: 'לא יציבים',
@@ -773,6 +794,16 @@ const I18N = {
     toolInterfaces: 'Interfaces',
     toolRx: 'RX',
     toolTx: 'TX',
+    toolPingScore: 'Ping score',
+    toolPingExplain: 'Assessment',
+    toolPingExcellent: 'Excellent',
+    toolPingGood: 'Good',
+    toolPingFair: 'Fair',
+    toolPingPoor: 'Poor',
+    toolPingExcellentDesc: 'Low latency and no packet loss. Great for sensitive services.',
+    toolPingGoodDesc: 'Stable response and suitable for everyday use.',
+    toolPingFairDesc: 'Some delay or loss is present. Worth monitoring.',
+    toolPingPoorDesc: 'Weak or unstable link. Check load or disconnects.',
     toolLivePing: 'Continuous ping',
     toolStartPing: 'Start',
     toolPausePing: 'Pause',
@@ -802,6 +833,17 @@ const I18N = {
     toolLiveState: 'Live',
     toolMbps: 'Mbps',
     toolLatencySeries: 'Recent samples',
+    toolTrafficNow: 'Current throughput',
+    toolTrafficPeak: 'Session peak',
+    toolTrafficAverage: 'Session average',
+    toolTrafficStability: 'Stability',
+    toolTrafficAnomaly: 'Anomaly',
+    toolTrafficStable: 'Stable',
+    toolTrafficNormal: 'Normal',
+    toolTrafficVolatile: 'Volatile',
+    toolTrafficHighSpike: 'A high spike was detected',
+    toolTrafficNoSpike: 'No notable spike detected',
+    toolTrafficHistoryNote: 'Current summaries are based on the active tools page session.',
     toolInventoryCount: 'Total devices',
     toolUnavailableCount: 'Offline',
     toolSlowCount: 'Unstable',
@@ -1216,8 +1258,17 @@ async function saveSettings() {
     })
   });
   state.settings.language = qs('setLanguage').value;
+  document.body.dataset.lang = currentLang();
   applyTheme(qs('setTheme').value);
   applyTranslations();
+  renderSettingsData(state.status || {}, {
+    settings: { ...state.settings, language: qs('setLanguage').value, theme: qs('setTheme').value, status_animation: qs('setStatusAnimation').value },
+    networks: (state.networkDrafts || []).map(item => item.cidr),
+    network_names: names,
+    discovery_mode: qs('setDiscoveryMode').value,
+    discovery_protocols: protocols,
+    db_path: state.dbPath,
+  });
   showMsg('settingsMessage', tr('settingsSaved'));
   await refreshData();
 }
@@ -1321,6 +1372,17 @@ function toolStatusClass(status) {
   return status === 'healthy' ? 'healthy' : status === 'degraded' ? 'degraded' : 'down';
 }
 
+function pingAssessment(result) {
+  const loss = Number(result?.loss_pct || 0);
+  const avg = Number(result?.latency_avg_ms || 0);
+  let score = 100 - (loss * 1.2) - Math.max(0, avg - 20) * 0.45;
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  if (score >= 90) return { score, label: tr('toolPingExcellent'), desc: tr('toolPingExcellentDesc') };
+  if (score >= 75) return { score, label: tr('toolPingGood'), desc: tr('toolPingGoodDesc') };
+  if (score >= 50) return { score, label: tr('toolPingFair'), desc: tr('toolPingFairDesc') };
+  return { score, label: tr('toolPingPoor'), desc: tr('toolPingPoorDesc') };
+}
+
 function populateToolDevices() {
   const sel = qs('toolDeviceSelect');
   if (!sel) return;
@@ -1359,13 +1421,26 @@ function renderToolsSummary(result) {
 }
 
 function renderPingTool(result) {
+  const assessment = pingAssessment(result);
+  const liveSamples = state.toolPingSeries || [];
   return `<div class="tool-result-card">
     <div class="tool-result-head"><div><h3>${tr('toolPingCardTitle')}</h3><small>${tr('runPingSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
     <div class="tool-metrics">
       <div class="tool-metric"><div class="k">${tr('toolPackets')}</div><div class="v">${result.received}/${result.transmitted || 0}</div></div>
       <div class="tool-metric"><div class="k">${tr('toolLoss')}</div><div class="v">${Number(result.loss_pct || 0)}%</div></div>
       <div class="tool-metric"><div class="k">${tr('toolLatency')}</div><div class="v">${result.latency_avg_ms != null ? `${Math.round(result.latency_avg_ms)} ms` : '—'}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolPingScore')}</div><div class="v">${assessment.score}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolPingExplain')}</div><div class="v" style="font-size:15px">${assessment.label}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolLatencySeries')}</div><div class="v">${liveSamples.length || 0}</div></div>
     </div>
+    <div class="tool-line ${assessment.score >= 75 ? 'good' : assessment.score >= 50 ? 'warn' : 'bad'}"><div class="tool-line-top"><strong>${assessment.label}</strong><span>${assessment.score}/100</span></div><div class="tool-line-sub"><span>${assessment.desc}</span></div></div>
+    <div class="tool-live-actions">
+      <button class="btn primary" onclick="startContinuousPing()">${tr('toolStartPing')}</button>
+      <button class="btn" onclick="pauseContinuousPing()">${tr('toolPausePing')}</button>
+      <button class="btn" onclick="resumeContinuousPing()">${tr('toolResumePing')}</button>
+      <button class="btn" onclick="stopContinuousPing()">${tr('toolStopPing')}</button>
+    </div>
+    ${liveSamples.length ? `<div class="tool-mini-strip">${liveSamples.map(sample => `<span class="${pingSampleClass(sample)}"></span>`).join('')}</div>` : ''}
     <div class="tool-output">${result.output || tr('toolNoData')}</div>
   </div>`;
 }
@@ -1568,11 +1643,19 @@ function renderTrafficPanel() {
   const totalRx = traffic.interfaces.reduce((sum, item) => sum + Number(item.rx_mbps || 0), 0);
   const totalTx = traffic.interfaces.reduce((sum, item) => sum + Number(item.tx_mbps || 0), 0);
   const chartSeries = (state.trafficSeries || []).slice(-20);
+  const combinedSeries = chartSeries.map(item => Number(item.rx || 0) + Number(item.tx || 0));
+  const avgTotal = combinedSeries.length ? combinedSeries.reduce((sum, value) => sum + value, 0) / combinedSeries.length : 0;
+  const peakTotal = combinedSeries.length ? Math.max(...combinedSeries) : 0;
+  const latestTotal = (combinedSeries[combinedSeries.length - 1] || 0);
+  const variance = combinedSeries.length ? combinedSeries.reduce((sum, value) => sum + Math.pow(value - avgTotal, 2), 0) / combinedSeries.length : 0;
+  const stddev = Math.sqrt(variance);
+  const stabilityLabel = stddev < Math.max(1, avgTotal * 0.2) ? tr('toolTrafficStable') : stddev < Math.max(2, avgTotal * 0.5) ? tr('toolTrafficNormal') : tr('toolTrafficVolatile');
+  const anomaly = latestTotal > Math.max(1, avgTotal * 2.2);
   const max = Math.max(1, ...chartSeries.map(item => Math.max(Number(item.rx || 0), Number(item.tx || 0), 1)));
   mount.innerHTML = `
     <div class="tool-big-stat">
-      <div><strong>${Math.round(totalRx * 10) / 10} ${tr('toolMbps')}</strong><small>${tr('toolRx')}</small></div>
-      <div><strong>${Math.round(totalTx * 10) / 10} ${tr('toolMbps')}</strong><small>${tr('toolTx')}</small></div>
+      <div><strong>${Math.round((totalRx + totalTx) * 10) / 10} ${tr('toolMbps')}</strong><small>${tr('toolTrafficNow')}</small></div>
+      <div><strong>${Math.round(peakTotal * 10) / 10} ${tr('toolMbps')}</strong><small>${tr('toolTrafficPeak')}</small></div>
     </div>
     <div class="tool-chart">
       ${chartSeries.map((sample, idx) => {
@@ -1583,9 +1666,15 @@ function renderTrafficPanel() {
         return `<div class="tool-chart-bar ${cls}" style="height:${height}px" title="RX ${sample.rx.toFixed(1)} / TX ${sample.tx.toFixed(1)} ${tr('toolMbps')}"><span>${label}</span></div>`;
       }).join('')}
     </div>
+    <div class="tool-metrics">
+      <div class="tool-metric"><div class="k">${tr('toolTrafficAverage')}</div><div class="v">${Math.round(avgTotal * 10) / 10} ${tr('toolMbps')}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolTrafficStability')}</div><div class="v" style="font-size:15px">${stabilityLabel}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolTrafficAnomaly')}</div><div class="v" style="font-size:15px">${anomaly ? tr('toolTrafficHighSpike') : tr('toolTrafficNoSpike')}</div></div>
+    </div>
     <div class="tool-list">
       ${traffic.interfaces.slice(0, 8).map(item => `<div class="tool-line ${Number(item.rx_mbps || 0) + Number(item.tx_mbps || 0) > 10 ? 'warn' : 'good'}"><div class="tool-line-top"><strong>${item.interface}</strong><span>${tr('toolRx')}: ${Number(item.rx_mbps || 0).toFixed(1)} • ${tr('toolTx')}: ${Number(item.tx_mbps || 0).toFixed(1)} ${tr('toolMbps')}</span></div></div>`).join('')}
     </div>
+    <div class="tool-output">${tr('toolTrafficHistoryNote')}</div>
   `;
 }
 
@@ -1646,6 +1735,12 @@ function showInventoryTool() {
 }
 
 function clearToolResults() {
+  const preserve = {
+    device: qs('toolDeviceSelect')?.value || '',
+    target: qs('toolTargetInput')?.value || '',
+    ports: qs('toolPortsInput')?.value || '',
+    hops: qs('toolHopsInput')?.value || '12',
+  };
   stopContinuousPing();
   ensureToolLivePolling(false);
   state.toolResults = null;
@@ -1657,6 +1752,10 @@ function clearToolResults() {
   renderLivePingPanel();
   renderTrafficPanel();
   renderInventoryPanel();
+  if (qs('toolDeviceSelect')) qs('toolDeviceSelect').value = preserve.device;
+  if (qs('toolTargetInput')) qs('toolTargetInput').value = preserve.target;
+  if (qs('toolPortsInput')) qs('toolPortsInput').value = preserve.ports;
+  if (qs('toolHopsInput')) qs('toolHopsInput').value = preserve.hops;
   ensureToolLivePolling(true);
   showMsg('toolsMessage', tr('toolClearDone'));
 }
@@ -1725,8 +1824,17 @@ window.addEventListener('load', async () => {
   window.setInterval(updateHeaderClock, 1000);
   qs('setLanguage')?.addEventListener('change', () => {
     state.settings.language = qs('setLanguage').value;
+    document.body.dataset.lang = currentLang();
     applyTranslations();
     renderNetworkManager();
+    renderSettingsData(state.status || {}, {
+      settings: { ...state.settings, language: qs('setLanguage').value },
+      networks: (state.networkDrafts || []).map(item => item.cidr),
+      network_names: Object.fromEntries((state.networkDrafts || []).filter(item => (item.alias || '').trim()).map(item => [item.cidr, item.alias.trim()])),
+      discovery_mode: qs('setDiscoveryMode')?.value || state.settings.discovery_mode || 'auto_manual',
+      discovery_protocols: ['ping', 'arp', 'dns', 'special', 'vendor'].filter(p => qs(`proto_${p}`)?.checked),
+      db_path: state.dbPath,
+    });
     updateHeaderClock();
   });
   try {
