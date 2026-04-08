@@ -465,8 +465,8 @@ body.viewer-mode .viewer-close{display:inline-flex}
 .edit-summary-title{margin:0;font-size:clamp(24px,2.3vw,40px);font-weight:950;letter-spacing:-.05em;line-height:1.05}
 .edit-summary-sub{margin:6px 0 0;color:var(--muted);font-size:14px}
 .edit-summary-meta{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.edit-workspace{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;min-height:0;align-items:start}
-.edit-primary-card,.edit-secondary-card{min-height:0;border-radius:26px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,.01));padding:18px 18px 16px}
+.edit-workspace{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;min-height:0;align-items:start;padding-bottom:10px}
+.edit-primary-card,.edit-secondary-card{min-height:0;overflow:hidden;border-radius:26px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,.01));padding:18px 18px 16px}
 .edit-primary-card{display:grid;grid-template-rows:auto auto auto auto;align-content:start}
 .edit-secondary-card{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:14px}
 .edit-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
@@ -501,7 +501,7 @@ body.viewer-mode .viewer-close{display:inline-flex}
 .drawer-list-item{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:8px}
 .drawer-list-item-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .drawer-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:12px}
-.edit-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
+.edit-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;padding:14px 0 0;border-top:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.04) 18%,var(--card2));position:relative;z-index:2}
 .edit-footer .quick-actions{margin-top:0;display:flex;gap:8px;flex-wrap:wrap;min-width:0}
 .edit-footer #editActionBar{justify-content:flex-end}
 .edit-footer .btn{white-space:nowrap}
