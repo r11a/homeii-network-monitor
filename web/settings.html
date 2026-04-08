@@ -43,9 +43,11 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
   background:linear-gradient(180deg,rgba(50,104,245,.18),rgba(24,185,214,.08));
   box-shadow:0 12px 28px rgba(50,104,245,.16);
 }
-.app{height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 280px;direction:rtl}
+.app{height:100vh;display:flex;flex-direction:row;direction:ltr}
 .sidebar{
-  grid-column:2;
+  order:2;
+  flex:0 0 280px;
+  width:280px;
   height:100vh;padding:18px 14px;display:flex;flex-direction:column;gap:16px;
   border-left:1px solid var(--line);
   background:
@@ -74,7 +76,8 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
 .info-card .v{margin-top:8px;font-size:18px;font-weight:900}
 .health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(53,211,153,.65)}
-.main{grid-column:1;height:100vh;overflow:auto;padding:20px}
+.main{order:1;flex:1 1 auto;min-width:0;height:100vh;overflow:auto;padding:20px;direction:rtl}
+.main > *{max-width:100%}
 body[data-lang="en"] .main{direction:ltr}
 body[data-lang="en"] .sidebar{direction:rtl}
 .top-shell,.panel,.btn,input,select,textarea{
