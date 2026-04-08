@@ -9,6 +9,7 @@ import re
 import socket
 import sqlite3
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -1315,28 +1316,45 @@ def speedtest_diagnostics() -> dict[str, Any]:
         commands.append(["speedtest", "--accept-license", "--accept-gdpr", "--format=json"])
     if shutil.which("speedtest-cli"):
         commands.append(["speedtest-cli", "--json"])
+    commands.append([sys.executable, "-m", "speedtest", "--json"])
     if shutil.which("fast"):
         commands.append(["fast", "--json"])
+    seen: set[tuple[str, ...]] = set()
+    last_error = "speedtest command not available"
     for cmd in commands:
+        key = tuple(cmd)
+        if key in seen:
+            continue
+        seen.add(key)
         ok, output = run_command_capture(cmd, timeout=90)
         if not output:
+            if not ok:
+                last_error = f"{Path(cmd[0]).name} returned no output"
             continue
         try:
             data = json.loads(output)
         except Exception:
-            data = {}
-        if cmd[0] == "speedtest":
-            download = round(float(data.get("download", {}).get("bandwidth", 0)) * 8 / 1_000_000, 2)
-            upload = round(float(data.get("upload", {}).get("bandwidth", 0)) * 8 / 1_000_000, 2)
-            ping_ms = round(float(data.get("ping", {}).get("latency", 0)), 1)
-        elif cmd[0] == "speedtest-cli":
-            download = round(float(data.get("download", 0)) / 1_000_000, 2)
-            upload = round(float(data.get("upload", 0)) / 1_000_000, 2)
-            ping_ms = round(float(data.get("ping", 0)), 1)
-        else:
-            download = round(float(data.get("downloadSpeed", 0)), 2)
-            upload = round(float(data.get("uploadSpeed", 0)), 2)
-            ping_ms = round(float(data.get("latency", 0)), 1)
+            last_error = output[:400] or f"{Path(cmd[0]).name} returned invalid output"
+            continue
+        try:
+            if Path(cmd[0]).name == "speedtest":
+                download = round(float((data.get("download") or {}).get("bandwidth", 0)) * 8 / 1_000_000, 2)
+                upload = round(float((data.get("upload") or {}).get("bandwidth", 0)) * 8 / 1_000_000, 2)
+                ping_ms = round(float((data.get("ping") or {}).get("latency", 0)), 1)
+            elif "speedtest" in Path(cmd[0]).name or (len(cmd) >= 3 and cmd[1:3] == ["-m", "speedtest"]):
+                download = round(float(data.get("download", 0)) / 1_000_000, 2)
+                upload = round(float(data.get("upload", 0)) / 1_000_000, 2)
+                ping_ms = round(float(data.get("ping", 0)), 1)
+            else:
+                download = round(float(data.get("downloadSpeed", 0)), 2)
+                upload = round(float(data.get("uploadSpeed", 0)), 2)
+                ping_ms = round(float(data.get("latency", 0)), 1)
+        except Exception as exc:
+            last_error = f"{Path(cmd[0]).name}: {exc}"
+            continue
+        if download <= 0 and upload <= 0:
+            last_error = output[:400] or f"{Path(cmd[0]).name} returned no throughput"
+            continue
         status = "healthy" if download > 0 else "down"
         return {
             "ok": ok,
@@ -1344,13 +1362,13 @@ def speedtest_diagnostics() -> dict[str, Any]:
             "download_mbps": download,
             "upload_mbps": upload,
             "ping_ms": ping_ms,
-            "command": cmd[0],
+            "command": " ".join(cmd[:3]) if len(cmd) > 1 else cmd[0],
             "output": output,
         }
     return {
         "ok": False,
         "status": "down",
-        "error": "speedtest command not available",
+        "error": last_error,
         "output": "",
     }
 
