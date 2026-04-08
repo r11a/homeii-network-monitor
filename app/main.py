@@ -1381,6 +1381,52 @@ def speedtest_diagnostics() -> dict[str, Any]:
     }
 
 
+def free_ips_diagnostics(target: str = "") -> dict[str, Any]:
+    cidr = infer_assigned_network(target) if target and looks_like_ip(target) else ""
+    if not cidr:
+        networks = get_networks()
+        cidr = networks[0] if networks else ""
+    if not cidr:
+        return {"ok": False, "status": "down", "network": "", "available": 0, "checked": 0, "items": [], "error": "No monitored network available"}
+    try:
+        network = ipaddress.ip_network(cidr, strict=False)
+    except Exception:
+        return {"ok": False, "status": "down", "network": cidr, "available": 0, "checked": 0, "items": [], "error": "Invalid network"}
+
+    used_ips: set[str] = set()
+    for device in get_devices(include_ignored=True):
+        ip = str(device.get("ip", "") or "").strip()
+        if not ip:
+            continue
+        try:
+            if ipaddress.ip_address(ip) in network:
+                used_ips.add(ip)
+        except Exception:
+            continue
+    for item in arp_scan_networks() + read_proc_arp():
+        ip = str(item.get("ip", "") or "").strip()
+        if not ip:
+            continue
+        try:
+            if ipaddress.ip_address(ip) in network:
+                used_ips.add(ip)
+        except Exception:
+            continue
+
+    all_hosts = [str(host) for host in network.hosts()]
+    free_hosts = [ip for ip in all_hosts if ip not in used_ips]
+    max_items = 128
+    return {
+        "ok": True,
+        "status": "healthy" if free_hosts else "degraded",
+        "network": cidr,
+        "available": len(free_hosts),
+        "checked": len(all_hosts),
+        "items": free_hosts[:max_items],
+        "truncated": len(free_hosts) > max_items,
+    }
+
+
 def traffic_diagnostics() -> dict[str, Any]:
     now = time.time()
     interfaces: list[dict[str, Any]] = []
@@ -2515,6 +2561,8 @@ async def api_tools_run(request: Request):
         result["tools"]["dns"] = dns_diagnostics(target)
     if "speed" in selected_tools or "all" in selected_tools:
         result["tools"]["speed"] = speedtest_diagnostics()
+    if "free_ips" in selected_tools:
+        result["tools"]["free_ips"] = free_ips_diagnostics(target)
 
     status_rank = {"healthy": 0, "degraded": 1, "down": 2}
     overall = "healthy"
