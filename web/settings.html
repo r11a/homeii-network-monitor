@@ -43,11 +43,12 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
   background:linear-gradient(180deg,rgba(50,104,245,.18),rgba(24,185,214,.08));
   box-shadow:0 12px 28px rgba(50,104,245,.16);
 }
-.app{height:100vh;display:flex;flex-direction:row-reverse;direction:rtl}
+.app{height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 280px;direction:ltr}
 .sidebar{
-  flex:0 0 280px;
+  grid-column:2;
   width:280px;
   min-width:280px;
+  direction:rtl;
   height:100vh;padding:18px 14px;display:flex;flex-direction:column;gap:16px;
   border-left:1px solid var(--line);
   background:
@@ -76,7 +77,7 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
 .info-card .v{margin-top:8px;font-size:18px;font-weight:900}
 .health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(53,211,153,.65)}
-.main{flex:1 1 auto;min-width:0;height:100vh;overflow:auto;padding:20px 18px 20px 20px;direction:rtl}
+.main{grid-column:1;min-width:0;height:100vh;overflow:auto;padding:20px 18px 20px 20px;direction:rtl}
 .main > .top-shell,
 .main > .page{width:min(100%,1440px);margin:0 auto 16px}
 body[data-lang="en"] .main{direction:ltr}
@@ -238,7 +239,7 @@ body[data-lang="en"] .tool-inline{direction:ltr;text-align:left}
 }
 @media (max-width:1100px){
   body{overflow:auto}
-  .app{flex-direction:column}
+  .app{display:block}
   .sidebar{width:auto;min-width:0;height:auto;border-left:0;border-bottom:1px solid var(--line)}
   .main{height:auto;padding:16px}
 }
@@ -416,6 +417,7 @@ body[data-lang="en"] .tool-inline{direction:ltr;text-align:left}
                 <button class="tool-btn" onclick="runNetworkTools(['ports'])"><strong id="runPortsTitle">סריקת פורטים</strong><span id="runPortsSub">בדיקת פורטים פתוחים</span></button>
                 <button class="tool-btn" onclick="runNetworkTools(['dns'])"><strong id="runDnsTitle">DNS</strong><span id="runDnsSub">Reverse DNS ושמות מארח</span></button>
                 <button class="tool-btn" onclick="runNetworkTools(['speed'])"><strong id="runSpeedTitle">בדיקת מהירות</strong><span id="runSpeedSub">בדיקת מהירות אינטרנט</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['free_ips'])"><strong id="runFreeTitle">כתובות פנויות</strong><span id="runFreeSub">איתור כתובות זמינות בתוך הרשת</span></button>
                 <button class="tool-btn" onclick="showInventoryTool()"><strong id="runInventoryTitle">מפת התקנים</strong><span id="runInventorySub">כל ההתקנים המזוהים כרגע</span></button>
                 <button class="tool-btn" onclick="clearToolResults()"><strong id="toolClearTitle">נקה מסך</strong><span id="toolClearSub">איפוס תוצאות ותצוגות חיות</span></button>
               </div>
@@ -559,6 +561,8 @@ const I18N = {
     runDnsSub: 'זיהוי שמות ו-Reverse DNS',
     runSpeedTitle: 'בדיקת מהירות',
     runSpeedSub: 'בדיקת מהירות אינטרנט',
+    runFreeTitle: 'כתובות פנויות',
+    runFreeSub: 'איתור כתובות זמינות בתוך הרשת',
     runInventoryTitle: 'מפת התקנים',
     runInventorySub: 'כל ההתקנים המזוהים כרגע',
     toolClearTitle: 'נקה מסך',
@@ -622,6 +626,12 @@ const I18N = {
     toolTraceCardTitle: 'מסלול',
     toolPortsCardTitle: 'סריקת פורטים',
     toolDnsCardTitle: 'זיהוי DNS',
+    toolFreeCardTitle: 'כתובות פנויות ברשת',
+    toolFreeSummary: 'כתובות פוטנציאליות זמינות',
+    toolFreeNetwork: 'רשת',
+    toolFreeChecked: 'נבדקו',
+    toolFreePotential: 'פנויות',
+    toolFreeHint: 'הרשימה מבוססת על התקנים מוכרים ועל זיהוי פעיל ברשת.',
     toolTrafficTitle: 'תעבורת רשת',
     toolTrafficDesc: 'מדידה חיה של קצבי RX/TX לפי הממשקים שזוהו במערכת.',
     toolInventoryTitle: 'מפת התקנים מזוהים',
@@ -781,6 +791,8 @@ const I18N = {
     runDnsSub: 'Reverse DNS and host names',
     runSpeedTitle: 'Speed test',
     runSpeedSub: 'Internet speed test',
+    runFreeTitle: 'Free addresses',
+    runFreeSub: 'Find available addresses in the subnet',
     runInventoryTitle: 'Inventory',
     runInventorySub: 'All currently identified devices',
     toolClearTitle: 'Clear screen',
@@ -844,6 +856,12 @@ const I18N = {
     toolTraceCardTitle: 'Trace route',
     toolPortsCardTitle: 'Port scan',
     toolDnsCardTitle: 'DNS lookup',
+    toolFreeCardTitle: 'Available network addresses',
+    toolFreeSummary: 'Potentially available addresses',
+    toolFreeNetwork: 'Network',
+    toolFreeChecked: 'Checked',
+    toolFreePotential: 'Available',
+    toolFreeHint: 'The list is based on known devices and active network identification.',
     toolTrafficTitle: 'Network traffic',
     toolTrafficDesc: 'Live RX/TX throughput by the interfaces detected on the host.',
     toolInventoryTitle: 'Identified devices',
@@ -1094,6 +1112,8 @@ function applyTranslations() {
   if (qs('runDnsSub')) qs('runDnsSub').textContent = tr('runDnsSub');
   if (qs('runSpeedTitle')) qs('runSpeedTitle').textContent = tr('runSpeedTitle');
   if (qs('runSpeedSub')) qs('runSpeedSub').textContent = tr('runSpeedSub');
+  if (qs('runFreeTitle')) qs('runFreeTitle').textContent = tr('runFreeTitle');
+  if (qs('runFreeSub')) qs('runFreeSub').textContent = tr('runFreeSub');
   if (qs('runInventoryTitle')) qs('runInventoryTitle').textContent = tr('runInventoryTitle');
   if (qs('runInventorySub')) qs('runInventorySub').textContent = tr('runInventorySub');
   if (qs('toolClearTitle')) qs('toolClearTitle').textContent = tr('toolClearTitle');
@@ -1534,6 +1554,20 @@ function renderSpeedTool(result) {
   </div>`;
 }
 
+function renderFreeIpsTool(result) {
+  const items = Array.isArray(result.items) ? result.items : [];
+  return `<div class="tool-result-card">
+    <div class="tool-result-head"><div><h3>${tr('toolFreeCardTitle')}</h3><small>${tr('toolFreeHint')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-metrics">
+      <div class="tool-metric"><div class="k">${tr('toolFreeNetwork')}</div><div class="v" style="font-size:15px">${result.network || '—'}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolFreeChecked')}</div><div class="v">${Number(result.checked || 0)}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolFreePotential')}</div><div class="v">${Number(result.available || 0)}</div></div>
+    </div>
+    <div class="tool-line ${items.length ? 'good' : 'warn'}"><div class="tool-line-top"><strong>${tr('toolFreeSummary')}</strong><span>${Number(result.available || 0)}</span></div><div class="tool-line-sub"><span>${tr('toolFreeHint')}</span></div></div>
+    <div class="tool-list">${items.length ? items.map(ip => `<div class="tool-line good"><div class="tool-line-top"><strong>${ip}</strong></div></div>`).join('') : `<div class="empty">${tr('toolNoData')}</div>`}</div>
+  </div>`;
+}
+
 function pingSampleClass(sample) {
   if (!sample) return 'warn';
   if (sample.status === 'healthy') return 'good';
@@ -1807,6 +1841,7 @@ function renderToolResults(result) {
   if (result.tools.ports) cards.push(renderPortsTool(result.tools.ports));
   if (result.tools.dns) cards.push(renderDnsTool(result.tools.dns));
   if (result.tools.speed) cards.push(renderSpeedTool(result.tools.speed));
+  if (result.tools.free_ips) cards.push(renderFreeIpsTool(result.tools.free_ips));
   mount.innerHTML = cards.join('');
 }
 
