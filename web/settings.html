@@ -43,9 +43,9 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
   background:linear-gradient(180deg,rgba(50,104,245,.18),rgba(24,185,214,.08));
   box-shadow:0 12px 28px rgba(50,104,245,.16);
 }
-.app{height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 280px;direction:ltr}
+.app{height:100vh;display:flex;flex-direction:row;direction:rtl}
 .sidebar{
-  grid-column:2;
+  flex:0 0 280px;
   width:280px;
   min-width:280px;
   direction:rtl;
@@ -77,7 +77,7 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
 .info-card .v{margin-top:8px;font-size:18px;font-weight:900}
 .health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(53,211,153,.65)}
-.main{grid-column:1;min-width:0;height:100vh;overflow:auto;padding:20px 18px 20px 20px;direction:rtl}
+.main{flex:1 1 auto;min-width:0;height:100vh;overflow:auto;padding:20px 18px 20px 20px;direction:rtl}
 .main > .top-shell,
 .main > .page{width:min(100%,1440px);margin:0 auto 16px}
 body[data-lang="en"] .main{direction:ltr}
@@ -289,7 +289,7 @@ body[data-lang="en"] .tool-inline{direction:ltr;text-align:left}
       </div>
     </div>
 
-    <section class="page active" id="page-general">
+    <section class="page active" id="page-general" style="display:block">
       <div class="panel">
         <div class="panel-head"><div><h2>כללי</h2><p>הגדרות כלליות של הממשק, גילוי ותצוגת ברירת מחדל.</p></div></div>
         <div class="settings-form-grid">
