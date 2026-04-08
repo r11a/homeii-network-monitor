@@ -128,6 +128,55 @@ textarea{min-height:120px;resize:vertical}
 .item-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
 .hidden-input{display:none}
 .empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted);border:1px dashed var(--line)}
+.tools-shell{display:grid;gap:16px}
+.tools-top{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:16px}
+.tool-target-panel,.tool-actions-panel,.tool-result-card{
+  padding:18px;border-radius:22px;border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+  box-shadow:var(--shadow)
+}
+.tool-target-panel{display:grid;gap:14px}
+.tool-presets{display:flex;gap:10px;flex-wrap:wrap}
+.tool-preset{padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.025);font-size:12px;color:var(--muted)}
+.tool-actions-panel{display:grid;gap:12px;align-content:start}
+.tool-actions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tool-btn{
+  appearance:none;border:1px solid var(--line);cursor:pointer;border-radius:18px;padding:14px 16px;text-align:right;color:var(--text);
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));display:grid;gap:6px;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease
+}
+.tool-btn:hover{transform:translateY(-1px);border-color:var(--line2);box-shadow:0 12px 24px rgba(2,8,23,.12)}
+.tool-btn strong{font-size:15px}
+.tool-btn span{color:var(--muted);font-size:12px}
+.tool-btn.primary{background:linear-gradient(135deg,rgba(50,104,245,.22),rgba(24,185,214,.12));border-color:rgba(50,104,245,.3)}
+.tools-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tool-stat{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))}
+.tool-stat .k{font-size:12px;color:var(--muted)}
+.tool-stat .v{margin-top:8px;font-size:28px;font-weight:900}
+.tool-stat.healthy .v{color:var(--green)}
+.tool-stat.degraded .v{color:var(--orange)}
+.tool-stat.down .v{color:var(--red)}
+.tool-results-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.tool-result-card{display:grid;gap:14px}
+.tool-result-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.tool-status-chip{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;font-weight:800}
+.tool-status-chip.healthy{color:var(--green);border-color:rgba(76,225,166,.35);background:rgba(76,225,166,.08)}
+.tool-status-chip.degraded{color:var(--orange);border-color:rgba(255,182,72,.35);background:rgba(255,182,72,.08)}
+.tool-status-chip.down{color:var(--red);border-color:rgba(255,127,150,.35);background:rgba(255,127,150,.08)}
+.tool-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tool-metric{padding:12px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid var(--line)}
+.tool-metric .k{font-size:11px;color:var(--muted)}
+.tool-metric .v{margin-top:6px;font-size:18px;font-weight:900}
+.tool-list{display:grid;gap:8px;max-height:320px;overflow:auto;padding-inline-end:4px}
+.tool-line{display:grid;gap:6px;padding:12px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
+.tool-line-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.tool-line-sub{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.tool-line.good{border-color:rgba(76,225,166,.26)}
+.tool-line.warn{border-color:rgba(255,182,72,.26)}
+.tool-line.bad{border-color:rgba(255,127,150,.28)}
+.tool-output{white-space:pre-wrap;font-family:Consolas,"Cascadia Mono",monospace;font-size:12px;line-height:1.5;padding:14px;border-radius:16px;border:1px solid var(--line);background:rgba(7,11,21,.55);max-height:220px;overflow:auto}
+body.light .tool-output{background:rgba(241,246,255,.92)}
+@media (max-width:1200px){.tools-top,.tool-results-grid{grid-template-columns:1fr}.tools-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){.tools-summary,.tool-actions-grid,.tool-metrics{grid-template-columns:1fr}}
 @media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto}}
 </style>
 </head>
@@ -148,6 +197,7 @@ textarea{min-height:120px;resize:vertical}
       <button class="nav-btn settings-nav-btn" data-page="manual" onclick="switchPage('manual', this)">התקן ידני</button>
       <button class="nav-btn settings-nav-btn" data-page="appearance" onclick="switchPage('appearance', this)">מראה</button>
       <button class="nav-btn settings-nav-btn" data-page="language" onclick="switchPage('language', this)">שפה</button>
+      <button class="nav-btn settings-nav-btn" data-page="tools" onclick="switchPage('tools', this)">כלים</button>
       <button class="nav-btn settings-nav-btn" data-page="system" onclick="switchPage('system', this)">מערכת</button>
     </div>
     <div class="sidebar-footer">
@@ -260,6 +310,63 @@ textarea{min-height:120px;resize:vertical}
       </div>
     </section>
 
+    <section class="page" id="page-tools">
+      <div class="panel">
+        <div class="panel-head"><div><h2 id="toolsTitle">כלי רשת</h2><p id="toolsDesc">בחר התקן קיים או הזן IP ידני, והריץ בדיקות מתקדמות עם תוצאה ברורה וויזואלית.</p></div></div>
+        <div class="tools-shell">
+          <div class="tools-top">
+            <div class="tool-target-panel">
+              <div class="settings-form-grid">
+                <div class="field">
+                  <label id="toolDeviceLabel">התקן קיים</label>
+                  <select id="toolDeviceSelect" onchange="handleToolDeviceSelect()">
+                    <option value="">בחר התקן</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label id="toolTargetLabel">כתובת IP ידנית</label>
+                  <input id="toolTargetInput" placeholder="192.168.1.100">
+                </div>
+                <div class="field">
+                  <label id="toolPortsLabel">פורטים לבדיקה</label>
+                  <input id="toolPortsInput" value="80,443,554,8000,8080,22">
+                </div>
+                <div class="field">
+                  <label id="toolHopsLabel">מספר קפיצות מקסימלי</label>
+                  <input id="toolHopsInput" type="number" min="4" max="24" value="12">
+                </div>
+              </div>
+              <div class="tool-presets">
+                <button type="button" class="tool-preset" id="toolPresetWeb" onclick="setToolPorts('80,443,8080')">Web: 80,443,8080</button>
+                <button type="button" class="tool-preset" id="toolPresetCam" onclick="setToolPorts('80,443,554,8000')">Camera: 80,443,554,8000</button>
+                <button type="button" class="tool-preset" id="toolPresetInfra" onclick="setToolPorts('22,53,80,123,443')">Infra: 22,53,80,123,443</button>
+              </div>
+            </div>
+            <div class="tool-actions-panel">
+              <div class="panel-head" style="margin:0"><div><h2 id="toolActionTitle">הרצת בדיקות</h2><p id="toolActionSub">הפעל כלי יחיד או הרץ הכל ברצף לקבלת תמונת מצב מלאה.</p></div></div>
+              <div class="tool-actions-grid">
+                <button class="tool-btn primary" onclick="runNetworkTools(['all'])"><strong id="runAllTitle">הרץ הכל</strong><span id="runAllSub">Ping, Trace, Ports, DNS</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['ping'])"><strong>PING</strong><span id="runPingSub">זמן תגובה ואחוז איבוד</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['trace'])"><strong>TRACE ROUTE</strong><span id="runTraceSub">מסלול וקפיצות בדרך</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['ports'])"><strong>PORT CHECK</strong><span id="runPortsSub">בדיקת פורטים פתוחים</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['dns'])"><strong>DNS</strong><span id="runDnsSub">Reverse DNS ושמות מארח</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="tools-summary" id="toolsSummary">
+            <div class="tool-stat"><div class="k">מצב</div><div class="v">—</div></div>
+            <div class="tool-stat"><div class="k">יעד</div><div class="v">—</div></div>
+            <div class="tool-stat"><div class="k">בדיקות</div><div class="v">—</div></div>
+            <div class="tool-stat"><div class="k">עודכן</div><div class="v">—</div></div>
+          </div>
+          <div id="toolsMessage" class="msg"></div>
+          <div class="tool-results-grid" id="toolsResults">
+            <div class="empty" id="toolsEmptyState">בחר יעד והריץ בדיקה כדי לראות כאן תוצאות עשירות.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="page" id="page-system">
       <div class="panel">
         <div class="panel-head"><div><h2>מערכת</h2><p>מידע מערכת, סטטוס סריקה, ייצוא וייבוא.</p></div></div>
@@ -287,7 +394,7 @@ textarea{min-height:120px;resize:vertical}
 
 <script>
 const qs = id => document.getElementById(id);
-const state = { settings: {}, status: null, networkDrafts: [], dbPath: '' };
+const state = { settings: {}, status: null, networkDrafts: [], dbPath: '', devices: [], toolResults: null };
 
 const I18N = {
   he: {
@@ -299,6 +406,7 @@ const I18N = {
     navManual: 'התקן ידני',
     navAppearance: 'מראה',
     navLanguage: 'שפה',
+    navTools: 'כלים',
     navSystem: 'מערכת',
     sidebarStatus: 'סטטוס',
     sidebarNetworks: 'רשתות',
@@ -337,6 +445,44 @@ const I18N = {
     languageDesc: 'בחר שפת ממשק לכל המערכת.',
     language: 'שפה',
     saveLanguage: 'שמור שפה',
+    toolsTitle: 'כלי רשת',
+    toolsDesc: 'בחר התקן קיים או הזן IP ידני, והריץ בדיקות מתקדמות עם תוצאה ברורה וויזואלית.',
+    toolDevice: 'התקן קיים',
+    toolTarget: 'כתובת IP ידנית',
+    toolPorts: 'פורטים לבדיקה',
+    toolHops: 'מספר קפיצות מקסימלי',
+    toolActionTitle: 'הרצת בדיקות',
+    toolActionSub: 'הפעל כלי יחיד או הרץ הכל ברצף לקבלת תמונת מצב מלאה.',
+    runAll: 'הרץ הכל',
+    runAllSub: 'Ping, Trace, Ports, DNS',
+    runPingSub: 'זמן תגובה ואחוז איבוד',
+    runTraceSub: 'מסלול וקפיצות בדרך',
+    runPortsSub: 'בדיקת פורטים פתוחים',
+    runDnsSub: 'Reverse DNS ושמות מארח',
+    toolPresetWeb: 'Web: 80,443,8080',
+    toolPresetCam: 'Camera: 80,443,554,8000',
+    toolPresetInfra: 'Infra: 22,53,80,123,443',
+    toolsEmpty: 'בחר יעד והריץ בדיקה כדי לראות כאן תוצאות עשירות.',
+    toolSelectDevice: 'בחר התקן',
+    toolMissingTarget: 'צריך לבחור התקן או להזין כתובת IP',
+    toolRunFailed: 'בדיקת הרשת נכשלה',
+    toolOverall: 'מצב כללי',
+    toolTargetStat: 'יעד',
+    toolChecks: 'בדיקות',
+    toolUpdated: 'עודכן',
+    toolHealthy: 'תקין',
+    toolDegraded: 'חלקי',
+    toolDown: 'נכשל',
+    toolPackets: 'מנות שהתקבלו',
+    toolLoss: 'איבוד',
+    toolLatency: 'ממוצע',
+    toolOpenPorts: 'פתוחים',
+    toolHopCount: 'קפיצות',
+    toolResolvedName: 'שם שזוהה',
+    toolAddresses: 'כתובות',
+    toolRawOutput: 'פלט מלא',
+    toolNoData: 'אין נתונים להצגה',
+    toolChosenDevice: 'התקן שנבחר',
     systemTitle: 'מערכת',
     systemDesc: 'מידע מערכת, סטטוס סריקה, ייצוא וייבוא.',
     sysVersionLabel: 'גרסת מערכת',
@@ -406,6 +552,7 @@ const I18N = {
     navManual: 'Manual Device',
     navAppearance: 'Appearance',
     navLanguage: 'Language',
+    navTools: 'Tools',
     navSystem: 'System',
     sidebarStatus: 'Status',
     sidebarNetworks: 'Networks',
@@ -444,6 +591,44 @@ const I18N = {
     languageDesc: 'Choose the interface language for the whole system.',
     language: 'Language',
     saveLanguage: 'Save language',
+    toolsTitle: 'Network tools',
+    toolsDesc: 'Pick an existing device or enter a manual IP, then run advanced checks with clear visual results.',
+    toolDevice: 'Existing device',
+    toolTarget: 'Manual IP address',
+    toolPorts: 'Ports to check',
+    toolHops: 'Maximum hops',
+    toolActionTitle: 'Run diagnostics',
+    toolActionSub: 'Run a single tool or execute the full diagnostics flow in one click.',
+    runAll: 'Run all',
+    runAllSub: 'Ping, Trace, Ports, DNS',
+    runPingSub: 'Latency and packet loss',
+    runTraceSub: 'Route path and hops',
+    runPortsSub: 'Open port check',
+    runDnsSub: 'Reverse DNS and host names',
+    toolPresetWeb: 'Web: 80,443,8080',
+    toolPresetCam: 'Camera: 80,443,554,8000',
+    toolPresetInfra: 'Infra: 22,53,80,123,443',
+    toolsEmpty: 'Pick a target and run a diagnostic to see rich results here.',
+    toolSelectDevice: 'Select device',
+    toolMissingTarget: 'Choose a device or enter an IP address',
+    toolRunFailed: 'Network diagnostic failed',
+    toolOverall: 'Overall',
+    toolTargetStat: 'Target',
+    toolChecks: 'Checks',
+    toolUpdated: 'Updated',
+    toolHealthy: 'Healthy',
+    toolDegraded: 'Degraded',
+    toolDown: 'Down',
+    toolPackets: 'Packets received',
+    toolLoss: 'Loss',
+    toolLatency: 'Average',
+    toolOpenPorts: 'Open ports',
+    toolHopCount: 'Hops',
+    toolResolvedName: 'Resolved name',
+    toolAddresses: 'Addresses',
+    toolRawOutput: 'Raw output',
+    toolNoData: 'No data to display',
+    toolChosenDevice: 'Selected device',
     systemTitle: 'System',
     systemDesc: 'System info, scan status, export, and import.',
     sysVersionLabel: 'System version',
@@ -566,7 +751,7 @@ function applyTranslations() {
   document.title = tr('pageTitle');
 
   qs('btnBackHome').textContent = tr('backHome');
-  const navKeys = { general: 'navGeneral', networks: 'navNetworks', manual: 'navManual', appearance: 'navAppearance', language: 'navLanguage', system: 'navSystem' };
+  const navKeys = { general: 'navGeneral', networks: 'navNetworks', manual: 'navManual', appearance: 'navAppearance', language: 'navLanguage', tools: 'navTools', system: 'navSystem' };
   document.querySelectorAll('.settings-nav-btn').forEach(btn => {
     btn.textContent = tr(navKeys[btn.dataset.page] || '');
   });
@@ -589,6 +774,7 @@ function applyTranslations() {
     manual: ['manualTitle', 'manualDesc'],
     appearance: ['appearanceTitle', 'appearanceDesc'],
     language: ['languageTitle', 'languageDesc'],
+    tools: ['toolsTitle', 'toolsDesc'],
     system: ['systemTitle', 'systemDesc']
   };
   Object.entries(sectionTexts).forEach(([page, keys]) => {
@@ -613,7 +799,11 @@ function applyTranslations() {
     manualNotes: 'notes',
     setTheme: 'theme',
     setStatusAnimation: 'statusAnimation',
-    setLanguage: 'language'
+    setLanguage: 'language',
+    toolDeviceSelect: 'toolDevice',
+    toolTargetInput: 'toolTarget',
+    toolPortsInput: 'toolPorts',
+    toolHopsInput: 'toolHops'
   };
   Object.entries(labels).forEach(([id, key]) => {
     const label = qs(id)?.closest('.field')?.querySelector('label');
@@ -634,6 +824,20 @@ function applyTranslations() {
   if (appearanceSave) appearanceSave.textContent = tr('saveAppearance');
   const languageSave = document.querySelector('#page-language .settings-actions .btn.primary');
   if (languageSave) languageSave.textContent = tr('saveLanguage');
+  if (qs('toolActionTitle')) qs('toolActionTitle').textContent = tr('toolActionTitle');
+  if (qs('toolActionSub')) qs('toolActionSub').textContent = tr('toolActionSub');
+  if (qs('runAllTitle')) qs('runAllTitle').textContent = tr('runAll');
+  if (qs('runAllSub')) qs('runAllSub').textContent = tr('runAllSub');
+  if (qs('runPingSub')) qs('runPingSub').textContent = tr('runPingSub');
+  if (qs('runTraceSub')) qs('runTraceSub').textContent = tr('runTraceSub');
+  if (qs('runPortsSub')) qs('runPortsSub').textContent = tr('runPortsSub');
+  if (qs('runDnsSub')) qs('runDnsSub').textContent = tr('runDnsSub');
+  if (qs('toolPresetWeb')) qs('toolPresetWeb').textContent = tr('toolPresetWeb');
+  if (qs('toolPresetCam')) qs('toolPresetCam').textContent = tr('toolPresetCam');
+  if (qs('toolPresetInfra')) qs('toolPresetInfra').textContent = tr('toolPresetInfra');
+  if (qs('toolsEmptyState')) qs('toolsEmptyState').textContent = tr('toolsEmpty');
+  const toolSelect = qs('toolDeviceSelect');
+  if (toolSelect && toolSelect.options[0]) toolSelect.options[0].text = tr('toolSelectDevice');
 
   const systemTitles = ['sysVersionLabel', 'sysDbLabel', 'sysNetworksLabel', 'sysScanModeLabel', 'sysScanStartedLabel', 'sysScanFinishedLabel'];
   document.querySelectorAll('#page-system .item strong').forEach((el, idx) => {
@@ -668,6 +872,9 @@ function applyTranslations() {
   qs('manualName').placeholder = tr('placeholderManualName');
   qs('manualCategory').placeholder = tr('placeholderManualCategory');
   qs('manualNotes').placeholder = tr('placeholderOptional');
+  qs('toolTargetInput').placeholder = '192.168.1.100';
+  renderToolsSummary(state.toolResults);
+  if (state.toolResults) renderToolResults(state.toolResults);
 }
 
 function validCidr(value) {
@@ -896,9 +1103,152 @@ function renderSettingsData(status, settingsData) {
   qs('sysScanFinished').textContent = fmtTs(status.scan?.last_finished);
 }
 
+function toolStatusLabel(status) {
+  if (status === 'healthy') return tr('toolHealthy');
+  if (status === 'degraded') return tr('toolDegraded');
+  return tr('toolDown');
+}
+
+function toolStatusClass(status) {
+  return status === 'healthy' ? 'healthy' : status === 'degraded' ? 'degraded' : 'down';
+}
+
+function populateToolDevices() {
+  const sel = qs('toolDeviceSelect');
+  if (!sel) return;
+  const current = sel.value;
+  const devices = [...(state.devices || [])].sort((a, b) => String(a.display_name || a.name || a.ip).localeCompare(String(b.display_name || b.name || b.ip), currentLang() === 'he' ? 'he' : 'en'));
+  sel.innerHTML = `<option value="">${tr('toolSelectDevice')}</option>` + devices.map(device => `<option value="${device.ip}">${device.display_name || device.name || device.hostname || device.ip} • ${device.ip}</option>`).join('');
+  if (devices.some(device => device.ip === current)) sel.value = current;
+}
+
+function handleToolDeviceSelect() {
+  const value = qs('toolDeviceSelect')?.value || '';
+  if (value) qs('toolTargetInput').value = value;
+}
+
+function setToolPorts(value) {
+  if (qs('toolPortsInput')) qs('toolPortsInput').value = value;
+}
+
+function resolveToolTarget() {
+  return String(qs('toolTargetInput')?.value || qs('toolDeviceSelect')?.value || '').trim();
+}
+
+function renderToolsSummary(result) {
+  const mount = qs('toolsSummary');
+  if (!mount) return;
+  if (!result) {
+    mount.innerHTML = `<div class="tool-stat"><div class="k">${tr('toolOverall')}</div><div class="v">—</div></div><div class="tool-stat"><div class="k">${tr('toolTargetStat')}</div><div class="v">—</div></div><div class="tool-stat"><div class="k">${tr('toolChecks')}</div><div class="v">—</div></div><div class="tool-stat"><div class="k">${tr('toolUpdated')}</div><div class="v">—</div></div>`;
+    return;
+  }
+  mount.innerHTML = `
+    <div class="tool-stat ${toolStatusClass(result.overall_status)}"><div class="k">${tr('toolOverall')}</div><div class="v">${toolStatusLabel(result.overall_status)}</div></div>
+    <div class="tool-stat"><div class="k">${tr('toolTargetStat')}</div><div class="v" style="font-size:22px">${result.target}</div></div>
+    <div class="tool-stat"><div class="k">${tr('toolChecks')}</div><div class="v">${Object.keys(result.tools || {}).length}</div></div>
+    <div class="tool-stat"><div class="k">${tr('toolUpdated')}</div><div class="v" style="font-size:18px">${new Date().toLocaleTimeString(currentLang() === 'he' ? 'he-IL' : 'en-US')}</div></div>
+  `;
+}
+
+function renderPingTool(result) {
+  return `<div class="tool-result-card">
+    <div class="tool-result-head"><div><h3>PING</h3><small>${tr('runPingSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-metrics">
+      <div class="tool-metric"><div class="k">${tr('toolPackets')}</div><div class="v">${result.received}/${result.transmitted || 0}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolLoss')}</div><div class="v">${Number(result.loss_pct || 0)}%</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolLatency')}</div><div class="v">${result.latency_avg_ms != null ? `${Math.round(result.latency_avg_ms)} ms` : '—'}</div></div>
+    </div>
+    <div class="tool-output">${result.output || tr('toolNoData')}</div>
+  </div>`;
+}
+
+function renderTraceTool(result) {
+  const hops = Array.isArray(result.hops) ? result.hops : [];
+  return `<div class="tool-result-card">
+    <div class="tool-result-head"><div><h3>TRACE ROUTE</h3><small>${tr('runTraceSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-metrics">
+      <div class="tool-metric"><div class="k">${tr('toolHopCount')}</div><div class="v">${result.hop_count || 0}</div></div>
+      <div class="tool-metric"><div class="k">Command</div><div class="v" style="font-size:15px">${result.command || 'traceroute'}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolTargetStat')}</div><div class="v" style="font-size:15px">${result.target}</div></div>
+    </div>
+    <div class="tool-list">${hops.length ? hops.map(hop => `<div class="tool-line ${hop.address === '*' ? 'bad' : (hop.latency_ms != null && hop.latency_ms > 120 ? 'warn' : 'good')}"><div class="tool-line-top"><strong>#${hop.hop} ${hop.address}</strong><span>${hop.latency_ms != null ? `${Math.round(hop.latency_ms)} ms` : '—'}</span></div><div class="tool-line-sub"><span>${hop.raw}</span></div></div>`).join('') : `<div class="empty">${tr('toolNoData')}</div>`}</div>
+  </div>`;
+}
+
+function renderPortsTool(result) {
+  const ports = Array.isArray(result.ports) ? result.ports : [];
+  return `<div class="tool-result-card">
+    <div class="tool-result-head"><div><h3>PORT CHECK</h3><small>${tr('runPortsSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-metrics">
+      <div class="tool-metric"><div class="k">${tr('toolOpenPorts')}</div><div class="v">${result.open_ports || 0}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolChecks')}</div><div class="v">${result.checked_ports || 0}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolTargetStat')}</div><div class="v" style="font-size:15px">${result.target}</div></div>
+    </div>
+    <div class="tool-list">${ports.length ? ports.map(port => `<div class="tool-line ${port.open ? 'good' : 'bad'}"><div class="tool-line-top"><strong>${port.port} • ${port.service}</strong><span>${port.open ? 'OPEN' : 'CLOSED'}</span></div><div class="tool-line-sub"><span>${port.latency_ms} ms</span>${port.error ? `<span>${port.error}</span>` : ''}</div></div>`).join('') : `<div class="empty">${tr('toolNoData')}</div>`}</div>
+  </div>`;
+}
+
+function renderDnsTool(result) {
+  return `<div class="tool-result-card">
+    <div class="tool-result-head"><div><h3>DNS</h3><small>${tr('runDnsSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-metrics">
+      <div class="tool-metric"><div class="k">${tr('toolResolvedName')}</div><div class="v" style="font-size:16px">${result.reverse_host || '—'}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolAddresses')}</div><div class="v">${(result.addresses || []).length}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolTargetStat')}</div><div class="v" style="font-size:15px">${result.target}</div></div>
+    </div>
+    <div class="tool-list">
+      ${(result.addresses || []).length ? result.addresses.map(address => `<div class="tool-line good"><div class="tool-line-top"><strong>${address}</strong></div></div>`).join('') : `<div class="empty">${tr('toolNoData')}</div>`}
+    </div>
+    ${result.output ? `<div class="tool-output">${result.output}</div>` : ''}
+  </div>`;
+}
+
+function renderToolResults(result) {
+  state.toolResults = result || null;
+  renderToolsSummary(result);
+  const mount = qs('toolsResults');
+  if (!mount) return;
+  if (!result || !result.tools || !Object.keys(result.tools).length) {
+    mount.innerHTML = `<div class="empty" id="toolsEmptyState">${tr('toolsEmpty')}</div>`;
+    return;
+  }
+  const cards = [];
+  if (result.tools.ping) cards.push(renderPingTool(result.tools.ping));
+  if (result.tools.trace) cards.push(renderTraceTool(result.tools.trace));
+  if (result.tools.ports) cards.push(renderPortsTool(result.tools.ports));
+  if (result.tools.dns) cards.push(renderDnsTool(result.tools.dns));
+  mount.innerHTML = cards.join('');
+}
+
+async function runNetworkTools(tools) {
+  const target = resolveToolTarget();
+  if (!target) {
+    showMsg('toolsMessage', tr('toolMissingTarget'), false);
+    return;
+  }
+  try {
+    showMsg('toolsMessage', `${tr('toolActionTitle')} • ${target}`);
+    const result = await api('./api/tools/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target,
+        tools,
+        ports: qs('toolPortsInput')?.value || '',
+        max_hops: Number(qs('toolHopsInput')?.value || 12),
+      })
+    });
+    renderToolResults(result);
+  } catch (err) {
+    showMsg('toolsMessage', `${tr('toolRunFailed')}: ${String(err.message || err)}`, false);
+  }
+}
+
 async function refreshData() {
-  const [status, settingsData] = await Promise.all([api('./api/status'), api('./api/settings')]);
+  const [status, settingsData, devicesData] = await Promise.all([api('./api/status'), api('./api/settings'), api('./api/devices')]);
+  state.devices = devicesData.devices || [];
   renderSettingsData(status, settingsData);
+  populateToolDevices();
   qs('lastRefreshText').textContent = tr('lastRefresh', {
     time: new Date().toLocaleTimeString(currentLang() === 'he' ? 'he-IL' : 'en-US')
   });
