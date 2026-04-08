@@ -49,6 +49,39 @@ ALERT_TITLE_NEW = "New device detected"
 ALERT_TITLE_OFFLINE = "Device offline"
 ALERT_TITLE_BACK_ONLINE = "Device back online"
 ALERT_TITLE_UNSTABLE = "Device unstable"
+PORT_NAME_MAP = {
+    20: "FTP-Data",
+    21: "FTP",
+    22: "SSH",
+    23: "Telnet",
+    25: "SMTP",
+    53: "DNS",
+    67: "DHCP",
+    68: "DHCP",
+    80: "HTTP",
+    110: "POP3",
+    123: "NTP",
+    135: "RPC",
+    139: "NetBIOS",
+    143: "IMAP",
+    161: "SNMP",
+    389: "LDAP",
+    443: "HTTPS",
+    445: "SMB",
+    554: "RTSP",
+    587: "SMTP TLS",
+    631: "IPP",
+    1883: "MQTT",
+    3306: "MySQL",
+    3389: "RDP",
+    5432: "PostgreSQL",
+    5900: "VNC",
+    8000: "HTTP Alt",
+    8080: "HTTP Proxy",
+    8123: "Home Assistant",
+    8443: "HTTPS Alt",
+    8883: "MQTT TLS",
+}
 
 
 def load_options() -> Dict[str, Any]:
@@ -1059,6 +1092,215 @@ def ping(ip: str) -> bool:
         ).returncode == 0
     except Exception:
         return False
+
+
+def run_command_capture(cmd: list[str], timeout: int = 10) -> tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=timeout,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+        )
+        return result.returncode == 0, (result.stdout or "").strip()
+    except Exception as exc:
+        return False, str(exc)
+
+
+def parse_ports(value: Any) -> list[int]:
+    if isinstance(value, list):
+        raw_items = value
+    else:
+        raw_items = re.split(r"[\s,;]+", str(value or "").strip())
+    ports: list[int] = []
+    for item in raw_items:
+        text = str(item).strip()
+        if not text:
+            continue
+        if "-" in text:
+            try:
+                start_s, end_s = text.split("-", 1)
+                start_i = max(1, min(65535, int(start_s)))
+                end_i = max(1, min(65535, int(end_s)))
+                if end_i < start_i:
+                    start_i, end_i = end_i, start_i
+                ports.extend(range(start_i, min(end_i, start_i + 32) + 1))
+            except Exception:
+                continue
+            continue
+        try:
+            port = int(text)
+        except Exception:
+            continue
+        if 1 <= port <= 65535:
+            ports.append(port)
+    deduped: list[int] = []
+    seen: set[int] = set()
+    for port in ports:
+        if port not in seen:
+            seen.add(port)
+            deduped.append(port)
+    return deduped[:64]
+
+
+def port_name(port: int) -> str:
+    return PORT_NAME_MAP.get(port, "Custom")
+
+
+def ping_diagnostics(ip: str, count: int = 4) -> dict[str, Any]:
+    count = max(1, min(int(count), 8))
+    ok, output = run_command_capture(["ping", "-c", str(count), "-W", "1", ip], timeout=max(4, count * 2))
+    transmitted = received = 0
+    loss_pct = 100
+    latency_min = latency_avg = latency_max = None
+    for line in output.splitlines():
+        lower = line.lower()
+        if "packets transmitted" in lower and "received" in lower:
+            match = re.search(r"(\d+)\s+packets transmitted,\s+(\d+)\s+(?:packets )?received.*?(\d+)%\s+packet loss", lower)
+            if match:
+                transmitted = int(match.group(1))
+                received = int(match.group(2))
+                loss_pct = int(match.group(3))
+        if "min/avg/max" in lower:
+            match = re.search(r"=\s*([\d.]+)/([\d.]+)/([\d.]+)", line)
+            if match:
+                latency_min = float(match.group(1))
+                latency_avg = float(match.group(2))
+                latency_max = float(match.group(3))
+    status = "down"
+    if received and loss_pct == 0:
+        status = "healthy" if (latency_avg or 0) < 80 else "degraded"
+    elif received:
+        status = "degraded"
+    return {
+        "ok": ok,
+        "target": ip,
+        "status": status,
+        "transmitted": transmitted,
+        "received": received,
+        "loss_pct": loss_pct,
+        "latency_min_ms": latency_min,
+        "latency_avg_ms": latency_avg,
+        "latency_max_ms": latency_max,
+        "output": output,
+    }
+
+
+def trace_diagnostics(ip: str, max_hops: int = 12) -> dict[str, Any]:
+    max_hops = max(4, min(int(max_hops), 24))
+    commands: list[list[str]] = []
+    if shutil.which("traceroute"):
+        commands.append(["traceroute", "-n", "-w", "1", "-q", "1", "-m", str(max_hops), ip])
+    if shutil.which("tracepath"):
+        commands.append(["tracepath", "-n", ip])
+    if shutil.which("busybox"):
+        commands.append(["busybox", "traceroute", "-n", "-w", "1", "-q", "1", "-m", str(max_hops), ip])
+
+    output = ""
+    ok = False
+    command_name = ""
+    for cmd in commands:
+        current_ok, current_output = run_command_capture(cmd, timeout=max_hops + 6)
+        output = current_output
+        ok = current_ok
+        command_name = Path(cmd[0]).name
+        if current_output:
+            break
+
+    hops: list[dict[str, Any]] = []
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if not line or line.lower().startswith("traceroute") or line.lower().startswith("tracepath"):
+            continue
+        match = re.match(r"(\d+)\s+(.*)", line)
+        if not match:
+            continue
+        hop_num = int(match.group(1))
+        rest = match.group(2).strip()
+        ip_match = re.search(r"(\d+\.\d+\.\d+\.\d+)", rest)
+        latency_matches = re.findall(r"([\d.]+)\s*ms", rest)
+        hops.append(
+            {
+                "hop": hop_num,
+                "address": ip_match.group(1) if ip_match else "*",
+                "latency_ms": float(latency_matches[0]) if latency_matches else None,
+                "raw": rest,
+            }
+        )
+    status = "healthy" if ok and hops else ("degraded" if hops else "down")
+    return {
+        "ok": ok,
+        "target": ip,
+        "status": status,
+        "command": command_name or "traceroute",
+        "hops": hops,
+        "hop_count": len(hops),
+        "output": output,
+    }
+
+
+def port_scan_diagnostics(ip: str, ports: list[int]) -> dict[str, Any]:
+    checked: list[dict[str, Any]] = []
+    open_ports = 0
+    for port in ports:
+        started = time.perf_counter()
+        is_open = False
+        error = ""
+        try:
+            with socket.create_connection((ip, port), timeout=1.2):
+                is_open = True
+        except Exception as exc:
+            error = str(exc)
+        latency = round((time.perf_counter() - started) * 1000, 1)
+        if is_open:
+            open_ports += 1
+        checked.append(
+            {
+                "port": port,
+                "service": port_name(port),
+                "open": is_open,
+                "latency_ms": latency,
+                "error": error,
+            }
+        )
+    status = "healthy" if open_ports else "down"
+    if 0 < open_ports < len(ports):
+        status = "degraded"
+    return {
+        "ok": True,
+        "target": ip,
+        "status": status,
+        "open_ports": open_ports,
+        "checked_ports": len(ports),
+        "ports": checked,
+    }
+
+
+def dns_diagnostics(target: str) -> dict[str, Any]:
+    reverse_host = ""
+    try:
+        reverse_host = socket.gethostbyaddr(target)[0]
+    except Exception:
+        reverse_host = ""
+    addresses: list[str] = []
+    try:
+        info = socket.gethostbyname_ex(target)
+        addresses = info[2] or []
+    except Exception:
+        pass
+    nslookup_ok, nslookup_output = run_command_capture(["nslookup", target], timeout=4) if shutil.which("nslookup") else (False, "")
+    status = "healthy" if (reverse_host or addresses or nslookup_ok) else "down"
+    return {
+        "ok": bool(reverse_host or addresses or nslookup_ok),
+        "target": target,
+        "status": status,
+        "reverse_host": reverse_host,
+        "addresses": addresses,
+        "output": nslookup_output,
+    }
 
 
 
@@ -2109,6 +2351,50 @@ def api_settings():
         return {"settings": {r["key"]: r["value"] for r in rows}, "networks": get_networks(), "network_names": get_network_names(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "db_path": str(DB_PATH), "workers": background_worker_payload()}
     finally:
         conn.close()
+
+
+@app.post("/api/tools/run")
+async def api_tools_run(request: Request):
+    payload = await request.json()
+    target = str(payload.get("target", "") or "").strip()
+    requested_tools = payload.get("tools", ["ping", "trace", "ports", "dns"])
+    if not isinstance(requested_tools, list):
+        requested_tools = ["ping", "trace", "ports", "dns"]
+    selected_tools = [str(item).strip().lower() for item in requested_tools if str(item).strip()]
+    if not target:
+        return JSONResponse({"ok": False, "error": "Missing target"}, status_code=400)
+    if not looks_like_ip(target):
+        return JSONResponse({"ok": False, "error": "Target must be an IP address"}, status_code=400)
+
+    ports = parse_ports(payload.get("ports", "80,443,554,8000,8080,22"))
+    if not ports:
+        ports = [80, 443, 554, 8000, 8080, 22]
+
+    result: dict[str, Any] = {
+        "ok": True,
+        "target": target,
+        "requested_tools": selected_tools,
+        "started_at": now_ts(),
+        "tools": {},
+    }
+    if "ping" in selected_tools or "all" in selected_tools:
+        result["tools"]["ping"] = ping_diagnostics(target, int(payload.get("ping_count", 4) or 4))
+    if "trace" in selected_tools or "all" in selected_tools:
+        result["tools"]["trace"] = trace_diagnostics(target, int(payload.get("max_hops", 12) or 12))
+    if "ports" in selected_tools or "all" in selected_tools:
+        result["tools"]["ports"] = port_scan_diagnostics(target, ports)
+    if "dns" in selected_tools or "all" in selected_tools:
+        result["tools"]["dns"] = dns_diagnostics(target)
+
+    status_rank = {"healthy": 0, "degraded": 1, "down": 2}
+    overall = "healthy"
+    for tool_payload in result["tools"].values():
+        tool_status = str(tool_payload.get("status", "healthy"))
+        if status_rank.get(tool_status, 0) > status_rank.get(overall, 0):
+            overall = tool_status
+    result["overall_status"] = overall
+    result["finished_at"] = now_ts()
+    return result
 
 
 @app.get("/api/export/devices.csv")
