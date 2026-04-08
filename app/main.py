@@ -2313,6 +2313,7 @@ def system_history_payload(from_ts: int | None = None, to_ts: int | None = None)
                 "daily_series": [],
                 "rankings": {"stable": [], "unstable": [], "offline": []},
                 "affected_devices": [],
+                "recent_changes": [],
                 "traffic_history_available": False,
             }
 
@@ -2491,6 +2492,28 @@ def system_history_payload(from_ts: int | None = None, to_ts: int | None = None)
                 rolling_statuses = next_statuses
             cursor_day += timedelta(days=1)
 
+        recent_changes: List[Dict[str, Any]] = []
+        for row in conn.execute(
+            f"""
+            SELECT ip, ts, old_status, new_status
+            FROM device_history
+            WHERE kind='status' AND ip IN ({placeholders}) AND ts>=? AND ts<?
+            ORDER BY ts DESC
+            LIMIT 18
+            """,
+            (*ips, from_ts, to_ts),
+        ).fetchall():
+            ip_value = row["ip"] or ""
+            recent_changes.append(
+                {
+                    "ip": ip_value,
+                    "name": labels.get(ip_value, ip_value or "—"),
+                    "ts": int(row["ts"] or 0),
+                    "old_status": row["old_status"] or "unknown",
+                    "new_status": row["new_status"] or "unknown",
+                }
+            )
+
         return {
             "window": {"from_ts": from_ts, "to_ts": to_ts},
             "summary": {
@@ -2508,6 +2531,7 @@ def system_history_payload(from_ts: int | None = None, to_ts: int | None = None)
                 "offline": offline_rank,
             },
             "affected_devices": affected_devices,
+            "recent_changes": recent_changes,
             "traffic_history_available": False,
         }
     finally:
