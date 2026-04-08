@@ -22,7 +22,7 @@ body.light{
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{
-  font-family:Bahnschrift,"Segoe UI Variable","Trebuchet MS",system-ui,sans-serif;
+  font-family:"Segoe UI","Segoe UI Variable","Noto Sans Hebrew","Rubik","Arial",system-ui,sans-serif;
   color:var(--text);
   background:
     radial-gradient(760px 340px at 100% -10%,rgba(91,140,255,.16),transparent 60%),
@@ -43,8 +43,9 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
   background:linear-gradient(180deg,rgba(50,104,245,.18),rgba(24,185,214,.08));
   box-shadow:0 12px 28px rgba(50,104,245,.16);
 }
-.app{height:100vh;display:grid;grid-template-columns:280px 1fr}
+.app{height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 280px;direction:rtl}
 .sidebar{
+  grid-column:2;
   height:100vh;padding:18px 14px;display:flex;flex-direction:column;gap:16px;
   border-left:1px solid var(--line);
   background:
@@ -73,7 +74,9 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
 .info-card .v{margin-top:8px;font-size:18px;font-weight:900}
 .health{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 14px rgba(53,211,153,.65)}
-.main{height:100vh;overflow:auto;padding:20px}
+.main{grid-column:1;height:100vh;overflow:auto;padding:20px}
+body[data-lang="en"] .main{direction:ltr}
+body[data-lang="en"] .sidebar{direction:rtl}
 .top-shell,.panel,.btn,input,select,textarea{
   border:1px solid var(--line);
   background:
@@ -86,7 +89,7 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
 .top-shell::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(91,140,255,.08),transparent 44%,rgba(34,211,238,.06));pointer-events:none}
 .top-shell::after{content:'';position:absolute;inset:1px;border-radius:23px;pointer-events:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(255,255,255,.02)}
 .hero{display:grid;gap:8px}
-.hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.045em;font-family:"Arial Nova","Aptos Display","Segoe UI Variable","Trebuchet MS",sans-serif}
+.hero-title{margin:0;font-size:30px;font-weight:900;letter-spacing:-.045em;font-family:"Aptos Display","Segoe UI Variable","Rubik","Arial",sans-serif}
 .hero-sub{margin:0;color:var(--muted);font-size:13px}
 .hero-meta{display:flex;gap:10px;flex-wrap:wrap}
 .hero-chip{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);font-size:12px;color:var(--muted)}
@@ -104,6 +107,7 @@ body.light .nav-btn.active,body.light .nav-btn:hover{
 .settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .field{display:grid;gap:6px}
 .field label{font-size:12px;color:var(--muted)}
+.field-hint{font-size:11px;color:var(--muted);margin-top:4px}
 input,select,textarea{padding:12px 14px;outline:none;width:100%;border-radius:14px;color:var(--text);font:inherit}
 textarea{min-height:120px;resize:vertical}
 .quick-actions{display:flex;gap:8px;flex-wrap:wrap}
@@ -148,6 +152,18 @@ textarea{min-height:120px;resize:vertical}
 .tool-btn strong{font-size:15px}
 .tool-btn span{color:var(--muted);font-size:12px}
 .tool-btn.primary{background:linear-gradient(135deg,rgba(50,104,245,.22),rgba(24,185,214,.12));border-color:rgba(50,104,245,.3)}
+.tool-live-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.tool-live-grid .span-2{grid-column:1 / -1}
+.tool-live-actions{display:flex;gap:10px;flex-wrap:wrap}
+.tool-inline{display:grid;gap:12px}
+.tool-big-stat{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.tool-big-stat strong{font-size:28px;font-weight:900}
+.tool-big-stat small{font-size:13px;color:var(--muted)}
+.tool-ping-state{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;font-weight:800}
+.tool-ping-state.running{color:var(--green);border-color:rgba(76,225,166,.35);background:rgba(76,225,166,.08)}
+.tool-ping-state.paused{color:var(--orange);border-color:rgba(255,182,72,.35);background:rgba(255,182,72,.08)}
+.tool-ping-state.stopped{color:var(--muted);background:rgba(255,255,255,.03)}
+.tool-ping-state.down{color:var(--red);border-color:rgba(255,127,150,.35);background:rgba(255,127,150,.08)}
 .tools-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .tool-stat{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))}
 .tool-stat .k{font-size:12px;color:var(--muted)}
@@ -175,8 +191,28 @@ textarea{min-height:120px;resize:vertical}
 .tool-line.bad{border-color:rgba(255,127,150,.28)}
 .tool-output{white-space:pre-wrap;font-family:Consolas,"Cascadia Mono",monospace;font-size:12px;line-height:1.5;padding:14px;border-radius:16px;border:1px solid var(--line);background:rgba(7,11,21,.55);max-height:220px;overflow:auto}
 body.light .tool-output{background:rgba(241,246,255,.92)}
+.tool-chart{display:flex;align-items:flex-end;gap:4px;height:140px;padding:12px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
+.tool-chart-bar{flex:1;min-width:0;border-radius:999px 999px 6px 6px;background:linear-gradient(180deg,var(--blue),var(--cyan));position:relative}
+.tool-chart-bar span{position:absolute;bottom:-20px;inset-inline-start:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap}
+.tool-chart-bar.good{background:linear-gradient(180deg,var(--green),#8ef0c7)}
+.tool-chart-bar.warn{background:linear-gradient(180deg,var(--orange),#ffd17b)}
+.tool-chart-bar.bad{background:linear-gradient(180deg,var(--red),#ffb1c0)}
+.tool-mini-strip{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:4px}
+.tool-mini-strip span{height:12px;border-radius:999px;background:rgba(148,163,184,.16)}
+.tool-mini-strip span.good{background:linear-gradient(180deg,var(--green),#8ef0c7)}
+.tool-mini-strip span.warn{background:linear-gradient(180deg,var(--orange),#ffd17b)}
+.tool-mini-strip span.bad{background:linear-gradient(180deg,var(--red),#ffb1c0)}
+body[data-lang="en"] .tool-btn,
+body[data-lang="en"] .tool-result-card,
+body[data-lang="en"] .tool-target-panel,
+body[data-lang="en"] .tool-actions-panel,
+body[data-lang="en"] .tool-result-head,
+body[data-lang="en"] .tool-metric,
+body[data-lang="en"] .tool-line,
+body[data-lang="en"] .tool-big-stat,
+body[data-lang="en"] .tool-inline{direction:ltr;text-align:left}
 @media (max-width:1200px){.tools-top,.tool-results-grid{grid-template-columns:1fr}.tools-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:760px){.tools-summary,.tool-actions-grid,.tool-metrics{grid-template-columns:1fr}}
+@media (max-width:760px){.tools-summary,.tool-actions-grid,.tool-metrics,.tool-live-grid{grid-template-columns:1fr}}
 @media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto}}
 </style>
 </head>
@@ -330,6 +366,7 @@ body.light .tool-output{background:rgba(241,246,255,.92)}
                 <div class="field">
                   <label id="toolPortsLabel">פורטים לבדיקה</label>
                   <input id="toolPortsInput" value="80,443,554,8000,8080,22">
+                  <div class="field-hint" id="toolPortsHint">טווחים מופרדים בפסיק. כתוב 0 כדי לסרוק את כל הפורטים.</div>
                 </div>
                 <div class="field">
                   <label id="toolHopsLabel">מספר קפיצות מקסימלי</label>
@@ -346,10 +383,13 @@ body.light .tool-output{background:rgba(241,246,255,.92)}
               <div class="panel-head" style="margin:0"><div><h2 id="toolActionTitle">הרצת בדיקות</h2><p id="toolActionSub">הפעל כלי יחיד או הרץ הכל ברצף לקבלת תמונת מצב מלאה.</p></div></div>
               <div class="tool-actions-grid">
                 <button class="tool-btn primary" onclick="runNetworkTools(['all'])"><strong id="runAllTitle">הרץ הכל</strong><span id="runAllSub">Ping, Trace, Ports, DNS</span></button>
-                <button class="tool-btn" onclick="runNetworkTools(['ping'])"><strong>PING</strong><span id="runPingSub">זמן תגובה ואחוז איבוד</span></button>
-                <button class="tool-btn" onclick="runNetworkTools(['trace'])"><strong>TRACE ROUTE</strong><span id="runTraceSub">מסלול וקפיצות בדרך</span></button>
-                <button class="tool-btn" onclick="runNetworkTools(['ports'])"><strong>PORT CHECK</strong><span id="runPortsSub">בדיקת פורטים פתוחים</span></button>
-                <button class="tool-btn" onclick="runNetworkTools(['dns'])"><strong>DNS</strong><span id="runDnsSub">Reverse DNS ושמות מארח</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['ping'])"><strong id="runPingTitle">פינג</strong><span id="runPingSub">זמן תגובה ואחוז איבוד</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['trace'])"><strong id="runTraceTitle">Trace Route</strong><span id="runTraceSub">מסלול וקפיצות בדרך</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['ports'])"><strong id="runPortsTitle">סריקת פורטים</strong><span id="runPortsSub">בדיקת פורטים פתוחים</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['dns'])"><strong id="runDnsTitle">DNS</strong><span id="runDnsSub">Reverse DNS ושמות מארח</span></button>
+                <button class="tool-btn" onclick="runNetworkTools(['speed'])"><strong id="runSpeedTitle">בדיקת מהירות</strong><span id="runSpeedSub">בדיקת מהירות אינטרנט</span></button>
+                <button class="tool-btn" onclick="showInventoryTool()"><strong id="runInventoryTitle">מפת התקנים</strong><span id="runInventorySub">כל ההתקנים המזוהים כרגע</span></button>
+                <button class="tool-btn" onclick="clearToolResults()"><strong id="toolClearTitle">נקה מסך</strong><span id="toolClearSub">איפוס תוצאות ותצוגות חיות</span></button>
               </div>
             </div>
           </div>
@@ -360,6 +400,32 @@ body.light .tool-output{background:rgba(241,246,255,.92)}
             <div class="tool-stat"><div class="k">עודכן</div><div class="v">—</div></div>
           </div>
           <div id="toolsMessage" class="msg"></div>
+          <div class="tool-live-grid">
+            <div class="tool-result-card">
+              <div class="tool-result-head"><div><h3 id="toolLivePingTitle">פינג מתמשך</h3><small id="toolLivePingDesc">בדיקה רציפה מול היעד עם אפשרות עצירה, השהיה והמשך.</small></div><span id="toolPingState" class="tool-ping-state stopped">ממתין</span></div>
+              <div class="tool-live-actions">
+                <button class="btn primary" id="toolPingStartBtn" onclick="startContinuousPing()">התחל</button>
+                <button class="btn" id="toolPingPauseBtn" onclick="pauseContinuousPing()">השהה</button>
+                <button class="btn" id="toolPingResumeBtn" onclick="resumeContinuousPing()">המשך</button>
+                <button class="btn" id="toolPingStopBtn" onclick="stopContinuousPing()">עצור</button>
+              </div>
+              <div id="toolLivePingMount" class="tool-inline">
+                <div class="empty">התחל פינג מתמשך כדי לקבל היסטוריית תגובה בזמן אמת.</div>
+              </div>
+            </div>
+            <div class="tool-result-card">
+              <div class="tool-result-head"><div><h3 id="toolTrafficTitle">תעבורת רשת</h3><small id="toolTrafficDesc">מדידה חיה של קצבי RX/TX לפי הממשקים שזוהו במערכת.</small></div><span class="tool-status-chip healthy" id="toolTrafficState">Live</span></div>
+              <div id="toolTrafficMount" class="tool-inline">
+                <div class="empty">התצוגה תופיע אוטומטית בזמן פתיחת עמוד הכלים.</div>
+              </div>
+            </div>
+            <div class="tool-result-card span-2" id="toolInventoryPanel">
+              <div class="tool-result-head"><div><h3 id="toolInventoryTitle">מפת התקנים מזוהים</h3><small id="toolInventoryDesc">סקירה מהירה של כל ההתקנים שכבר מזוהים במערכת, עם שמות, קטגוריות וסטטוסים.</small></div><span class="tool-status-chip healthy" id="toolInventoryState">Live</span></div>
+              <div id="toolInventoryMount" class="tool-list">
+                <div class="empty">אין התקנים להצגה כרגע.</div>
+              </div>
+            </div>
+          </div>
           <div class="tool-results-grid" id="toolsResults">
             <div class="empty" id="toolsEmptyState">בחר יעד והריץ בדיקה כדי לראות כאן תוצאות עשירות.</div>
           </div>
@@ -394,7 +460,7 @@ body.light .tool-output{background:rgba(241,246,255,.92)}
 
 <script>
 const qs = id => document.getElementById(id);
-const state = { settings: {}, status: null, networkDrafts: [], dbPath: '', devices: [], toolResults: null };
+const state = { settings: {}, status: null, networkDrafts: [], dbPath: '', devices: [], toolResults: null, toolPingLoop: null, toolPingPaused: false, toolPingBusy: false, toolPingSeries: [], toolTrafficLoop: null, toolTrafficData: null, trafficSeries: [] };
 
 const I18N = {
   he: {
@@ -454,14 +520,24 @@ const I18N = {
     toolActionTitle: 'הרצת בדיקות',
     toolActionSub: 'הפעל כלי יחיד או הרץ הכל ברצף לקבלת תמונת מצב מלאה.',
     runAll: 'הרץ הכל',
-    runAllSub: 'Ping, Trace, Ports, DNS',
+    runAllSub: 'פינג, מסלול, פורטים ו-DNS',
+    runPingTitle: 'פינג',
     runPingSub: 'זמן תגובה ואחוז איבוד',
+    runTraceTitle: 'מסלול',
     runTraceSub: 'מסלול וקפיצות בדרך',
+    runPortsTitle: 'סריקת פורטים',
     runPortsSub: 'בדיקת פורטים פתוחים',
-    runDnsSub: 'Reverse DNS ושמות מארח',
-    toolPresetWeb: 'Web: 80,443,8080',
-    toolPresetCam: 'Camera: 80,443,554,8000',
-    toolPresetInfra: 'Infra: 22,53,80,123,443',
+    runDnsTitle: 'DNS',
+    runDnsSub: 'זיהוי שמות ו-Reverse DNS',
+    runSpeedTitle: 'בדיקת מהירות',
+    runSpeedSub: 'בדיקת מהירות אינטרנט',
+    runInventoryTitle: 'מפת התקנים',
+    runInventorySub: 'כל ההתקנים המזוהים כרגע',
+    toolClearTitle: 'נקה מסך',
+    toolClearSub: 'איפוס תוצאות ותצוגות חיות',
+    toolPresetWeb: 'ווב: 80,443,8080',
+    toolPresetCam: 'מצלמות: 80,443,554,8000',
+    toolPresetInfra: 'תשתיות: 22,53,80,123,443',
     toolsEmpty: 'בחר יעד והריץ בדיקה כדי לראות כאן תוצאות עשירות.',
     toolSelectDevice: 'בחר התקן',
     toolMissingTarget: 'צריך לבחור התקן או להזין כתובת IP',
@@ -483,6 +559,51 @@ const I18N = {
     toolRawOutput: 'פלט מלא',
     toolNoData: 'אין נתונים להצגה',
     toolChosenDevice: 'התקן שנבחר',
+    toolOpen: 'פתוח',
+    toolClosed: 'סגור',
+    toolCommand: 'פקודה',
+    toolDownload: 'הורדה',
+    toolUpload: 'העלאה',
+    toolPingMetric: 'פינג',
+    toolTraffic: 'תעבורת רשת',
+    toolInterfaces: 'ממשקים',
+    toolRx: 'כניסה',
+    toolTx: 'יציאה',
+    toolLivePing: 'פינג מתמשך',
+    toolStartPing: 'התחל',
+    toolPausePing: 'השהה',
+    toolResumePing: 'המשך',
+    toolStopPing: 'עצור',
+    toolClear: 'נקה מסך',
+    toolInventory: 'מפת התקנים',
+    toolInventoryEmpty: 'אין התקנים להצגה',
+    toolAllPortsHint: 'טווחים מופרדים בפסיק. כתוב 0 כדי לסרוק את כל הפורטים',
+    toolLivePingTitle: 'פינג מתמשך',
+    toolLivePingDesc: 'בדיקה רציפה מול היעד עם אפשרות עצירה, השהיה והמשך.',
+    toolPingCardTitle: 'פינג',
+    toolTraceCardTitle: 'מסלול',
+    toolPortsCardTitle: 'סריקת פורטים',
+    toolDnsCardTitle: 'זיהוי DNS',
+    toolTrafficTitle: 'תעבורת רשת',
+    toolTrafficDesc: 'מדידה חיה של קצבי RX/TX לפי הממשקים שזוהו במערכת.',
+    toolInventoryTitle: 'מפת התקנים מזוהים',
+    toolInventoryDesc: 'סקירה מהירה של כל ההתקנים שכבר מזוהים במערכת, עם שמות, קטגוריות וסטטוסים.',
+    toolPingIdle: 'ממתין',
+    toolPingRunning: 'רץ',
+    toolPingPaused: 'מושהה',
+    toolPingStopped: 'נעצר',
+    toolPingNoData: 'התחל פינג מתמשך כדי לקבל היסטוריית תגובה בזמן אמת.',
+    toolTrafficEmpty: 'התצוגה תופיע אוטומטית בזמן פתיחת עמוד הכלים.',
+    toolClearDone: 'מסך הכלים נוקה',
+    toolLiveState: 'חי',
+    toolMbps: 'Mbps',
+    toolLatencySeries: 'מדידות אחרונות',
+    toolInventoryCount: 'סה״כ התקנים',
+    toolUnavailableCount: 'לא זמינים',
+    toolSlowCount: 'לא יציבים',
+    toolStatus: 'סטטוס',
+    toolService: 'שירות',
+    toolAddress: 'כתובת',
     systemTitle: 'מערכת',
     systemDesc: 'מידע מערכת, סטטוס סריקה, ייצוא וייבוא.',
     sysVersionLabel: 'גרסת מערכת',
@@ -601,10 +722,20 @@ const I18N = {
     toolActionSub: 'Run a single tool or execute the full diagnostics flow in one click.',
     runAll: 'Run all',
     runAllSub: 'Ping, Trace, Ports, DNS',
+    runPingTitle: 'Ping',
     runPingSub: 'Latency and packet loss',
+    runTraceTitle: 'Trace route',
     runTraceSub: 'Route path and hops',
+    runPortsTitle: 'Port scan',
     runPortsSub: 'Open port check',
+    runDnsTitle: 'DNS',
     runDnsSub: 'Reverse DNS and host names',
+    runSpeedTitle: 'Speed test',
+    runSpeedSub: 'Internet speed test',
+    runInventoryTitle: 'Inventory',
+    runInventorySub: 'All currently identified devices',
+    toolClearTitle: 'Clear screen',
+    toolClearSub: 'Reset results and live views',
     toolPresetWeb: 'Web: 80,443,8080',
     toolPresetCam: 'Camera: 80,443,554,8000',
     toolPresetInfra: 'Infra: 22,53,80,123,443',
@@ -629,6 +760,51 @@ const I18N = {
     toolRawOutput: 'Raw output',
     toolNoData: 'No data to display',
     toolChosenDevice: 'Selected device',
+    toolOpen: 'Open',
+    toolClosed: 'Closed',
+    toolCommand: 'Command',
+    toolDownload: 'Download',
+    toolUpload: 'Upload',
+    toolPingMetric: 'Ping',
+    toolTraffic: 'Network traffic',
+    toolInterfaces: 'Interfaces',
+    toolRx: 'RX',
+    toolTx: 'TX',
+    toolLivePing: 'Continuous ping',
+    toolStartPing: 'Start',
+    toolPausePing: 'Pause',
+    toolResumePing: 'Resume',
+    toolStopPing: 'Stop',
+    toolClear: 'Clear screen',
+    toolInventory: 'Device inventory',
+    toolInventoryEmpty: 'No devices to display',
+    toolAllPortsHint: 'Comma-separated ranges. Use 0 to scan all ports',
+    toolLivePingTitle: 'Continuous ping',
+    toolLivePingDesc: 'Run a continuous ping loop against the target with full controls.',
+    toolPingCardTitle: 'Ping',
+    toolTraceCardTitle: 'Trace route',
+    toolPortsCardTitle: 'Port scan',
+    toolDnsCardTitle: 'DNS lookup',
+    toolTrafficTitle: 'Network traffic',
+    toolTrafficDesc: 'Live RX/TX throughput by the interfaces detected on the host.',
+    toolInventoryTitle: 'Identified devices',
+    toolInventoryDesc: 'Quick inventory of every device already identified by the system.',
+    toolPingIdle: 'Idle',
+    toolPingRunning: 'Running',
+    toolPingPaused: 'Paused',
+    toolPingStopped: 'Stopped',
+    toolPingNoData: 'Start a continuous ping session to see live latency history.',
+    toolTrafficEmpty: 'Traffic appears automatically when the tools page is open.',
+    toolClearDone: 'Tools screen cleared',
+    toolLiveState: 'Live',
+    toolMbps: 'Mbps',
+    toolLatencySeries: 'Recent samples',
+    toolInventoryCount: 'Total devices',
+    toolUnavailableCount: 'Offline',
+    toolSlowCount: 'Unstable',
+    toolStatus: 'Status',
+    toolService: 'Service',
+    toolAddress: 'Address',
     systemTitle: 'System',
     systemDesc: 'System info, scan status, export, and import.',
     sysVersionLabel: 'System version',
@@ -731,6 +907,8 @@ function switchPage(page, btn) {
   qs(`page-${page}`)?.classList.add('active');
   document.querySelectorAll('.settings-nav-btn').forEach(el => el.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  if (page !== 'tools') stopContinuousPing();
+  ensureToolLivePolling(page === 'tools');
   document.querySelector('.main')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -748,6 +926,7 @@ function applyTheme(theme) {
 function applyTranslations() {
   document.documentElement.lang = currentLang();
   document.documentElement.dir = currentLang() === 'he' ? 'rtl' : 'ltr';
+  document.body.dataset.lang = currentLang();
   document.title = tr('pageTitle');
 
   qs('btnBackHome').textContent = tr('backHome');
@@ -828,13 +1007,36 @@ function applyTranslations() {
   if (qs('toolActionSub')) qs('toolActionSub').textContent = tr('toolActionSub');
   if (qs('runAllTitle')) qs('runAllTitle').textContent = tr('runAll');
   if (qs('runAllSub')) qs('runAllSub').textContent = tr('runAllSub');
+  if (qs('runPingTitle')) qs('runPingTitle').textContent = tr('runPingTitle');
   if (qs('runPingSub')) qs('runPingSub').textContent = tr('runPingSub');
+  if (qs('runTraceTitle')) qs('runTraceTitle').textContent = tr('runTraceTitle');
   if (qs('runTraceSub')) qs('runTraceSub').textContent = tr('runTraceSub');
+  if (qs('runPortsTitle')) qs('runPortsTitle').textContent = tr('runPortsTitle');
   if (qs('runPortsSub')) qs('runPortsSub').textContent = tr('runPortsSub');
+  if (qs('runDnsTitle')) qs('runDnsTitle').textContent = tr('runDnsTitle');
   if (qs('runDnsSub')) qs('runDnsSub').textContent = tr('runDnsSub');
+  if (qs('runSpeedTitle')) qs('runSpeedTitle').textContent = tr('runSpeedTitle');
+  if (qs('runSpeedSub')) qs('runSpeedSub').textContent = tr('runSpeedSub');
+  if (qs('runInventoryTitle')) qs('runInventoryTitle').textContent = tr('runInventoryTitle');
+  if (qs('runInventorySub')) qs('runInventorySub').textContent = tr('runInventorySub');
+  if (qs('toolClearTitle')) qs('toolClearTitle').textContent = tr('toolClearTitle');
+  if (qs('toolClearSub')) qs('toolClearSub').textContent = tr('toolClearSub');
   if (qs('toolPresetWeb')) qs('toolPresetWeb').textContent = tr('toolPresetWeb');
   if (qs('toolPresetCam')) qs('toolPresetCam').textContent = tr('toolPresetCam');
   if (qs('toolPresetInfra')) qs('toolPresetInfra').textContent = tr('toolPresetInfra');
+  if (qs('toolPortsHint')) qs('toolPortsHint').textContent = tr('toolAllPortsHint');
+  if (qs('toolLivePingTitle')) qs('toolLivePingTitle').textContent = tr('toolLivePingTitle');
+  if (qs('toolLivePingDesc')) qs('toolLivePingDesc').textContent = tr('toolLivePingDesc');
+  if (qs('toolTrafficTitle')) qs('toolTrafficTitle').textContent = tr('toolTrafficTitle');
+  if (qs('toolTrafficDesc')) qs('toolTrafficDesc').textContent = tr('toolTrafficDesc');
+  if (qs('toolInventoryTitle')) qs('toolInventoryTitle').textContent = tr('toolInventoryTitle');
+  if (qs('toolInventoryDesc')) qs('toolInventoryDesc').textContent = tr('toolInventoryDesc');
+  if (qs('toolTrafficState')) qs('toolTrafficState').textContent = tr('toolLiveState');
+  if (qs('toolInventoryState')) qs('toolInventoryState').textContent = tr('toolLiveState');
+  if (qs('toolPingStartBtn')) qs('toolPingStartBtn').textContent = tr('toolStartPing');
+  if (qs('toolPingPauseBtn')) qs('toolPingPauseBtn').textContent = tr('toolPausePing');
+  if (qs('toolPingResumeBtn')) qs('toolPingResumeBtn').textContent = tr('toolResumePing');
+  if (qs('toolPingStopBtn')) qs('toolPingStopBtn').textContent = tr('toolStopPing');
   if (qs('toolsEmptyState')) qs('toolsEmptyState').textContent = tr('toolsEmpty');
   const toolSelect = qs('toolDeviceSelect');
   if (toolSelect && toolSelect.options[0]) toolSelect.options[0].text = tr('toolSelectDevice');
@@ -875,6 +1077,9 @@ function applyTranslations() {
   qs('toolTargetInput').placeholder = '192.168.1.100';
   renderToolsSummary(state.toolResults);
   if (state.toolResults) renderToolResults(state.toolResults);
+  renderLivePingPanel();
+  renderTrafficPanel();
+  renderInventoryPanel();
 }
 
 function validCidr(value) {
@@ -1152,7 +1357,7 @@ function renderToolsSummary(result) {
 
 function renderPingTool(result) {
   return `<div class="tool-result-card">
-    <div class="tool-result-head"><div><h3>PING</h3><small>${tr('runPingSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-result-head"><div><h3>${tr('toolPingCardTitle')}</h3><small>${tr('runPingSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
     <div class="tool-metrics">
       <div class="tool-metric"><div class="k">${tr('toolPackets')}</div><div class="v">${result.received}/${result.transmitted || 0}</div></div>
       <div class="tool-metric"><div class="k">${tr('toolLoss')}</div><div class="v">${Number(result.loss_pct || 0)}%</div></div>
@@ -1165,10 +1370,10 @@ function renderPingTool(result) {
 function renderTraceTool(result) {
   const hops = Array.isArray(result.hops) ? result.hops : [];
   return `<div class="tool-result-card">
-    <div class="tool-result-head"><div><h3>TRACE ROUTE</h3><small>${tr('runTraceSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-result-head"><div><h3>${tr('toolTraceCardTitle')}</h3><small>${tr('runTraceSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
     <div class="tool-metrics">
       <div class="tool-metric"><div class="k">${tr('toolHopCount')}</div><div class="v">${result.hop_count || 0}</div></div>
-      <div class="tool-metric"><div class="k">Command</div><div class="v" style="font-size:15px">${result.command || 'traceroute'}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolCommand')}</div><div class="v" style="font-size:15px">${result.command || 'traceroute'}</div></div>
       <div class="tool-metric"><div class="k">${tr('toolTargetStat')}</div><div class="v" style="font-size:15px">${result.target}</div></div>
     </div>
     <div class="tool-list">${hops.length ? hops.map(hop => `<div class="tool-line ${hop.address === '*' ? 'bad' : (hop.latency_ms != null && hop.latency_ms > 120 ? 'warn' : 'good')}"><div class="tool-line-top"><strong>#${hop.hop} ${hop.address}</strong><span>${hop.latency_ms != null ? `${Math.round(hop.latency_ms)} ms` : '—'}</span></div><div class="tool-line-sub"><span>${hop.raw}</span></div></div>`).join('') : `<div class="empty">${tr('toolNoData')}</div>`}</div>
@@ -1178,19 +1383,19 @@ function renderTraceTool(result) {
 function renderPortsTool(result) {
   const ports = Array.isArray(result.ports) ? result.ports : [];
   return `<div class="tool-result-card">
-    <div class="tool-result-head"><div><h3>PORT CHECK</h3><small>${tr('runPortsSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-result-head"><div><h3>${tr('toolPortsCardTitle')}</h3><small>${tr('runPortsSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
     <div class="tool-metrics">
       <div class="tool-metric"><div class="k">${tr('toolOpenPorts')}</div><div class="v">${result.open_ports || 0}</div></div>
       <div class="tool-metric"><div class="k">${tr('toolChecks')}</div><div class="v">${result.checked_ports || 0}</div></div>
       <div class="tool-metric"><div class="k">${tr('toolTargetStat')}</div><div class="v" style="font-size:15px">${result.target}</div></div>
     </div>
-    <div class="tool-list">${ports.length ? ports.map(port => `<div class="tool-line ${port.open ? 'good' : 'bad'}"><div class="tool-line-top"><strong>${port.port} • ${port.service}</strong><span>${port.open ? 'OPEN' : 'CLOSED'}</span></div><div class="tool-line-sub"><span>${port.latency_ms} ms</span>${port.error ? `<span>${port.error}</span>` : ''}</div></div>`).join('') : `<div class="empty">${tr('toolNoData')}</div>`}</div>
+    <div class="tool-list">${ports.length ? ports.map(port => `<div class="tool-line ${port.open ? 'good' : 'bad'}"><div class="tool-line-top"><strong>${port.port} • ${port.service}</strong><span>${port.open ? tr('toolOpen') : tr('toolClosed')}</span></div><div class="tool-line-sub"><span>${port.latency_ms} ms</span>${port.error ? `<span>${port.error}</span>` : ''}</div></div>`).join('') : `<div class="empty">${tr('toolNoData')}</div>`}</div>
   </div>`;
 }
 
 function renderDnsTool(result) {
   return `<div class="tool-result-card">
-    <div class="tool-result-head"><div><h3>DNS</h3><small>${tr('runDnsSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-result-head"><div><h3>${tr('toolDnsCardTitle')}</h3><small>${tr('runDnsSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
     <div class="tool-metrics">
       <div class="tool-metric"><div class="k">${tr('toolResolvedName')}</div><div class="v" style="font-size:16px">${result.reverse_host || '—'}</div></div>
       <div class="tool-metric"><div class="k">${tr('toolAddresses')}</div><div class="v">${(result.addresses || []).length}</div></div>
@@ -1201,6 +1406,256 @@ function renderDnsTool(result) {
     </div>
     ${result.output ? `<div class="tool-output">${result.output}</div>` : ''}
   </div>`;
+}
+
+function renderSpeedTool(result) {
+  const down = result.download_mbps != null ? `${Math.round(Number(result.download_mbps))}` : '—';
+  const up = result.upload_mbps != null ? `${Math.round(Number(result.upload_mbps))}` : '—';
+  const ping = result.ping_ms != null ? `${Math.round(Number(result.ping_ms))} ms` : '—';
+  return `<div class="tool-result-card">
+    <div class="tool-result-head"><div><h3>${tr('runSpeedTitle')}</h3><small>${tr('runSpeedSub')}</small></div><span class="tool-status-chip ${toolStatusClass(result.status)}">${toolStatusLabel(result.status)}</span></div>
+    <div class="tool-metrics">
+      <div class="tool-metric"><div class="k">${tr('toolDownload')}</div><div class="v">${down} ${tr('toolMbps')}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolUpload')}</div><div class="v">${up} ${tr('toolMbps')}</div></div>
+      <div class="tool-metric"><div class="k">${tr('toolPingMetric')}</div><div class="v">${ping}</div></div>
+    </div>
+    ${result.error ? `<div class="tool-output">${result.error}</div>` : ''}
+    ${result.output ? `<div class="tool-output">${result.output}</div>` : ''}
+  </div>`;
+}
+
+function pingSampleClass(sample) {
+  if (!sample) return 'warn';
+  if (sample.status === 'healthy') return 'good';
+  if (sample.status === 'degraded') return 'warn';
+  return 'bad';
+}
+
+function updatePingControlButtons() {
+  const running = !!state.toolPingLoop;
+  const paused = !!state.toolPingPaused;
+  if (qs('toolPingStartBtn')) qs('toolPingStartBtn').disabled = running;
+  if (qs('toolPingPauseBtn')) qs('toolPingPauseBtn').disabled = !running || paused;
+  if (qs('toolPingResumeBtn')) qs('toolPingResumeBtn').disabled = !running || !paused;
+  if (qs('toolPingStopBtn')) qs('toolPingStopBtn').disabled = !running;
+}
+
+function renderLivePingPanel() {
+  const mount = qs('toolLivePingMount');
+  const statusEl = qs('toolPingState');
+  if (!mount || !statusEl) return;
+  const running = !!state.toolPingLoop;
+  const paused = !!state.toolPingPaused;
+  const samples = state.toolPingSeries || [];
+  let stateText = tr('toolPingIdle');
+  let stateClass = 'stopped';
+  if (running && paused) {
+    stateText = tr('toolPingPaused');
+    stateClass = 'paused';
+  } else if (running) {
+    stateText = tr('toolPingRunning');
+    stateClass = 'running';
+  } else if (samples.length) {
+    stateText = tr('toolPingStopped');
+    stateClass = 'stopped';
+  }
+  statusEl.className = `tool-ping-state ${stateClass}`;
+  statusEl.textContent = stateText;
+  updatePingControlButtons();
+  if (!samples.length) {
+    mount.innerHTML = `<div class="empty">${tr('toolPingNoData')}</div>`;
+    return;
+  }
+  const last = samples[samples.length - 1];
+  const valid = samples.filter(item => Number.isFinite(item.latency) && item.latency > 0);
+  const avg = valid.length ? Math.round(valid.reduce((sum, item) => sum + item.latency, 0) / valid.length) : 0;
+  const max = Math.max(1, ...samples.map(item => Math.max(1, Number(item.latency || 0))));
+  mount.innerHTML = `
+    <div class="tool-big-stat">
+      <div><strong>${last.latency ? `${Math.round(last.latency)} ms` : '—'}</strong><small>${tr('toolLatency')}</small></div>
+      <div><strong>${avg ? `${avg} ms` : '—'}</strong><small>${tr('toolLatencySeries')}</small></div>
+    </div>
+    <div class="tool-chart">
+      ${samples.map((sample, idx) => {
+        const height = Math.max(16, Math.round((Math.max(1, Number(sample.latency || 0)) / max) * 100));
+        const cls = pingSampleClass(sample);
+        const label = idx === 0 || idx === samples.length - 1 ? new Date(sample.ts).toLocaleTimeString(currentLang() === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+        return `<div class="tool-chart-bar ${cls}" style="height:${height}px" title="${sample.latency ? `${Math.round(sample.latency)} ms` : 'timeout'}"><span>${label}</span></div>`;
+      }).join('')}
+    </div>
+    <div class="tool-mini-strip">${samples.map(sample => `<span class="${pingSampleClass(sample)}"></span>`).join('')}</div>
+  `;
+}
+
+async function pingLoopTick() {
+  if (state.toolPingPaused || state.toolPingBusy) return;
+  const target = resolveToolTarget();
+  if (!target) {
+    stopContinuousPing();
+    showMsg('toolsMessage', tr('toolMissingTarget'), false);
+    return;
+  }
+  try {
+    state.toolPingBusy = true;
+    const result = await api('./api/tools/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target, tools: ['ping'], ping_count: 1 })
+    });
+    const ping = result.tools?.ping || {};
+    state.toolPingSeries.push({
+      ts: Date.now(),
+      latency: Number(ping.latency_avg_ms || 0),
+      status: String(ping.status || 'down'),
+      loss: Number(ping.loss_pct || 100),
+    });
+    if (state.toolPingSeries.length > 24) state.toolPingSeries.shift();
+    renderLivePingPanel();
+  } catch (err) {
+    state.toolPingSeries.push({ ts: Date.now(), latency: 0, status: 'down', loss: 100 });
+    if (state.toolPingSeries.length > 24) state.toolPingSeries.shift();
+    renderLivePingPanel();
+  } finally {
+    state.toolPingBusy = false;
+  }
+}
+
+async function startContinuousPing() {
+  if (state.toolPingLoop) return;
+  const target = resolveToolTarget();
+  if (!target) return showMsg('toolsMessage', tr('toolMissingTarget'), false);
+  state.toolPingPaused = false;
+  state.toolPingSeries = [];
+  renderLivePingPanel();
+  await pingLoopTick();
+  state.toolPingLoop = window.setInterval(pingLoopTick, 2500);
+  renderLivePingPanel();
+}
+
+function pauseContinuousPing() {
+  if (!state.toolPingLoop) return;
+  state.toolPingPaused = true;
+  renderLivePingPanel();
+}
+
+function resumeContinuousPing() {
+  if (!state.toolPingLoop) return;
+  state.toolPingPaused = false;
+  renderLivePingPanel();
+  pingLoopTick();
+}
+
+function stopContinuousPing() {
+  if (state.toolPingLoop) {
+    window.clearInterval(state.toolPingLoop);
+    state.toolPingLoop = null;
+  }
+  state.toolPingPaused = false;
+  renderLivePingPanel();
+}
+
+function renderTrafficPanel() {
+  const mount = qs('toolTrafficMount');
+  if (!mount) return;
+  const traffic = state.toolTrafficData;
+  if (!traffic || !Array.isArray(traffic.interfaces)) {
+    mount.innerHTML = `<div class="empty">${tr('toolTrafficEmpty')}</div>`;
+    return;
+  }
+  const totalRx = traffic.interfaces.reduce((sum, item) => sum + Number(item.rx_mbps || 0), 0);
+  const totalTx = traffic.interfaces.reduce((sum, item) => sum + Number(item.tx_mbps || 0), 0);
+  const chartSeries = (state.trafficSeries || []).slice(-20);
+  const max = Math.max(1, ...chartSeries.map(item => Math.max(Number(item.rx || 0), Number(item.tx || 0), 1)));
+  mount.innerHTML = `
+    <div class="tool-big-stat">
+      <div><strong>${Math.round(totalRx * 10) / 10} ${tr('toolMbps')}</strong><small>${tr('toolRx')}</small></div>
+      <div><strong>${Math.round(totalTx * 10) / 10} ${tr('toolMbps')}</strong><small>${tr('toolTx')}</small></div>
+    </div>
+    <div class="tool-chart">
+      ${chartSeries.map((sample, idx) => {
+        const value = Math.max(Number(sample.rx || 0), Number(sample.tx || 0));
+        const height = Math.max(16, Math.round((value / max) * 100));
+        const cls = value > 50 ? 'bad' : value > 10 ? 'warn' : 'good';
+        const label = idx === 0 || idx === chartSeries.length - 1 ? sample.label : '';
+        return `<div class="tool-chart-bar ${cls}" style="height:${height}px" title="RX ${sample.rx.toFixed(1)} / TX ${sample.tx.toFixed(1)} ${tr('toolMbps')}"><span>${label}</span></div>`;
+      }).join('')}
+    </div>
+    <div class="tool-list">
+      ${traffic.interfaces.slice(0, 8).map(item => `<div class="tool-line ${Number(item.rx_mbps || 0) + Number(item.tx_mbps || 0) > 10 ? 'warn' : 'good'}"><div class="tool-line-top"><strong>${item.interface}</strong><span>${tr('toolRx')}: ${Number(item.rx_mbps || 0).toFixed(1)} • ${tr('toolTx')}: ${Number(item.tx_mbps || 0).toFixed(1)} ${tr('toolMbps')}</span></div></div>`).join('')}
+    </div>
+  `;
+}
+
+async function pollTraffic() {
+  try {
+    const traffic = await api('./api/tools/traffic');
+    state.toolTrafficData = traffic;
+    const totalRx = (traffic.interfaces || []).reduce((sum, item) => sum + Number(item.rx_mbps || 0), 0);
+    const totalTx = (traffic.interfaces || []).reduce((sum, item) => sum + Number(item.tx_mbps || 0), 0);
+    state.trafficSeries.push({
+      ts: Date.now(),
+      label: new Date().toLocaleTimeString(currentLang() === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' }),
+      rx: totalRx,
+      tx: totalTx,
+    });
+    if (state.trafficSeries.length > 20) state.trafficSeries.shift();
+    renderTrafficPanel();
+  } catch {}
+}
+
+function ensureToolLivePolling(active = false) {
+  if (active) {
+    if (!state.toolTrafficLoop) {
+      pollTraffic();
+      state.toolTrafficLoop = window.setInterval(pollTraffic, 4000);
+    }
+    renderInventoryPanel();
+    return;
+  }
+  if (state.toolTrafficLoop) {
+    window.clearInterval(state.toolTrafficLoop);
+    state.toolTrafficLoop = null;
+  }
+}
+
+function renderInventoryPanel() {
+  const mount = qs('toolInventoryMount');
+  if (!mount) return;
+  const devices = [...(state.devices || [])].sort((a, b) => String(a.display_name || a.name || a.hostname || a.ip).localeCompare(String(b.display_name || b.name || b.hostname || b.ip), currentLang() === 'he' ? 'he' : 'en'));
+  if (!devices.length) {
+    mount.innerHTML = `<div class="empty">${tr('toolInventoryEmpty')}</div>`;
+    return;
+  }
+  const offline = devices.filter(item => item.status === 'offline').length;
+  const unstable = devices.filter(item => item.status === 'unstable').length;
+  const header = `<div class="tool-big-stat"><div><strong>${devices.length}</strong><small>${tr('toolInventoryCount')}</small></div><div><strong>${offline}</strong><small>${tr('toolUnavailableCount')}</small></div><div><strong>${unstable}</strong><small>${tr('toolSlowCount')}</small></div></div>`;
+  const lines = devices.slice(0, 40).map(device => {
+    const cls = device.status === 'online' ? 'good' : device.status === 'unstable' ? 'warn' : 'bad';
+    const name = device.display_name || device.name || device.hostname || device.ip;
+    return `<div class="tool-line ${cls}"><div class="tool-line-top"><strong>${name}</strong><span>${device.ip}</span></div><div class="tool-line-sub"><span>${tr('toolStatus')}: ${device.status || '—'}</span><span>${tr('category')}: ${device.category || '—'}</span><span>${tr('toolAddress')}: ${device.assigned_network || '—'}</span><span>${tr('protocolVendor')}: ${device.vendor || '—'}</span></div></div>`;
+  }).join('');
+  mount.innerHTML = `${header}<div class="tool-list">${lines}</div>`;
+}
+
+function showInventoryTool() {
+  renderInventoryPanel();
+  qs('toolInventoryPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearToolResults() {
+  stopContinuousPing();
+  ensureToolLivePolling(false);
+  state.toolResults = null;
+  state.toolPingSeries = [];
+  state.toolTrafficData = null;
+  state.trafficSeries = [];
+  renderToolsSummary(null);
+  renderToolResults(null);
+  renderLivePingPanel();
+  renderTrafficPanel();
+  renderInventoryPanel();
+  ensureToolLivePolling(true);
+  showMsg('toolsMessage', tr('toolClearDone'));
 }
 
 function renderToolResults(result) {
@@ -1217,17 +1672,23 @@ function renderToolResults(result) {
   if (result.tools.trace) cards.push(renderTraceTool(result.tools.trace));
   if (result.tools.ports) cards.push(renderPortsTool(result.tools.ports));
   if (result.tools.dns) cards.push(renderDnsTool(result.tools.dns));
+  if (result.tools.speed) cards.push(renderSpeedTool(result.tools.speed));
   mount.innerHTML = cards.join('');
 }
 
 async function runNetworkTools(tools) {
+  if ((tools || []).includes('inventory')) {
+    showInventoryTool();
+    return;
+  }
   const target = resolveToolTarget();
-  if (!target) {
+  const needsTarget = !(tools || []).every(tool => tool === 'speed');
+  if (needsTarget && !target) {
     showMsg('toolsMessage', tr('toolMissingTarget'), false);
     return;
   }
   try {
-    showMsg('toolsMessage', `${tr('toolActionTitle')} • ${target}`);
+    showMsg('toolsMessage', `${tr('toolActionTitle')} • ${target || 'internet'}`);
     const result = await api('./api/tools/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1249,6 +1710,7 @@ async function refreshData() {
   state.devices = devicesData.devices || [];
   renderSettingsData(status, settingsData);
   populateToolDevices();
+  renderInventoryPanel();
   qs('lastRefreshText').textContent = tr('lastRefresh', {
     time: new Date().toLocaleTimeString(currentLang() === 'he' ? 'he-IL' : 'en-US')
   });
@@ -1266,6 +1728,7 @@ window.addEventListener('load', async () => {
   });
   try {
     await refreshData();
+    ensureToolLivePolling(false);
   } catch (e) {
     console.error(e);
     alert(tr('loadFailed'));
