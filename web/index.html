@@ -440,6 +440,7 @@ body.viewer-mode .kpis,
 body.viewer-mode #tab-dashboard,
 body.viewer-mode #tab-devices,
 body.viewer-mode #tab-alerts,
+body.viewer-mode #tab-history,
 body.viewer-mode #tab-settings{display:none !important}
 body.viewer-mode .app{grid-template-columns:1fr}
 body.viewer-mode .sidebar{display:none}
@@ -624,6 +625,7 @@ body.settings-mode .settings-page .panel{max-width:1320px}
       <button class="nav-btn" data-tab="viewer" onclick="switchTab('viewer', this)" id="navViewer">Viewer</button>
       <button class="nav-btn" data-tab="devices" onclick="switchTab('devices', this)" id="navDevices">Devices</button>
       <button class="nav-btn" data-tab="alerts" onclick="switchTab('alerts', this)" id="navAlerts">Alerts</button>
+      <button class="nav-btn" data-tab="history" onclick="switchTab('history', this)" id="navHistory">History</button>
       <button class="nav-btn" onclick="location.href='./settings.html'" id="navSettings">Settings</button>
       <a class="nav-btn viewer-admin-link" id="viewerAdminLink" href="./">ממשק מלא</a>
     </div>
@@ -767,6 +769,37 @@ body.settings-mode .settings-page .panel{max-width:1320px}
 
     <section id="tab-alerts" class="section">
       <div class="panel compact-panel"><div class="panel-head"><div><h2 id="alertsTitle">Alerts</h2><p id="alertsSub">Notifications for new, offline, unstable and recovered devices.</p></div></div><div id="alertsSummary" class="viewer-summary" style="margin-bottom:12px"></div><div class="alert-columns"><div><div class="toolbar" style="margin-bottom:12px"><div class="field"><label id="lblAlertSearch">חיפוש בהתראות</label><input id="alertsSearch" class="search-input" placeholder="חיפוש בהתראות" oninput="renderAlerts()"></div><div class="field"><label id="lblAlertSeverity">חומרה</label><select id="alertSeverity" onchange="renderAlerts()"><option value="">הכל</option><option value="info">info</option><option value="medium">medium</option><option value="high">high</option><option value="critical">critical</option></select></div></div><div id="alertsMount" class="alert-list compact-scroll tall"></div></div><div><div class="toolbar" style="margin-bottom:12px"><div class="field"><label id="lblEventSearch">חיפוש באירועים</label><input id="eventsSearch" class="search-input" placeholder="חיפוש באירועים" oninput="renderAlerts()"></div></div><div id="eventsMount" class="event-timeline compact-scroll tall"></div></div></div></div>
+      </div>
+    </section>
+
+    <section id="tab-history" class="section">
+      <div class="panel compact-panel">
+        <div class="panel-head">
+          <div>
+            <h2 id="historyPageTitle">היסטוריה</h2>
+            <p id="historyPageSub">מבט רוחבי על יציבות הרשת, ניתוקים ושינויים לאורך זמן.</p>
+          </div>
+        </div>
+        <div class="history-toolbar" id="historyToolbar">
+          <div class="field">
+            <label id="historyFromLabel" for="historyFrom">מתאריך</label>
+            <input type="datetime-local" id="historyFrom">
+          </div>
+          <div class="field">
+            <label id="historyToLabel" for="historyTo">עד תאריך</label>
+            <input type="datetime-local" id="historyTo">
+          </div>
+          <div class="actions">
+            <button type="button" class="btn small primary" onclick="applyHistoryRange()" id="historyApplyBtn">הצג</button>
+          </div>
+          <div class="preset-group">
+            <button type="button" class="btn small" onclick="setHistoryPreset('24h')" id="historyPreset24h">24 שעות</button>
+            <button type="button" class="btn small" onclick="setHistoryPreset('7d')" id="historyPreset7d">7 ימים</button>
+            <button type="button" class="btn small" onclick="setHistoryPreset('14d')" id="historyPreset14d">14 ימים</button>
+          </div>
+        </div>
+        <div id="historyMessage" class="msg"></div>
+        <div id="historyMount" class="drawer-analytics"></div>
       </div>
     </section>
 
@@ -1073,14 +1106,14 @@ function safeArray(v){ return Array.isArray(v) ? v : [] }
 function setText(id,val){const el=qs(id); if(el) el.textContent=val}
 function setPlaceholder(id,val){const el=qs(id); if(el) el.placeholder=val}
 function setOptText(id,idx,val){const el=qs(id); if(el && el.options && el.options[idx]) el.options[idx].text=val}
-const state={status:null,devices:[],alerts:[],events:[],viewerCategories:[],viewerCategoryDevices:{},viewerSummarySeries:[],viewerSummaryAvailability:0,availabilitySources:{},settings:{},activeFilter:'',viewerFilter:'all',viewerCategoryKey:'',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null,alertMuteSignature:'',alertLastSignature:'',editDetail:null};
+const state={status:null,devices:[],alerts:[],events:[],viewerCategories:[],viewerCategoryDevices:{},viewerSummarySeries:[],viewerSummaryAvailability:0,availabilitySources:{},settings:{},activeFilter:'',viewerFilter:'all',viewerCategoryKey:'',selectedIps:new Set(),sortBy:'name',sortDir:'asc',refreshTimer:null,alertMuteSignature:'',alertLastSignature:'',editDetail:null,historyReport:null};
 const normalizedPath=(location.pathname||'').replace(/\/+$/,'');
 const directViewerMode=(normalizedPath.endsWith('/viewer')||normalizedPath.endsWith('/viewer.html'));
 const I18N={
   he:{
-    brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",settings:"הגדרות",viewerAdmin:"ממשק מלא",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
+    brand:"HOMEii Network",dashboard:"דשבורד",viewer:"צפייה",devices:"מכשירים",alerts:"התראות",historyNav:"היסטוריה",settings:"הגדרות",viewerAdmin:"ממשק מלא",settingsBack:"חזרה לתפריט הראשי",settingsTopNote:"ההגדרות מחולקות לעמודים נפרדים דרך תפריט הצד.",
     scan:"סריקה עכשיו",acceptAll:"אשר את כל החדשים",refresh:"רענון נתונים",closeViewer:"סגור",alertPanelTitle:"מרכז התראות",alertPanelSub:"יש התראות פתוחות או אירועים קריטיים שדורשים תשומת לב.",mute:"השתק",cancel:"בטל",resolveAll:"אשר הכל",offlineDevices:"מכשירים מנותקים",online:"מחוברים",total:"סה״כ",new:"חדשים",unstableDevices:"לא יציבים",critical:"קריטיים",pinned:"נעוצים",
-    dashboardTitle:"מכשירים שדורשים תשומת לב",dashboardSub:"דשבורד חכם עם דגש על מנותקים, קריטיים ושינויים אחרונים.",dashboardJournalSub:"3-5 האירועים החשובים והחדשים ביותר ברשת.",viewerTitle:"Viewer",viewerSub:"תצוגה חיה לקריאה בלבד של מצב הרשת.",viewerReadonly:"לצפייה בלבד",viewerSummaryTitle:"מצב חי",viewerSummarySub:"סיכום מהיר של מצב הרשת ללא פעולות עריכה.",viewerFocusTitle:"תצוגת צפייה",viewerFocusSub:"בחר סיכום למעלה כדי להציג רק את מה שמעניין אותך, בלי לעבור דף.",viewerAttentionTitle:"מנותקים ולא יציבים",viewerAttentionSub:"התקנים שמצריכים תשומת לב מיידית.",viewerEventsTitle:"שינויים חיים",viewerEventsSub:"נפילות, חזרות, חוסר יציבות וגילוי חדש.",viewerNewTitle:"מכשירים חדשים",viewerNewSub:"התקנים שהתגלו וממתינים לבדיקה.",recentDevicesTitle:"מכשירים אחרונים",recentDevicesSub:"התקנים פעילים ושינויים אחרונים ברשת.",networkSummaryTitle:"סיכום רשתות",networkSummarySub:"כמות התקנים לפי רשת וסטטוס.",attentionTitle:"דורשים טיפול",attentionSub:"מנותקים, קריטיים או חדשים שמומלץ לבדוק.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית. לחיצה על שם ההתקן פותחת את כל הפרטים והפעולות.",
+    dashboardTitle:"מכשירים שדורשים תשומת לב",dashboardSub:"דשבורד חכם עם דגש על מנותקים, קריטיים ושינויים אחרונים.",dashboardJournalSub:"3-5 האירועים החשובים והחדשים ביותר ברשת.",viewerTitle:"Viewer",viewerSub:"תצוגה חיה לקריאה בלבד של מצב הרשת.",viewerReadonly:"לצפייה בלבד",viewerSummaryTitle:"מצב חי",viewerSummarySub:"סיכום מהיר של מצב הרשת ללא פעולות עריכה.",viewerFocusTitle:"תצוגת צפייה",viewerFocusSub:"בחר סיכום למעלה כדי להציג רק את מה שמעניין אותך, בלי לעבור דף.",viewerAttentionTitle:"מנותקים ולא יציבים",viewerAttentionSub:"התקנים שמצריכים תשומת לב מיידית.",viewerEventsTitle:"שינויים חיים",viewerEventsSub:"נפילות, חזרות, חוסר יציבות וגילוי חדש.",viewerNewTitle:"מכשירים חדשים",viewerNewSub:"התקנים שהתגלו וממתינים לבדיקה.",historyPageTitle:"היסטוריה",historyPageSub:"מבט רוחבי על יציבות הרשת, ניתוקים ושינויים לאורך זמן.",recentDevicesTitle:"מכשירים אחרונים",recentDevicesSub:"התקנים פעילים ושינויים אחרונים ברשת.",networkSummaryTitle:"סיכום רשתות",networkSummarySub:"כמות התקנים לפי רשת וסטטוס.",attentionTitle:"דורשים טיפול",attentionSub:"מנותקים, קריטיים או חדשים שמומלץ לבדוק.",devicesTitle:"מכשירים",devicesSub:"טבלה קומפקטית. לחיצה על שם ההתקן פותחת את כל הפרטים והפעולות.",
     search:"חיפוש",status:"סטטוס",category:"קטגוריה",networkFilter:"רשת",vendorFilter:"יצרן",sortBy:"מיון",bulkActions:"פעולות מרובות",selected:"נבחרו",bulkPin:"נעץ מסומנים",bulkUnpin:"בטל נעיצה",bulkCritical:"סמן כקריטי",bulkUncritical:"בטל סימון קריטי",bulkDelete:"מחק מסומנים",sortName:"שם",sortIp:"IP",sortStatus:"סטטוס",sortVendor:"יצרן",sortLastSeen:"נראה לאחרונה",networkNames:"שמות רשתות",view:"תצוגה",all:"הכל",clearFilters:"נקה סינונים",rescan:"סריקה מחדש",alertsTitle:"התראות",eventsTitle:"אירועים",openAlerts:"התראות פתוחות",recentEvents:"אירועים אחרונים",
     general:"כללי",generalSub:"הגדרות כלליות של הממשק ותצוגת ברירת מחדל.",language:"שפה",languageSub:"בחר שפת ממשק לכל המערכת.",theme:"ערכת נושא",autoRefresh:"רענון אוטומטי (שניות)",defaultView:"תצוגת ברירת מחדל",
     networks:"רשתות",networksSub:"הגדר את כל טווחי הרשת שברצונך לסרוק.",manualDevice:"התקן ידני",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"שם",manualCategory:"קטגוריה",manualNotes:"הערות",addDevice:"הוסף התקן",assignedNetwork:"שיוך לרשת",flags:"דגלים",save:"שמור",close:"סגור",editDeviceTitle:"עריכת התקן",appearancePreview:"תצוגה פעילה",activeTheme:"ערכת נושא פעילה",runScanNow:"שמור והפעל סריקה",
@@ -1092,9 +1125,9 @@ statusText:"סטטוס",networksText:"רשתות",discoveryMode:"מצב גילו
     version:"גרסה",db:"מסד נתונים",scanMode:"מצב סריקה",lastScanStarted:"סריקה אחרונה התחילה",lastScanFinished:"סריקה אחרונה הסתיימה",light:"בהיר",dark:"כהה",table:"טבלה",grid:"כרטיסים",advanced:"מתקדם",compact:"קומפקטי",optional:"אופציונלי",severity:"חומרה",updatedNow:"עודכן",networkCol:"רשת",details:"פרטים",alertSearch:"חיפוש בהתראות",eventSearch:"חיפוש באירועים",systemEvent:"אירוע מערכת",dbHealth:"מצב מסד הנתונים",scanSummary:"סיכום סריקה",productPolish:"ליטוש מוצר",sysVersionLabel:"גרסת מערכת",sysDbLabel:"מסד נתונים פעיל",sysNetworksLabel:"רשתות מנוטרות",sysScanModeLabel:"מצב סריקה נוכחי",sysScanStartedLabel:"זמן התחלת הסריקה האחרונה",sysScanFinishedLabel:"זמן סיום הסריקה האחרונה",networkNamesHint:"אם יש שם רשת, הוא יוצג בממשק במקום ה-CIDR",networkEditorTitle:"שיוך שמות לרשתות",networkManagerHint:"הוסף טווח רשת וכינוי באותה שורה. ניתן גם לערוך או למחוק לפני השמירה.",networkCidr:"טווח רשת (CIDR)",networkAlias:"כינוי רשת",addNetwork:"הוסף רשת",edit:"ערוך",delete:"מחק",saveNetworksOnly:"שמור רשתות",networkEmpty:"עדיין לא הוגדרו רשתות",settingsHelperNote:"שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים",saveAppearance:"שמור מראה"
   },
   en:{
-    brand:"HOMEii Network",dashboard:"Dashboard",viewer:"Viewer",devices:"Devices",alerts:"Alerts",settings:"Settings",viewerAdmin:"Full app",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
+    brand:"HOMEii Network",dashboard:"Dashboard",viewer:"Viewer",devices:"Devices",alerts:"Alerts",historyNav:"History",settings:"Settings",viewerAdmin:"Full app",settingsBack:"Back to main menu",settingsTopNote:"Settings are split into separate pages from the sidebar.",
     scan:"Scan now",acceptAll:"Accept all new",refresh:"Refresh data",closeViewer:"Close",alertPanelTitle:"Alert center",alertPanelSub:"Open alerts or critical events need attention.",mute:"Mute",cancel:"Cancel",resolveAll:"Resolve all",offlineDevices:"Offline Devices",online:"Online",total:"Total",new:"New",unstableDevices:"Unstable",critical:"Critical",pinned:"Pinned",
-    dashboardTitle:"Devices needing attention",dashboardSub:"Smart dashboard focused on offline, critical and recent changes.",dashboardJournalSub:"The 3-5 most important and recent network events.",viewerTitle:"Viewer",viewerSub:"Read-only live overview of the network state.",viewerReadonly:"Read only",viewerSummaryTitle:"Live overview",viewerSummarySub:"Quick status summary without edit actions.",viewerFocusTitle:"Watch panel",viewerFocusSub:"Use the summary cards to filter what you watch without leaving this page.",viewerAttentionTitle:"Offline and unstable",viewerAttentionSub:"Devices that need immediate attention.",viewerEventsTitle:"Live changes",viewerEventsSub:"Down, back online, unstable and new-device activity.",viewerNewTitle:"New devices",viewerNewSub:"Recently discovered devices waiting for review.",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",devicesTitle:"Devices",devicesSub:"Compact table. Click the device name to open full details and actions.",
+    dashboardTitle:"Devices needing attention",dashboardSub:"Smart dashboard focused on offline, critical and recent changes.",dashboardJournalSub:"The 3-5 most important and recent network events.",viewerTitle:"Viewer",viewerSub:"Read-only live overview of the network state.",viewerReadonly:"Read only",viewerSummaryTitle:"Live overview",viewerSummarySub:"Quick status summary without edit actions.",viewerFocusTitle:"Watch panel",viewerFocusSub:"Use the summary cards to filter what you watch without leaving this page.",viewerAttentionTitle:"Offline and unstable",viewerAttentionSub:"Devices that need immediate attention.",viewerEventsTitle:"Live changes",viewerEventsSub:"Down, back online, unstable and new-device activity.",viewerNewTitle:"New devices",viewerNewSub:"Recently discovered devices waiting for review.",historyPageTitle:"History",historyPageSub:"System-wide stability, disconnections and change trends over time.",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",devicesTitle:"Devices",devicesSub:"Compact table. Click the device name to open full details and actions.",
     search:"Search",status:"Status",category:"Category",networkFilter:"Network",vendorFilter:"Vendor",sortBy:"Sort by",bulkActions:"Bulk actions",selected:"selected",bulkPin:"Pin selected",bulkUnpin:"Unpin selected",bulkCritical:"Mark critical",bulkUncritical:"Unmark critical",bulkDelete:"Delete selected",sortName:"Name",sortIp:"IP",sortStatus:"Status",sortVendor:"Vendor",sortLastSeen:"Last seen",networkNames:"Network Names",view:"View",all:"All",clearFilters:"Clear filters",rescan:"Rescan",alertsTitle:"Alerts",eventsTitle:"Events",openAlerts:"Open alerts",recentEvents:"Recent events",recentDevicesTitle:"Recent devices",recentDevicesSub:"Active devices and latest changes on the network.",networkSummaryTitle:"Network summary",networkSummarySub:"Device counts by network and status.",attentionTitle:"Needs attention",attentionSub:"Offline, critical or new devices worth checking.",
     general:"General",generalSub:"General interface settings and default view.",language:"Language",languageSub:"Choose the interface language for the whole system.",theme:"Theme",autoRefresh:"Auto refresh (seconds)",defaultView:"Default view",
     networks:"Networks",networksSub:"Configure all network ranges you want to scan.",manualDevice:"Manual Device",manualDeviceSub:"Add a device manually if it was not detected automatically.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"Add device",assignedNetwork:"Assigned Network",flags:"Flags",save:"Save",close:"Close",editDeviceTitle:"Edit Device",appearancePreview:"Active view",activeTheme:"Active theme",runScanNow:"Run scan now",
@@ -1146,6 +1179,12 @@ function switchTab(tab,btn){
   const targetUrl=directViewerMode&&tab==='viewer'?location.pathname:`#${tab}`;
   if((directViewerMode&&location.pathname!==targetUrl)||(!directViewerMode&&location.hash!==`#${tab}`)) history.replaceState(null,'',targetUrl);
   document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'});
+  if(tab==='history'){
+    loadHistorySummary().catch(err=>{
+      console.error(err);
+      showMsg('historyMessage', err.message||err, false);
+    });
+  }
 }
 function setTheme(theme){document.body.classList.toggle('dark',theme==='dark')}
 function applyDashboardStyle(style){document.body.classList.toggle('compact-dashboard',style==='compact')}
@@ -1243,7 +1282,7 @@ function switchSettingsPage(page, btn){
 
 function applyTranslations(){
   setText('brandTitle',tr('brand'));
-  setText('navDashboard',tr('dashboard')); setText('navViewer',tr('viewer')); setText('navDevices',tr('devices')); setText('navAlerts',tr('alerts')); setText('navSettings',tr('settings')); setText('viewerAdminLink',tr('viewerAdmin'));
+  setText('navDashboard',tr('dashboard')); setText('navViewer',tr('viewer')); setText('navDevices',tr('devices')); setText('navAlerts',tr('alerts')); setText('navHistory',tr('historyNav')); setText('navSettings',tr('settings')); setText('viewerAdminLink',tr('viewerAdmin'));
   setText('settingsBackBtn',tr('settingsBack')); setText('sideGeneral',tr('general')); setText('sideNetworks',tr('networks')); setText('sideManual',tr('manualDevice')); setText('sideAppearance',tr('appearance')); setText('sideLanguage',tr('language')); setText('sideSystem',tr('system'));
   setText('settingsTopNote',tr('settingsTopNote')); setText('settingsHelperNote',tr('settingsHelperNote'));
   setText('btnScan',tr('scan')); setText('btnAcceptAll',tr('acceptAll')); setText('btnRefresh',tr('refresh')); setText('btnViewerClose',tr('closeViewer'));
@@ -1259,6 +1298,7 @@ function applyTranslations(){
   setText('btnClearFilters',tr('clearFilters')); setText('btnAcceptAll2',tr('acceptAll')); setText('btnRescan',tr('rescan')); setText('bulkTitle',tr('bulkActions')); setText('bulkCountLabel',tr('selected')); setText('bulkPinBtn',tr('bulkPin')); setText('bulkUnpinBtn',tr('bulkUnpin')); setText('bulkCriticalBtn',tr('bulkCritical')); setText('bulkUncriticalBtn',tr('bulkUncritical')); setText('bulkDeleteBtn',tr('bulkDelete'));
   setText('alertsTitle',tr('alertsTitle')); setText('alertsSub',tr('alertsSub')); setText('eventsTitle',tr('eventsTitle')); setText('eventsSub',tr('eventsSub')); setText('lblAlertSearch',tr('alertSearch')); setText('lblAlertSeverity',tr('severity')); setText('lblEventSearch',tr('eventSearch'));
   setPlaceholder('alertsSearch',tr('alertSearch')); setPlaceholder('eventsSearch',tr('eventSearch'));
+  setText('historyPageTitle',tr('historyPageTitle')); setText('historyPageSub',tr('historyPageSub')); setText('historyFromLabel',tr('historyFrom')); setText('historyToLabel',tr('historyTo')); setText('historyApplyBtn',tr('historyApply')); setText('historyPreset24h',tr('historyPreset24h')); setText('historyPreset7d',tr('historyPreset7d')); setText('historyPreset14d',tr('historyPreset14d'));
   setText('settingsGeneralTitle',tr('general')); setText('settingsGeneralSub',tr('generalSub')); setText('lblRefresh',tr('autoRefresh')); setText('lblDefaultView',tr('defaultView')); setText('lblDashboardStyle',tr('dashboardStyle'));
   setOptText('setView',0,tr('table')); setOptText('setView',1,tr('grid')); setOptText('setStyle',0,tr('advanced')); setOptText('setStyle',1,tr('compact'));
   setText('btnSaveSettingsGeneral',tr('saveSettings'));
@@ -1615,16 +1655,13 @@ function historyAffectedDevices(items){
   const rows=safeArray(items);
   return `<div class="history-card"><h5>${escapeHtml(tr('historyAffectedDevices'))}</h5><div class="history-window-list">${rows.length?rows.map(item=>`<div class="history-window-item"><div><strong>${escapeHtml(item.name||item.ip||'—')}</strong><small>${escapeHtml(item.ip||'')} • ${escapeHtml(localText(`${tr('historyOfflineCount')}: ${Number(item.offline_count||0)}`,`${tr('historyOfflineCount')}: ${Number(item.offline_count||0)}`))}${Number(item.unstable_count||0)?` • ${escapeHtml(tr('historyUnstableCount'))}: ${Number(item.unstable_count||0)}`:''}</small></div><div class="viewer-category-chip ${Number(item.offline_count||0)>0?'bad':'warn'}">${Number(item.offline_count||0)>0?escapeHtml(tr('status_offline')):escapeHtml(tr('status_unstable'))}</div></div>`).join(''):`<div class="drawer-empty">${escapeHtml(tr('drawerNoAnalytics'))}</div>`}</div></div>`;
 }
-function renderEditAnalytics(report){
-  const mount=qs('editAnalyticsMount');
-  if(!mount) return;
+function historyAnalyticsMarkup(report){
   if(!report){
-    mount.innerHTML=`<div class="drawer-empty">${escapeHtml(tr('drawerNoAnalytics'))}</div>`;
-    return;
+    return `<div class="drawer-empty">${escapeHtml(tr('drawerNoAnalytics'))}</div>`;
   }
   const summary=report.summary||{};
   const daily=safeArray(report.daily_series);
-  mount.innerHTML=`
+  return `
     <div class="history-metrics">
       ${historyMetric(tr('historyAvailability'), `${Number(summary.availability_pct||0)}%`)}
       ${historyMetric(tr('historyDisconnects'), Number(summary.disconnects||0), 'bad')}
@@ -1646,6 +1683,56 @@ function renderEditAnalytics(report){
     </div>
     ${historyAffectedDevices(report.affected_devices)}
   `;
+}
+function renderEditAnalytics(report){
+  const mount=qs('editAnalyticsMount');
+  if(!mount) return;
+  mount.innerHTML=historyAnalyticsMarkup(report);
+}
+function applyHistoryDefaultRange(days=14){
+  const to=Math.floor(Date.now()/1000);
+  const from=to-(days*86400);
+  const fromInput=qs('historyFrom');
+  const toInput=qs('historyTo');
+  if(fromInput) fromInput.value=toLocalDateTimeInput(from);
+  if(toInput) toInput.value=toLocalDateTimeInput(to);
+}
+function currentHistoryQuery(){
+  const fromTs=fromLocalDateTimeInput(qs('historyFrom')?.value||'');
+  const toTs=fromLocalDateTimeInput(qs('historyTo')?.value||'');
+  const params=new URLSearchParams();
+  if(fromTs) params.set('from_ts',String(fromTs));
+  if(toTs) params.set('to_ts',String(toTs));
+  return params.toString();
+}
+function renderHistoryPage(report){
+  const mount=qs('historyMount');
+  if(!mount) return;
+  mount.innerHTML=historyAnalyticsMarkup(report);
+}
+async function loadHistorySummary(silent=false){
+  const mount=qs('historyMount');
+  if(mount && !silent){
+    mount.innerHTML=`<div class="drawer-empty">${escapeHtml(localText('טוען היסטוריה...','Loading history...'))}</div>`;
+  }
+  try{
+    const query=currentHistoryQuery();
+    const report=await api(`./api/history/summary${query?`?${query}`:''}`);
+    state.historyReport=report;
+    renderHistoryPage(report);
+  }catch(err){
+    renderHistoryPage(null);
+    throw err;
+  }
+}
+async function applyHistoryRange(){
+  await loadHistorySummary();
+}
+function setHistoryPreset(preset){
+  if(preset==='24h') applyHistoryDefaultRange(1);
+  else if(preset==='7d') applyHistoryDefaultRange(7);
+  else applyHistoryDefaultRange(14);
+  loadHistorySummary().catch(err=>showMsg('historyMessage', err.message||err, false));
 }
 function currentEditHistoryQuery(){
   const fromTs=fromLocalDateTimeInput(qs('editHistoryFrom')?.value||'');
@@ -1753,7 +1840,7 @@ function renderAlerts(){const alertText=(qs('alertsSearch')?.value||'').trim().t
 function renderViewer(){const online=(state.devices||[]).filter(d=>d.status==='online'); const offline=(state.devices||[]).filter(d=>d.status==='offline'); const unstable=(state.devices||[]).filter(d=>d.status==='unstable'); const newcomers=(state.devices||[]).filter(d=>d.status==='new'); const openAlerts=(state.alerts||[]).filter(a=>a.status==='open'); const liveEvents=(state.events||[]).filter(e=>['device_offline','device_online','device_unstable','device_stable','new_device'].includes(e.event_type||'')).slice(0,10); const viewerStats=[{key:'all',label:tr('viewerFilterAll'),value:(state.devices||[]).length,color:'var(--text)'},{key:'online',label:tr('viewerFilterOnline'),value:online.length,color:'var(--green)'},{key:'offline',label:tr('viewerFilterOffline'),value:offline.length,color:'var(--red)'},{key:'new',label:tr('viewerFilterNew'),value:newcomers.length,color:'var(--blue)'},{key:'unstable',label:tr('viewerFilterUnstable'),value:unstable.length,color:'var(--orange)'},{key:'alerts',label:tr('viewerFilterAlerts'),value:openAlerts.length,color:'var(--gold)'}]; qs('viewerSummary').innerHTML=viewerStats.map(item=>`<button class="viewer-stat clickable ${state.viewerFilter===item.key?'active':''}" onclick="setViewerFilter('${item.key}')"><div class="k">${escapeHtml(item.label)}</div><div class="v" style="color:${item.color}">${item.value}</div></button>`).join(''); const focusDevices=viewerDevicesForFilter(); qs('viewerFilterTag').textContent=viewerFilterLabel(state.viewerFilter); qs('viewerDevices').innerHTML=focusDevices.length?focusDevices.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; const attention=[...offline,...unstable].sort((a,b)=>Number(b.last_seen||0)-Number(a.last_seen||0)).slice(0,12); qs('viewerAttention').innerHTML=attention.length?attention.map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerEvents').innerHTML=liveEvents.length?liveEvents.map(viewerEventRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`; qs('viewerNew').innerHTML=newcomers.length?newcomers.slice(0,12).map(viewerDeviceRow).join(''):`<div class="empty">${escapeHtml(tr('noViewerItems'))}</div>`}
 function renderDashboard(){const items=getDashboardDevices(); const priority=getPriorityDevices(); const nets=networkSummaryRows(); qs('dashboardDevices').innerHTML=items.length?items.map(dashboardCard).join(''):`<div class="empty">${escapeHtml(tr('noDashboardDevices'))}</div>`; qs('dashboardPriority').innerHTML=priority.length?priority.map(priorityRow).join(''):`<div class="empty">${escapeHtml(tr('noAttentionDevices'))}</div>`; qs('dashboardNetworks').innerHTML=nets.length?nets.map(n=>`<div class="smart-row"><div class="smart-main"><div class="smart-title">${escapeHtml(n.label)}</div><div class="smart-sub"><span>${escapeHtml(tr('total'))}: ${n.total}</span>${n.hosts?`<span>${escapeHtml((state.settings.language||'he')==='he'?'טווח':'Range')}: ${n.hosts}</span>`:''}${n.utilization?`<span>${escapeHtml((state.settings.language||'he')==='he'?'ניצול':'Use')}: ${n.utilization}%</span>`:''}</div><div class="meter"><div class="meter-fill" style="width:${n.utilization||0}%"></div></div></div><div class="smart-meta"><div class="network-metrics"><span class="chip online">${escapeHtml(tr('online'))}: ${n.online}</span><span class="chip offline">${escapeHtml(tr('status_offline'))}: ${n.offline}</span>${n.critical?`<span class="chip critical">${escapeHtml(tr('critical'))}: ${n.critical}</span>`:''}</div></div></div>`).join(''):`<div class="empty">${escapeHtml(tr('noNetworkSummary'))}</div>`}
 function renderSettings(st){ qs('appearanceCurrent').textContent=`${tr('activeTheme')}: ${st.settings?.theme||'light'}`;qs('setRefresh').value=st.settings?.auto_refresh||'30'; qs('setView').value=st.settings?.default_view||'table'; qs('setStyle').value=st.settings?.dashboard_style||'advanced'; qs('setTheme').value=st.settings?.theme||'light'; qs('setStatusAnimation').value=st.settings?.status_animation||'blink'; qs('setLanguage').value=st.settings?.language||'he'; qs('setDiscoveryMode').value=st.discovery_mode||st.settings?.discovery_mode||'auto_manual'; ['ping','arp','dns','special','vendor'].forEach(p=>{const el=qs('proto_'+p); if(el) el.checked=(st.discovery_protocols||[]).includes(p);}); state.networkDrafts=(st.networks||[]).map(n=>({cidr:n, alias:((st.network_names||{})[n]||'').trim()})); renderNetworkManager(); setText('sysVersionLabel',tr('sysVersionLabel')); setText('sysDbLabel',tr('sysDbLabel')); setText('sysNetworksLabel',tr('sysNetworksLabel')); setText('sysScanModeLabel',tr('sysScanModeLabel')); setText('sysScanStartedLabel',tr('sysScanStartedLabel')); setText('sysScanFinishedLabel',tr('sysScanFinishedLabel')); qs('sysVersion').textContent=escapeHtml(st.version||''); qs('sysNetworks').textContent=(st.networks||[]).map(n=>displayNetwork(n)).join(', ')||'â€”'; qs('sysDb').textContent=state.dbPath||'/data/homeii/homeii.db'; qs('sysScanStarted').textContent=fmtTs(st.scan?.last_started); qs('sysScanFinished').textContent=fmtTs(st.scan?.last_finished); qs('sysScanMode').textContent=escapeHtml(`${scanSummaryText(st.scan)} â€¢ ${workerSummaryText(st.workers||state.status?.workers||{})}`)}
-async function refreshAll(){const [status,devices,alerts,events,settings,viewerCategories]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings'),api('./api/viewer/categories')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.viewerCategories=viewerCategories.categories||[]; state.viewerCategoryDevices=viewerCategories.devices||{}; state.viewerSummarySeries=(viewerCategories.summary&&viewerCategories.summary.series)||[]; state.viewerSummaryAvailability=Number((viewerCategories.summary&&viewerCategories.summary.availability_24h)||0); state.availabilitySources={}; state.dbPath=settings.db_path||''; if(state.viewerCategoryKey && !(state.viewerCategories||[]).some(item=>viewerCategoryKey(item.category)===state.viewerCategoryKey)){ state.viewerCategoryKey=''; } applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); if(qs('sTotal')) qs('sTotal').textContent=status.total??0; if(qs('sOnline')) qs('sOnline').textContent=status.online??0; if(qs('sOffline')) qs('sOffline').textContent=status.offline??0; if(qs('sUnstable')) qs('sUnstable').textContent=status.unstable??0; if(qs('sNew')) qs('sNew').textContent=status.new??0; if(qs('sCritical')) qs('sCritical').textContent=status.critical??0; if(qs('sPinned')) qs('sPinned').textContent=status.pinned??0; renderKpiAvailabilityStrips(); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); if(document.body.classList.contains('settings-mode')){ const activeBtn=document.querySelector('.settings-nav-btn.active'); ensureSettingsVisibility((activeBtn&&activeBtn.dataset.settingsPage)||'general'); } if(qs('versionText')) qs('versionText').textContent=status.version||'5.0.0'; if(qs('heroSub')) qs('heroSub').textContent=`v${status.version||'5.0.0'} â€¢ ${tr('dashboardSub')}`; if(qs('sideScanState')) qs('sideScanState').textContent=workerSummaryText(status.workers||{}); if(qs('sideNetworksCount')) qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; if(qs('lastRefreshText')) qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); if(qs('dbPath')) qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`; if(editState.ip && !qs('editModal')?.classList.contains('hidden')){ renderEditDetail(editState.detail||{device:currentEditDevice(),history:[],alerts:[],events:[]}); loadEditDeviceDetail(editState.ip); }}
+async function refreshAll(){const [status,devices,alerts,events,settings,viewerCategories]=await Promise.all([api('./api/status'),api('./api/devices'),api('./api/alerts'),api('./api/events'),api('./api/settings'),api('./api/viewer/categories')]); state.status=status; state.devices=devices.devices||[]; state.alerts=alerts.alerts||[]; state.events=events.events||[]; state.settings=settings.settings||{}; state.viewerCategories=viewerCategories.categories||[]; state.viewerCategoryDevices=viewerCategories.devices||{}; state.viewerSummarySeries=(viewerCategories.summary&&viewerCategories.summary.series)||[]; state.viewerSummaryAvailability=Number((viewerCategories.summary&&viewerCategories.summary.availability_24h)||0); state.availabilitySources={}; state.dbPath=settings.db_path||''; if(state.viewerCategoryKey && !(state.viewerCategories||[]).some(item=>viewerCategoryKey(item.category)===state.viewerCategoryKey)){ state.viewerCategoryKey=''; } applyTranslations(); setTheme(state.settings.theme||'light'); applyStatusAnimation(state.settings.status_animation||'blink'); applyDashboardStyle(state.settings.dashboard_style||'advanced'); scheduleAutoRefresh(); populateCategories(state.devices); populateNetworks(state.devices); populateVendors(state.devices); if(qs('sTotal')) qs('sTotal').textContent=status.total??0; if(qs('sOnline')) qs('sOnline').textContent=status.online??0; if(qs('sOffline')) qs('sOffline').textContent=status.offline??0; if(qs('sUnstable')) qs('sUnstable').textContent=status.unstable??0; if(qs('sNew')) qs('sNew').textContent=status.new??0; if(qs('sCritical')) qs('sCritical').textContent=status.critical??0; if(qs('sPinned')) qs('sPinned').textContent=status.pinned??0; renderKpiAvailabilityStrips(); renderDashboard(); renderViewer(); renderDevices(); renderAlerts(); renderSettings(status); if(document.body.classList.contains('settings-mode')){ const activeBtn=document.querySelector('.settings-nav-btn.active'); ensureSettingsVisibility((activeBtn&&activeBtn.dataset.settingsPage)||'general'); } if(qs('versionText')) qs('versionText').textContent=status.version||'5.0.0'; if(qs('heroSub')) qs('heroSub').textContent=`v${status.version||'5.0.0'} â€¢ ${tr('dashboardSub')}`; if(qs('sideScanState')) qs('sideScanState').textContent=workerSummaryText(status.workers||{}); if(qs('sideNetworksCount')) qs('sideNetworksCount').textContent=(status.networks||[]).length; const lang=(state.settings.language||'he')==='he'?'he-IL':'en-US'; if(qs('lastRefreshText')) qs('lastRefreshText').textContent=`${tr('lastSync')}: ${new Date().toLocaleTimeString(lang)}`; updateHeaderClock(); if(qs('dbPath')) qs('dbPath').textContent=`DB: ${state.dbPath||'/data/homeii/homeii.db'}`; if(editState.ip && !qs('editModal')?.classList.contains('hidden')){ renderEditDetail(editState.detail||{device:currentEditDevice(),history:[],alerts:[],events:[]}); loadEditDeviceDetail(editState.ip); } if(qs('tab-history')?.classList.contains('active')){ loadHistorySummary(true).catch(err=>console.error(err)); }}
 async function runScan(){await api('./api/scan?mode=manual'); showMsg('deviceMessage',tr('scanStarted')); await refreshAll()}
 async function addManual(){const ip=qs('manualIp').value.trim(); if(!ip) return showMsg('settingsMessage',tr('ipRequired'),false); const name=encodeURIComponent(qs('manualName').value.trim()); const category=encodeURIComponent(qs('manualCategory').value.trim()); const notes=encodeURIComponent(qs('manualNotes').value.trim()); await api(`./api/add_manual?ip=${encodeURIComponent(ip)}&name=${name}&category=${category}&notes=${notes}`); qs('manualIp').value=''; qs('manualName').value=''; qs('manualCategory').value=''; qs('manualNotes').value=''; showMsg('manualMessage',tr('deviceAdded')); await refreshAll()}
 async function removeDevice(ip){await api(`./api/remove/${encodeURIComponent(ip)}`); if(editState.ip===ip) closeEditModal(); await refreshAll()}
@@ -2001,7 +2088,7 @@ renderAlerts=function(){
   const eventHtml=events.length?events.map(e=>eventLineV2(e,link)).join(''):`<div class="empty"><div>${escapeHtml(tr('noEvents'))}</div></div>`;
   qs('alertsMount').innerHTML=alertHtml; qs('eventsMount').innerHTML=eventHtml;
 }
-window.addEventListener('load', async()=>{mountSettingsStandalone(); qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); updateHeaderClock(); window.setInterval(updateHeaderClock,1000); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
+window.addEventListener('load', async()=>{mountSettingsStandalone(); applyHistoryDefaultRange(14); qs('setTheme')?.addEventListener('change',e=>setTheme(e.target.value)); qs('setStatusAnimation')?.addEventListener('change',e=>applyStatusAnimation(e.target.value)); qs('setStyle')?.addEventListener('change',e=>applyDashboardStyle(e.target.value)); updateHeaderClock(); window.setInterval(updateHeaderClock,1000); const initialTab=directViewerMode?'viewer':(location.hash||'#dashboard').replace('#',''); const btn=document.querySelector(`.nav-btn[data-tab="${initialTab}"]`); if(btn) switchTab(initialTab,btn); try{await refreshAll()}catch(e){console.error(e); alert((state.settings.language||'he')==='he'?'טעינת HOMEii Network Monitor נכשלה':'Failed to load HOMEii Network Monitor')}})
 window.addEventListener('resize',()=>{ if(!document.body.classList.contains('settings-mode') && qs('devicesMount')) renderDevices(); })
 </script>
 </body>
