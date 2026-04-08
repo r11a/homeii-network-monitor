@@ -483,7 +483,7 @@ body.viewer-mode .viewer-close{display:inline-flex}
 .edit-workspace > *{min-height:0;height:100%}
 .edit-primary-card,.edit-secondary-card{min-height:0;border-radius:26px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,.01));padding:18px 18px 16px}
 .edit-primary-card{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);align-content:stretch;overflow:auto}
-.edit-secondary-card{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:14px;align-content:stretch;overflow:hidden}
+.edit-secondary-card{display:grid;grid-template-rows:auto auto auto minmax(0,1fr);gap:14px;align-content:stretch;overflow:hidden}
 .edit-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
 .edit-card-head h4{margin:0;font-size:18px;font-weight:900}
 .edit-card-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
@@ -508,14 +508,49 @@ body.viewer-mode .viewer-close{display:inline-flex}
 .edit-info-card{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.02);display:grid;gap:6px;min-height:76px}
 .edit-info-card .label{color:var(--muted);font-size:12px}
 .edit-info-card .value{font-weight:800;font-size:16px;line-height:1.25;word-break:break-word}
-.edit-panel-tabs{display:flex;gap:10px;flex-wrap:wrap}
+.edit-panel-tabs{display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:relative;z-index:2}
 .edit-panel-tab{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--muted);padding:10px 14px;border-radius:999px;font-weight:800;font-size:13px;cursor:pointer;transition:all .16s ease}
 .edit-panel-tab.active{background:linear-gradient(180deg,rgba(91,140,255,.18),rgba(91,140,255,.08));border-color:rgba(91,140,255,.36);color:var(--text)}
+.edit-panel-body{display:grid;min-height:0;overflow:hidden}
 .drawer-list{display:grid;gap:8px;overflow:auto;padding-inline-end:4px;padding-bottom:8px;min-height:0}
 .drawer-list.hidden{display:none}
+.drawer-analytics{display:grid;gap:14px;overflow:auto;padding-inline-end:4px;padding-bottom:8px;min-height:0}
+.drawer-analytics.hidden{display:none}
 .drawer-list-item{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:8px}
 .drawer-list-item-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .drawer-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:12px}
+.history-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;padding:12px 14px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.025)}
+.history-toolbar.hidden{display:none}
+.history-toolbar .field{display:grid;gap:6px;min-width:170px;flex:1}
+.history-toolbar .field label{font-size:12px;color:var(--muted);font-weight:700}
+.history-toolbar .actions{display:flex;gap:8px;flex-wrap:wrap}
+.history-toolbar .preset-group{display:flex;gap:8px;flex-wrap:wrap}
+.history-toolbar .btn.small{padding:10px 12px}
+.history-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.history-metric{padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:6px}
+.history-metric .label{font-size:12px;color:var(--muted);font-weight:700}
+.history-metric .value{font-size:26px;font-weight:900;line-height:1}
+.history-note{padding:14px 16px;border-radius:18px;border:1px dashed var(--line);color:var(--muted);background:rgba(255,255,255,.02)}
+.history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.history-card{padding:14px 16px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:12px}
+.history-card h5{margin:0;font-size:15px;font-weight:900}
+.history-bars{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(14px,1fr);gap:6px;align-items:end;min-height:110px}
+.history-bar{display:grid;gap:6px;justify-items:center;align-content:end}
+.history-bar-fill{width:100%;min-height:8px;border-radius:999px;background:linear-gradient(180deg,rgba(91,140,255,.7),rgba(91,140,255,.34));box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.history-bar-fill.warn{background:linear-gradient(180deg,rgba(250,204,21,.76),rgba(250,204,21,.34))}
+.history-bar-fill.bad{background:linear-gradient(180deg,rgba(251,113,133,.8),rgba(251,113,133,.36))}
+.history-bar-label{font-size:11px;color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg);height:42px}
+.history-bar-value{font-size:11px;font-weight:800;color:var(--text)}
+.history-ranking{display:grid;gap:8px}
+.history-ranking-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.025)}
+.history-ranking-main{display:grid;gap:4px;min-width:0}
+.history-ranking-name{font-weight:800}
+.history-ranking-sub{font-size:12px;color:var(--muted)}
+.history-ranking-value{font-size:20px;font-weight:900}
+.history-window-list{display:grid;gap:8px;max-height:240px;overflow:auto;padding-inline-end:4px}
+.history-window-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.025)}
+.history-window-item strong{font-size:14px}
+.history-window-item small{display:block;color:var(--muted);margin-top:4px}
 .edit-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;padding:16px 20px 20px;margin:0 -20px -20px;border-top:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.06) 16%,var(--card2));position:relative;z-index:4;box-shadow:0 -18px 36px rgba(15,23,42,.12)}
 .edit-footer .quick-actions{margin-top:0;display:flex;gap:8px;flex-wrap:wrap;min-width:0}
 .edit-footer #editActionBar{justify-content:flex-end}
@@ -550,7 +585,7 @@ body.settings-mode .settings-page .panel{max-width:1320px}
 @media (max-width:1320px){.kpis{grid-template-columns:repeat(4,1fr)} .grid.two{grid-template-columns:1fr}.alert-hub{grid-template-columns:1fr auto}}
 @media (max-width:1100px){body{overflow:auto}.app{grid-template-columns:1fr}.sidebar{height:auto}.main{height:auto;overflow:visible}.toolbar{grid-template-columns:1fr 1fr} .dashboard-card{grid-template-columns:1fr;direction:rtl}.d-actions{flex-wrap:wrap}}
 @media (max-width:980px){.viewer-grid,.alert-columns,.top-shell,.alert-center-grid{grid-template-columns:1fr}.actionbar{justify-content:flex-start}.alert-hub{grid-template-columns:1fr}}
-@media (max-width:980px){.edit-workspace,.edit-info-grid{grid-template-columns:1fr}.edit-secondary-card{grid-template-rows:auto auto minmax(240px,1fr)}}
+@media (max-width:980px){.edit-workspace,.edit-info-grid{grid-template-columns:1fr}.edit-secondary-card{grid-template-rows:auto auto auto minmax(240px,1fr)}.history-metrics,.history-grid{grid-template-columns:1fr}}
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
   .sidebar{height:auto;border-left:0;border-bottom:1px solid var(--line)}
@@ -986,9 +1021,31 @@ body.settings-mode .settings-page .panel{max-width:1320px}
           <div class="edit-panel-tabs">
             <button type="button" class="edit-panel-tab active" data-edit-tab="timeline" onclick="switchEditPanelTab('timeline')" id="editTimelineTitle">ציר זמן</button>
             <button type="button" class="edit-panel-tab" data-edit-tab="activity" onclick="switchEditPanelTab('activity')" id="editActivityTitle">התראות ופעילות</button>
+            <button type="button" class="edit-panel-tab" data-edit-tab="history" onclick="switchEditPanelTab('history')" id="editHistoryTitle">היסטוריה</button>
           </div>
-          <div id="editHistoryMount" class="drawer-list"></div>
-          <div id="editEventsMount" class="drawer-list hidden"></div>
+          <div class="history-toolbar hidden" id="editHistoryToolbar">
+            <div class="field">
+              <label id="editHistoryFromLabel" for="editHistoryFrom">מתאריך</label>
+              <input type="datetime-local" id="editHistoryFrom">
+            </div>
+            <div class="field">
+              <label id="editHistoryToLabel" for="editHistoryTo">עד תאריך</label>
+              <input type="datetime-local" id="editHistoryTo">
+            </div>
+            <div class="actions">
+              <button type="button" class="btn small primary" onclick="applyEditHistoryRange()" id="editHistoryApplyBtn">הצג</button>
+            </div>
+            <div class="preset-group">
+              <button type="button" class="btn small" onclick="setEditHistoryPreset('24h')" id="editHistoryPreset24h">24 שעות</button>
+              <button type="button" class="btn small" onclick="setEditHistoryPreset('7d')" id="editHistoryPreset7d">7 ימים</button>
+              <button type="button" class="btn small" onclick="setEditHistoryPreset('14d')" id="editHistoryPreset14d">14 ימים</button>
+            </div>
+          </div>
+          <div class="edit-panel-body">
+            <div id="editHistoryMount" class="drawer-list"></div>
+            <div id="editEventsMount" class="drawer-list hidden"></div>
+            <div id="editAnalyticsMount" class="drawer-analytics hidden"></div>
+          </div>
         </div>
       </div>
       <div id="editMessage" class="msg"></div>
@@ -996,8 +1053,6 @@ body.settings-mode .settings-page .panel{max-width:1320px}
         <div class="quick-actions" id="editActionBar">
           <button class="btn" onclick="pingNow(editState.ip)" id="editPingBtn">פינג</button>
           <button class="btn" onclick="openInBrowser(editState.ip)" id="editBrowserBtn">פתח בדפדפן</button>
-          <button class="btn" onclick="togglePin(editState.ip)" id="editPinBtn">נעץ</button>
-          <button class="btn" onclick="toggleCritical(editState.ip)" id="editCriticalBtn2">סמן כקריטי</button>
           <button class="btn red" onclick="removeDevice(editState.ip)" id="editRemoveBtn">הסר</button>
         </div>
         <div class="quick-actions">
@@ -1031,7 +1086,7 @@ const I18N={
     networks:"רשתות",networksSub:"הגדר את כל טווחי הרשת שברצונך לסרוק.",manualDevice:"התקן ידני",manualDeviceSub:"הוסף התקן ידנית אם לא זוהה אוטומטית.",manualName:"שם",manualCategory:"קטגוריה",manualNotes:"הערות",addDevice:"הוסף התקן",assignedNetwork:"שיוך לרשת",flags:"דגלים",save:"שמור",close:"סגור",editDeviceTitle:"עריכת התקן",appearancePreview:"תצוגה פעילה",activeTheme:"ערכת נושא פעילה",runScanNow:"שמור והפעל סריקה",
     appearance:"מראה",appearanceSub:"בחר ערכת נושא והעדפות תצוגה.",statusAnimation:"הבהוב מצבי התקן",blink:"מהבהב",static:"קבוע",dashboardStyle:"סגנון דשבורד",saveSettings:"שמור הגדרות",saveNetworks:"שמור רשתות",exportDevices:"ייצוא מכשירים",exportSettings:"ייצוא הגדרות",importDevices:"ייבוא מכשירים",importSettings:"ייבוא הגדרות",system:"מערכת",systemSub:"מידע מערכת, מסד הנתונים וסטטוס סריקה.",
 statusText:"סטטוס",networksText:"רשתות",discoveryMode:"מצב גילוי",protocols:"פרוטוקולי גילוי",modeAutoManual:"אוטומטי + ידני",modeManualOnly:"ידני בלבד",modeAutoOnly:"אוטומטי בלבד",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"זיהוי שרת/שער",protoVendor:"זיהוי יצרן",scanStarted:"הסריקה התחילה",deviceAdded:"התקן נוסף",deviceApproved:"ההתקן אושר",allApproved:"כל ההתקנים החדשים אושרו",settingsSaved:"ההגדרות נשמרו",networksSaved:"הרשתות נשמרו",
-lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"פינג",pin:"נעץ",unpin:"בטל נעיצה",edit:"ערוך",remove:"הסר",accept:"אשר",addShort:"הוסף",criticalMark:"סמן קריטי",criticalUnmark:"בטל קריטי",yes:"כן",manualIp:"כתובת IP",scanProfile:"פרופיל סריקה",scanProfileSlow:"איטי",scanProfileNormal:"רגיל",scanProfileFast:"מהיר",categoryHealthTitle:"בריאות לפי קטגוריה",categoryHealthSub:"אילו קטגוריות יציבות, ואילו דורשות תשומת לב.",maintenanceMode:"תחזוקה",muteAlerts:"השתק התראות",deviceBehavior:"התנהגות",deviceTimeline:"ציר זמן",deviceActivity:"התראות ופעילות",drawerDeviceSub:"שליטה מלאה על זיהוי, ניטור והתראות של ההתקן.",drawerNoHistory:"עדיין אין שינויי מצב",drawerNoActivity:"אין התראות או אירועים אחרונים",muted:"מושתק",timelineRecovered:"חזר לפעילות",timelineChanged:"שינוי מצב",
+    lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"פינג",pin:"נעץ",unpin:"בטל נעיצה",edit:"ערוך",remove:"הסר",accept:"אשר",addShort:"הוסף",criticalMark:"סמן קריטי",criticalUnmark:"בטל קריטי",yes:"כן",manualIp:"כתובת IP",scanProfile:"פרופיל סריקה",scanProfileSlow:"איטי",scanProfileNormal:"רגיל",scanProfileFast:"מהיר",categoryHealthTitle:"בריאות לפי קטגוריה",categoryHealthSub:"אילו קטגוריות יציבות, ואילו דורשות תשומת לב.",maintenanceMode:"תחזוקה",muteAlerts:"השתק התראות",deviceBehavior:"התנהגות",deviceTimeline:"ציר זמן",deviceActivity:"התראות ופעילות",deviceHistory:"היסטוריה",drawerDeviceSub:"שליטה מלאה על זיהוי, ניטור והתראות של ההתקן.",drawerNoHistory:"עדיין אין שינויי מצב",drawerNoActivity:"אין התראות או אירועים אחרונים",drawerNoAnalytics:"אין מספיק נתוני היסטוריה לטווח שנבחר",muted:"מושתק",timelineRecovered:"חזר לפעילות",timelineChanged:"שינוי מצב",historyFrom:"מתאריך",historyTo:"עד תאריך",historyApply:"הצג",historyPreset24h:"24 שעות",historyPreset7d:"7 ימים",historyPreset14d:"14 ימים",historySummary:"סיכום תקופה",historyAvailability:"זמינות",historyDisconnects:"נפילות",historyUnstable:"חוסר יציבות",historyRecoveries:"חזרות",historyEvents:"שינויי מצב",historyDailyAvailability:"זמינות יומית",historyMostStable:"הכי יציבים",historyMostUnstable:"הכי לא יציבים",historyMostDisconnected:"התנתקו הכי הרבה",historyAffectedDevices:"התקנים שנפגעו בטווח",historyTrafficNote:"היסטוריית תעבורה תופיע כאן אחרי שנשמור דגימות לאורך זמן.",historyCurrentWindow:"חלון נוכחי",historyLoadFailed:"לא הצלחתי לטעון היסטוריה",historyOfflineCount:"מספר נפילות",historyUnstableCount:"מספר אי-יציבויות",
     status_online:"מחובר",status_offline:"מנותק",status_unstable:"לא יציב",status_new:"חדש",status_unknown:"לא ידוע",ipRequired:"חובה להזין כתובת IP",running:"רץ",idle:"מוכן",
     noDevices:"לא נמצאו התקנים בתוצאות הסינון",noAlerts:"אין התראות פתוחות כרגע",noAlertsHint:"התראות נפתחות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",noEvents:"אין אירועים",noDashboardDevices:"אין מכשירים להצגה",noAttentionDevices:"אין התקנים שדורשים טיפול כרגע",noNetworkSummary:"אין נתוני רשת להצגה",noViewerItems:"אין כרגע פריטים להצגה",viewerFilterAll:"כל המכשירים",viewerFilterOnline:"מחוברים",viewerFilterOffline:"מנותקים",viewerFilterNew:"חדשים",viewerFilterUnstable:"לא יציבים",viewerFilterAlerts:"עם התראות פתוחות",alertsSub:"כאן יופיעו התראות על מכשיר חדש, מכשיר שנפל, מכשיר שחזר או מכשיר לא יציב.",eventsSub:"כאן יופיעו כל אירועי המערכת והשינויים האחרונים, גם אם אין התראות פתוחות.",resolve:"סגור",nameCol:"שם",ipCol:"IP",statusCol:"סטטוס",categoryCol:"קטגוריה",vendorCol:"יצרן",macCol:"MAC",lastSeenCol:"נראה לאחרונה",actionsCol:"פעולות",importDevicesDone:"ייבוא מכשירים הושלם",importSettingsDone:"ייבוא הגדרות הושלם",importFailed:"הייבוא נכשל",lastSync:"סנכרון אחרון",refreshedNow:"הנתונים רועננו",
     version:"גרסה",db:"מסד נתונים",scanMode:"מצב סריקה",lastScanStarted:"סריקה אחרונה התחילה",lastScanFinished:"סריקה אחרונה הסתיימה",light:"בהיר",dark:"כהה",table:"טבלה",grid:"כרטיסים",advanced:"מתקדם",compact:"קומפקטי",optional:"אופציונלי",severity:"חומרה",updatedNow:"עודכן",networkCol:"רשת",details:"פרטים",alertSearch:"חיפוש בהתראות",eventSearch:"חיפוש באירועים",systemEvent:"אירוע מערכת",dbHealth:"מצב מסד הנתונים",scanSummary:"סיכום סריקה",productPolish:"ליטוש מוצר",sysVersionLabel:"גרסת מערכת",sysDbLabel:"מסד נתונים פעיל",sysNetworksLabel:"רשתות מנוטרות",sysScanModeLabel:"מצב סריקה נוכחי",sysScanStartedLabel:"זמן התחלת הסריקה האחרונה",sysScanFinishedLabel:"זמן סיום הסריקה האחרונה",networkNamesHint:"אם יש שם רשת, הוא יוצג בממשק במקום ה-CIDR",networkEditorTitle:"שיוך שמות לרשתות",networkManagerHint:"הוסף טווח רשת וכינוי באותה שורה. ניתן גם לערוך או למחוק לפני השמירה.",networkCidr:"טווח רשת (CIDR)",networkAlias:"כינוי רשת",addNetwork:"הוסף רשת",edit:"ערוך",delete:"מחק",saveNetworksOnly:"שמור רשתות",networkEmpty:"עדיין לא הוגדרו רשתות",settingsHelperNote:"שמור כל אזור לאחר שינוי כדי שההגדרות יישמרו למסד הנתונים",saveAppearance:"שמור מראה"
@@ -1045,7 +1100,7 @@ lastSeen:"נראה לאחרונה",known:"מוכר",pending:"ממתין",ping:"�
     networks:"Networks",networksSub:"Configure all network ranges you want to scan.",manualDevice:"Manual Device",manualDeviceSub:"Add a device manually if it was not detected automatically.",manualName:"Name",manualCategory:"Category",manualNotes:"Notes",addDevice:"Add device",assignedNetwork:"Assigned Network",flags:"Flags",save:"Save",close:"Close",editDeviceTitle:"Edit Device",appearancePreview:"Active view",activeTheme:"Active theme",runScanNow:"Run scan now",
     appearance:"Appearance",appearanceSub:"Choose theme and display preferences.",statusAnimation:"Device status animation",blink:"Blinking",static:"Static",dashboardStyle:"Dashboard style",saveSettings:"Save settings",saveNetworks:"Save networks only",exportDevices:"Export devices",exportSettings:"Export settings",importDevices:"Import devices",importSettings:"Import settings",system:"System",systemSub:"System information, database and scan status.",
 statusText:"Status",networksText:"Networks",discoveryMode:"Discovery mode",protocols:"Discovery protocols",modeAutoManual:"Auto + Manual",modeManualOnly:"Manual only",modeAutoOnly:"Auto only",protoPing:"Ping",protoArp:"ARP",protoDns:"DNS",protoSpecial:"Host/Gateway",protoVendor:"Vendor lookup",scanStarted:"Scan started",deviceAdded:"Device added",deviceApproved:"Device accepted",allApproved:"All new devices accepted",settingsSaved:"Settings saved",networksSaved:"Networks saved",
-lastSeen:"Last seen",known:"Known",pending:"Pending",ping:"Ping",pin:"Pin",unpin:"Unpin",edit:"Edit",remove:"Remove",accept:"Accept",addShort:"Add",criticalMark:"Mark critical",criticalUnmark:"Unmark critical",yes:"Yes",manualIp:"IP Address",scanProfile:"Scan profile",scanProfileSlow:"Slow",scanProfileNormal:"Normal",scanProfileFast:"Fast",categoryHealthTitle:"Category health",categoryHealthSub:"Which categories are healthy and which need attention.",maintenanceMode:"Maintenance",muteAlerts:"Mute alerts",deviceBehavior:"Behavior",deviceTimeline:"Timeline",deviceActivity:"Alerts and activity",drawerDeviceSub:"Full control over monitoring, alerts and device behavior.",drawerNoHistory:"No recent state changes",drawerNoActivity:"No recent alerts or activity",muted:"Muted",timelineRecovered:"Recovered",timelineChanged:"State changed",
+    lastSeen:"Last seen",known:"Known",pending:"Pending",ping:"Ping",pin:"Pin",unpin:"Unpin",edit:"Edit",remove:"Remove",accept:"Accept",addShort:"Add",criticalMark:"Mark critical",criticalUnmark:"Unmark critical",yes:"Yes",manualIp:"IP Address",scanProfile:"Scan profile",scanProfileSlow:"Slow",scanProfileNormal:"Normal",scanProfileFast:"Fast",categoryHealthTitle:"Category health",categoryHealthSub:"Which categories are healthy and which need attention.",maintenanceMode:"Maintenance",muteAlerts:"Mute alerts",deviceBehavior:"Behavior",deviceTimeline:"Timeline",deviceActivity:"Alerts and activity",deviceHistory:"History",drawerDeviceSub:"Full control over monitoring, alerts and device behavior.",drawerNoHistory:"No recent state changes",drawerNoActivity:"No recent alerts or activity",drawerNoAnalytics:"Not enough historical data for the selected range",muted:"Muted",timelineRecovered:"Recovered",timelineChanged:"State changed",historyFrom:"From",historyTo:"To",historyApply:"Show",historyPreset24h:"24 hours",historyPreset7d:"7 days",historyPreset14d:"14 days",historySummary:"Window summary",historyAvailability:"Availability",historyDisconnects:"Disconnects",historyUnstable:"Unstable",historyRecoveries:"Recoveries",historyEvents:"State changes",historyDailyAvailability:"Daily availability",historyMostStable:"Most stable",historyMostUnstable:"Most unstable",historyMostDisconnected:"Most disconnected",historyAffectedDevices:"Affected devices in range",historyTrafficNote:"Traffic history will appear here once long-term samples are stored.",historyCurrentWindow:"Current window",historyLoadFailed:"Failed to load history",historyOfflineCount:"Disconnect count",historyUnstableCount:"Unstable count",
     status_online:"Online",status_offline:"Offline",status_unstable:"Unstable",status_new:"New",status_unknown:"Unknown",ipRequired:"IP address is required",running:"Running",idle:"Idle",
     noDevices:"No devices found",noAlerts:"No open alerts right now",noAlertsHint:"Alerts are created for new devices, offline devices, devices back online, and unstable devices.",noEvents:"No events",noDashboardDevices:"No devices to display",noAttentionDevices:"No devices need attention right now",noNetworkSummary:"No network summary available",noViewerItems:"Nothing to show right now",viewerFilterAll:"All devices",viewerFilterOnline:"Online",viewerFilterOffline:"Offline",viewerFilterNew:"New",viewerFilterUnstable:"Unstable",viewerFilterAlerts:"Open alerts",alertsSub:"This panel shows alerts for new, offline, recovered and unstable devices.",eventsSub:"This panel shows the raw event feed, even when there are no open alerts.",resolve:"Resolve",nameCol:"Name",ipCol:"IP",statusCol:"Status",categoryCol:"Category",vendorCol:"Vendor",macCol:"MAC",lastSeenCol:"Last seen",actionsCol:"Actions",importDevicesDone:"Device import completed",importSettingsDone:"Settings import completed",importFailed:"Import failed",lastSync:"Last sync",refreshedNow:"Data refreshed",
     version:"Version",db:"DB",scanMode:"Scan mode",lastScanStarted:"Last scan started",lastScanFinished:"Last scan finished",light:"Light",dark:"Dark",table:"Table",grid:"Grid",advanced:"Advanced",compact:"Compact",optional:"Optional",severity:"Severity",updatedNow:"Updated",networkCol:"Network",details:"Details",alertSearch:"Search alerts",eventSearch:"Search events",systemEvent:"System event",dbHealth:"Database health",scanSummary:"Scan summary",productPolish:"Product polish",sysVersionLabel:"System version",sysDbLabel:"Active database",sysNetworksLabel:"Monitored networks",sysScanModeLabel:"Current scan mode",sysScanStartedLabel:"Last scan start time",sysScanFinishedLabel:"Last scan finish time",networkNamesHint:"If a network has a name, it will be shown in the UI instead of the CIDR",networkEditorTitle:"Network name mapping",networkManagerHint:"Add a network range and alias in one row. You can edit or remove entries before saving.",networkCidr:"Network range (CIDR)",networkAlias:"Network alias",addNetwork:"Add network",edit:"Edit",delete:"Delete",saveNetworksOnly:"Save networks only",networkEmpty:"No networks configured yet",settingsHelperNote:"Save each section after changes so the settings are written to the database",saveAppearance:"Save appearance"
@@ -1489,6 +1544,26 @@ function removeNetworkDraft(idx){
 
 function renderNetworkNamesEditor(networks,names){ /* handled by renderNetworkManager */ }
 const editState={ip:'',detail:null,tab:'timeline'};
+function pad2(v){return String(v).padStart(2,'0')}
+function toLocalDateTimeInput(ts){
+  const ms=Number(ts||0)*1000;
+  if(!ms) return '';
+  const dt=new Date(ms);
+  return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}T${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+}
+function fromLocalDateTimeInput(value){
+  if(!value) return 0;
+  const ts=Math.floor(new Date(value).getTime()/1000);
+  return Number.isFinite(ts) ? ts : 0;
+}
+function applyEditHistoryDefaultRange(days=14){
+  const to=Math.floor(Date.now()/1000);
+  const from=to-(days*86400);
+  const fromInput=qs('editHistoryFrom');
+  const toInput=qs('editHistoryTo');
+  if(fromInput) fromInput.value=toLocalDateTimeInput(from);
+  if(toInput) toInput.value=toLocalDateTimeInput(to);
+}
 function currentEditDevice(){return (state.devices||[]).find(x=>x.ip===editState.ip)||null}
 function renderEditToggleButtons(){
   document.querySelectorAll('[data-target]').forEach(btn=>{
@@ -1504,10 +1579,92 @@ function toggleEditFlag(id){
   renderEditToggleButtons();
 }
 function switchEditPanelTab(tab){
-  editState.tab=tab==='activity'?'activity':'timeline';
+  editState.tab=['timeline','activity','history'].includes(tab)?tab:'timeline';
   document.querySelectorAll('[data-edit-tab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.editTab===editState.tab));
   qs('editHistoryMount')?.classList.toggle('hidden', editState.tab!=='timeline');
   qs('editEventsMount')?.classList.toggle('hidden', editState.tab!=='activity');
+  qs('editAnalyticsMount')?.classList.toggle('hidden', editState.tab!=='history');
+  qs('editHistoryToolbar')?.classList.toggle('hidden', editState.tab!=='history');
+}
+function historyMetric(label,value,tone=''){
+  return `<div class="history-metric ${tone}"><div class="label">${escapeHtml(label)}</div><div class="value">${escapeHtml(String(value))}</div></div>`;
+}
+function historyBars(series){
+  const rows=safeArray(series);
+  if(!rows.length) return `<div class="drawer-empty">${escapeHtml(tr('drawerNoAnalytics'))}</div>`;
+  return `<div class="history-bars">${rows.map(item=>{
+    const value=Number(item.availability_pct||0);
+    const tone=value>=99?'':'';
+    const cls=value>=95?'':(value>=60?'warn':'bad');
+    const height=Math.max(10,Math.round((value/100)*88));
+    const label=(state.settings.language||'he')==='he'
+      ? new Date(Number(item.ts||0)*1000).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'})
+      : new Date(Number(item.ts||0)*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    return `<div class="history-bar" title="${escapeHtml(label)} • ${value}%">
+      <div class="history-bar-value">${value}%</div>
+      <div class="history-bar-fill ${cls}" style="height:${height}px"></div>
+      <div class="history-bar-label">${escapeHtml(label)}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function historyRankingCard(title,items,metricLabel){
+  const rows=safeArray(items);
+  return `<div class="history-card"><h5>${escapeHtml(title)}</h5><div class="history-ranking">${rows.length?rows.map(item=>`<div class="history-ranking-item"><div class="history-ranking-main"><div class="history-ranking-name">${escapeHtml(item.name||item.ip||'—')}</div><div class="history-ranking-sub">${escapeHtml(item.ip||'')}</div></div><div class="history-ranking-value">${Number(item.value||0)}</div></div>`).join(''):`<div class="drawer-empty">${escapeHtml(metricLabel)}</div>`}</div></div>`;
+}
+function historyAffectedDevices(items){
+  const rows=safeArray(items);
+  return `<div class="history-card"><h5>${escapeHtml(tr('historyAffectedDevices'))}</h5><div class="history-window-list">${rows.length?rows.map(item=>`<div class="history-window-item"><div><strong>${escapeHtml(item.name||item.ip||'—')}</strong><small>${escapeHtml(item.ip||'')} • ${escapeHtml(localText(`${tr('historyOfflineCount')}: ${Number(item.offline_count||0)}`,`${tr('historyOfflineCount')}: ${Number(item.offline_count||0)}`))}${Number(item.unstable_count||0)?` • ${escapeHtml(tr('historyUnstableCount'))}: ${Number(item.unstable_count||0)}`:''}</small></div><div class="viewer-category-chip ${Number(item.offline_count||0)>0?'bad':'warn'}">${Number(item.offline_count||0)>0?escapeHtml(tr('status_offline')):escapeHtml(tr('status_unstable'))}</div></div>`).join(''):`<div class="drawer-empty">${escapeHtml(tr('drawerNoAnalytics'))}</div>`}</div></div>`;
+}
+function renderEditAnalytics(report){
+  const mount=qs('editAnalyticsMount');
+  if(!mount) return;
+  if(!report){
+    mount.innerHTML=`<div class="drawer-empty">${escapeHtml(tr('drawerNoAnalytics'))}</div>`;
+    return;
+  }
+  const summary=report.summary||{};
+  const daily=safeArray(report.daily_series);
+  mount.innerHTML=`
+    <div class="history-metrics">
+      ${historyMetric(tr('historyAvailability'), `${Number(summary.availability_pct||0)}%`)}
+      ${historyMetric(tr('historyDisconnects'), Number(summary.disconnects||0), 'bad')}
+      ${historyMetric(tr('historyUnstable'), Number(summary.unstable||0), 'warn')}
+      ${historyMetric(tr('historyRecoveries'), Number(summary.recoveries||0))}
+    </div>
+    <div class="history-card">
+      <h5>${escapeHtml(tr('historyDailyAvailability'))}</h5>
+      ${historyBars(daily)}
+    </div>
+    <div class="history-grid">
+      ${historyRankingCard(tr('historyMostStable'), report.rankings?.stable, tr('drawerNoAnalytics'))}
+      ${historyRankingCard(tr('historyMostUnstable'), report.rankings?.unstable, tr('drawerNoAnalytics'))}
+      ${historyRankingCard(tr('historyMostDisconnected'), report.rankings?.offline, tr('drawerNoAnalytics'))}
+      <div class="history-card">
+        <h5>${escapeHtml(tr('historyCurrentWindow'))}</h5>
+        <div class="history-note">${escapeHtml(tr('historyTrafficNote'))}</div>
+      </div>
+    </div>
+    ${historyAffectedDevices(report.affected_devices)}
+  `;
+}
+function currentEditHistoryQuery(){
+  const fromTs=fromLocalDateTimeInput(qs('editHistoryFrom')?.value||'');
+  const toTs=fromLocalDateTimeInput(qs('editHistoryTo')?.value||'');
+  const params=new URLSearchParams();
+  if(fromTs) params.set('from_ts',String(fromTs));
+  if(toTs) params.set('to_ts',String(toTs));
+  return params.toString();
+}
+async function applyEditHistoryRange(){
+  if(!editState.ip) return;
+  await loadEditDeviceDetail(editState.ip);
+  switchEditPanelTab('history');
+}
+function setEditHistoryPreset(preset){
+  if(preset==='24h') applyEditHistoryDefaultRange(1);
+  else if(preset==='7d') applyEditHistoryDefaultRange(7);
+  else applyEditHistoryDefaultRange(14);
+  applyEditHistoryRange();
 }
 function renderEditDetail(detail){
   const d=detail?.device || currentEditDevice();
@@ -1522,6 +1679,7 @@ function renderEditDetail(detail){
   qs('editHistoryMount').innerHTML=history.length?history.map(item=>`<div class="drawer-list-item"><div class="drawer-list-item-top"><strong>${escapeHtml(statusLabel(item.new_status||'unknown'))}</strong><small>${escapeHtml(fmtTs(item.ts))}</small></div><div class="smart-sub"><span>${escapeHtml(tr('timelineChanged'))}</span><span>${escapeHtml(statusLabel(item.old_status||'unknown'))} → ${escapeHtml(statusLabel(item.new_status||'unknown'))}</span></div></div>`).join(''):`<div class="drawer-empty">${escapeHtml(tr('drawerNoHistory'))}</div>`;
   const activity=[...(detail?.alerts||[]).map(item=>({ts:item.updated_at||item.created_at||0,title:item.title||tr('alertsTitle'),sub:item.message||'',tag:(item.severity||'info').toUpperCase()})),...(detail?.events||[]).map(item=>({ts:item.ts||0,title:item.message||item.event_type||tr('eventsTitle'),sub:item.event_type||'',tag:item.level||'info'}))].sort((a,b)=>Number(b.ts||0)-Number(a.ts||0)).slice(0,12);
   qs('editEventsMount').innerHTML=activity.length?activity.map(item=>`<div class="drawer-list-item"><div class="drawer-list-item-top"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(fmtTs(item.ts))}</small></div><div class="smart-sub"><span>${escapeHtml(item.tag)}</span>${item.sub?`<span>${escapeHtml(item.sub)}</span>`:''}</div></div>`).join(''):`<div class="drawer-empty">${escapeHtml(tr('drawerNoActivity'))}</div>`;
+  renderEditAnalytics(detail?.history_report||null);
   qs('editIp').textContent=d.ip||'—';
   qs('editMac').textContent=d.mac||'—';
   qs('editHostname').textContent=d.hostname||'—';
@@ -1531,16 +1689,19 @@ function renderEditDetail(detail){
 async function loadEditDeviceDetail(ip){
   qs('editHistoryMount').innerHTML=`<div class="drawer-empty">${escapeHtml(localText('טוען היסטוריה...','Loading timeline...'))}</div>`;
   qs('editEventsMount').innerHTML=`<div class="drawer-empty">${escapeHtml(localText('טוען פעילות...','Loading activity...'))}</div>`;
+  qs('editAnalyticsMount').innerHTML=`<div class="drawer-empty">${escapeHtml(localText('טוען היסטוריה...','Loading history...'))}</div>`;
   try{
-    const detail=await api(`./api/device/${encodeURIComponent(ip)}/detail`);
+    const query=currentEditHistoryQuery();
+    const detail=await api(`./api/device/${encodeURIComponent(ip)}/detail${query?`?${query}`:''}`);
     editState.detail=detail;
     renderEditDetail(detail);
   }catch(err){
     qs('editHistoryMount').innerHTML=`<div class="drawer-empty">${escapeHtml(localText('לא הצלחתי לטעון היסטוריה','Failed to load timeline'))}</div>`;
     qs('editEventsMount').innerHTML=`<div class="drawer-empty">${escapeHtml(localText('לא הצלחתי לטעון פעילות','Failed to load activity'))}</div>`;
+    qs('editAnalyticsMount').innerHTML=`<div class="drawer-empty">${escapeHtml(tr('historyLoadFailed'))}</div>`;
   }
 }
-async function openEditDevice(ip){const d=(state.devices||[]).find(x=>x.ip===ip); if(!d) return; editState.ip=ip; editState.detail=null; editState.tab='timeline'; qs('editModalTitle').textContent=tr('editDeviceTitle'); qs('editCloseTopBtn').textContent=tr('close'); qs('editCloseBtn').textContent=tr('close'); qs('editSaveBtn').textContent=tr('save'); qs('editNameLabel').textContent=localText('שם ההתקן','Device name'); qs('editCategoryLabel').textContent=tr('category'); qs('editNetworkLabel').textContent=tr('assignedNetwork'); qs('editNotesLabel').textContent=localText('הערות','Notes'); qs('editFlagsLabel').textContent=tr('flags'); qs('editIpLabel').textContent='IP'; qs('editMacLabel').textContent='MAC'; qs('editHostnameLabel').textContent='Hostname'; qs('editVendorLabel').textContent=tr('vendorFilter'); setEditPingVisual('', tr('ping')); qs('editBrowserBtn').textContent=localText('פתח בדפדפן','Open in browser'); qs('editRemoveBtn').textContent=tr('remove'); qs('editName').value=d.name||d.display_name||''; qs('editCategory').value=d.category||''; qs('editNotes').value=d.notes||''; qs('editPinned').checked=!!d.pinned; qs('editCritical').checked=!!d.critical; qs('editMaintenance').checked=!!d.maintenance; qs('editMuteAlerts').checked=!!d.mute_alerts; qs('editIp').textContent=d.ip||'—'; qs('editMac').textContent=d.mac||'—'; qs('editHostname').textContent=d.hostname||'—'; qs('editVendor').textContent=d.vendor||'—'; const networks=(state.status?.networks||[]); qs('editAssignedNetwork').innerHTML=`<option value="">-</option>`+networks.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); qs('editAssignedNetwork').value=d.assigned_network||''; qs('editScanProfile').value=d.scan_profile||'normal'; qs('editPrimaryTitle').textContent=localText('עריכה מהירה','Quick edit'); qs('editPrimarySub').textContent=localText('רק השדות שמשנים את אופן ההתנהגות של ההתקן.','Only the controls that change how this device behaves.'); qs('editSecondaryTitle').textContent=localText('מידע ומעקב','Details and activity'); qs('editSecondarySub').textContent=localText('הפרטים לקריאה בלבד והיסטוריית השינויים במקום נפרד מהעריכה.','Read-only metadata and change history are separated from edit controls.'); qs('editMoreInfoTitle').textContent=localText('פרטי זיהוי וחיבור','Identity and network details'); qs('editMoreInfoSub').textContent=localText('לחץ להצגת מידע נוסף','Click to show more details'); qs('editScanProfileLabel').textContent=tr('scanProfile'); qs('editBehaviorLabel').textContent=tr('deviceBehavior'); qs('editMaintenanceLabel').textContent=tr('maintenanceMode'); qs('editMuteAlertsLabel').textContent=tr('muteAlerts'); qs('editPinnedLabel').textContent=tr('pinned'); qs('editCriticalLabel').textContent=tr('critical'); qs('editTimelineTitle').textContent=tr('deviceTimeline'); qs('editActivityTitle').textContent=tr('deviceActivity'); qs('editModalSub').textContent=tr('drawerDeviceSub'); const scanProfileOptions=qs('editScanProfile').options; if(scanProfileOptions[0]) scanProfileOptions[0].text=tr('scanProfileSlow'); if(scanProfileOptions[1]) scanProfileOptions[1].text=tr('scanProfileNormal'); if(scanProfileOptions[2]) scanProfileOptions[2].text=tr('scanProfileFast'); qs('editPinBtn').textContent=tr(d.pinned?'unpin':'pin'); qs('editCriticalBtn2').textContent=tr(d.critical?'criticalUnmark':'criticalMark'); renderEditToggleButtons(); switchEditPanelTab('timeline'); renderEditDetail({device:d,history:[],alerts:[],events:[]}); qs('editModal').classList.remove('hidden'); await loadEditDeviceDetail(ip)}
+async function openEditDevice(ip){const d=(state.devices||[]).find(x=>x.ip===ip); if(!d) return; editState.ip=ip; editState.detail=null; editState.tab='timeline'; qs('editModalTitle').textContent=tr('editDeviceTitle'); qs('editCloseTopBtn').textContent=tr('close'); qs('editCloseBtn').textContent=tr('close'); qs('editSaveBtn').textContent=tr('save'); qs('editNameLabel').textContent=localText('שם ההתקן','Device name'); qs('editCategoryLabel').textContent=tr('category'); qs('editNetworkLabel').textContent=tr('assignedNetwork'); qs('editNotesLabel').textContent=localText('הערות','Notes'); qs('editFlagsLabel').textContent=tr('flags'); qs('editIpLabel').textContent='IP'; qs('editMacLabel').textContent='MAC'; qs('editHostnameLabel').textContent='Hostname'; qs('editVendorLabel').textContent=tr('vendorFilter'); setEditPingVisual('', tr('ping')); qs('editBrowserBtn').textContent=localText('פתח בדפדפן','Open in browser'); qs('editRemoveBtn').textContent=tr('remove'); qs('editName').value=d.name||d.display_name||''; qs('editCategory').value=d.category||''; qs('editNotes').value=d.notes||''; qs('editPinned').checked=!!d.pinned; qs('editCritical').checked=!!d.critical; qs('editMaintenance').checked=!!d.maintenance; qs('editMuteAlerts').checked=!!d.mute_alerts; qs('editIp').textContent=d.ip||'—'; qs('editMac').textContent=d.mac||'—'; qs('editHostname').textContent=d.hostname||'—'; qs('editVendor').textContent=d.vendor||'—'; const networks=(state.status?.networks||[]); qs('editAssignedNetwork').innerHTML=`<option value="">-</option>`+networks.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(displayNetwork(n))}</option>`).join(''); qs('editAssignedNetwork').value=d.assigned_network||''; qs('editScanProfile').value=d.scan_profile||'normal'; qs('editPrimaryTitle').textContent=localText('עריכה מהירה','Quick edit'); qs('editPrimarySub').textContent=localText('רק השדות שמשנים את אופן ההתנהגות של ההתקן.','Only the controls that change how this device behaves.'); qs('editSecondaryTitle').textContent=localText('מידע ומעקב','Details and activity'); qs('editSecondarySub').textContent=localText('הפרטים לקריאה בלבד והיסטוריית השינויים במקום נפרד מהעריכה.','Read-only metadata and change history are separated from edit controls.'); qs('editMoreInfoTitle').textContent=localText('פרטי זיהוי וחיבור','Identity and network details'); qs('editMoreInfoSub').textContent=localText('לחץ להצגת מידע נוסף','Click to show more details'); qs('editScanProfileLabel').textContent=tr('scanProfile'); qs('editBehaviorLabel').textContent=tr('deviceBehavior'); qs('editMaintenanceLabel').textContent=tr('maintenanceMode'); qs('editMuteAlertsLabel').textContent=tr('muteAlerts'); qs('editPinnedLabel').textContent=tr('pinned'); qs('editCriticalLabel').textContent=tr('critical'); qs('editTimelineTitle').textContent=tr('deviceTimeline'); qs('editActivityTitle').textContent=tr('deviceActivity'); qs('editHistoryTitle').textContent=tr('deviceHistory'); qs('editHistoryFromLabel').textContent=tr('historyFrom'); qs('editHistoryToLabel').textContent=tr('historyTo'); qs('editHistoryApplyBtn').textContent=tr('historyApply'); qs('editHistoryPreset24h').textContent=tr('historyPreset24h'); qs('editHistoryPreset7d').textContent=tr('historyPreset7d'); qs('editHistoryPreset14d').textContent=tr('historyPreset14d'); qs('editModalSub').textContent=tr('drawerDeviceSub'); const scanProfileOptions=qs('editScanProfile').options; if(scanProfileOptions[0]) scanProfileOptions[0].text=tr('scanProfileSlow'); if(scanProfileOptions[1]) scanProfileOptions[1].text=tr('scanProfileNormal'); if(scanProfileOptions[2]) scanProfileOptions[2].text=tr('scanProfileFast'); renderEditToggleButtons(); applyEditHistoryDefaultRange(14); switchEditPanelTab('timeline'); renderEditDetail({device:d,history:[],alerts:[],events:[],history_report:null}); qs('editModal').classList.remove('hidden'); await loadEditDeviceDetail(ip)}
 function closeEditModal(){editState.detail=null; qs('editModal').classList.add('hidden')}
 async function saveEditDevice(){if(!editState.ip) return; await api(`./api/update?ip=${encodeURIComponent(editState.ip)}&name=${encodeURIComponent(qs('editName').value)}&category=${encodeURIComponent(qs('editCategory').value)}&notes=${encodeURIComponent(qs('editNotes').value)}&assigned_network=${encodeURIComponent(qs('editAssignedNetwork').value)}&scan_profile=${encodeURIComponent(qs('editScanProfile').value)}&maintenance=${qs('editMaintenance').checked?1:0}&mute_alerts=${qs('editMuteAlerts').checked?1:0}&pinned=${qs('editPinned').checked?1:0}&critical=${qs('editCritical').checked?1:0}`); showMsg('editMessage',tr('settingsSaved')); showMsg('deviceMessage',tr('settingsSaved')); await refreshAll()}
 
