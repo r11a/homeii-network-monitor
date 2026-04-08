@@ -501,9 +501,11 @@ body.viewer-mode .viewer-close{display:inline-flex}
 .drawer-list-item{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:grid;gap:8px}
 .drawer-list-item-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .drawer-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:12px}
-.edit-footer{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
-.edit-footer .quick-actions{margin-top:0;display:flex;gap:8px;flex-wrap:wrap}
-.edit-footer .btn.red{margin-inline-start:auto}
+.edit-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)}
+.edit-footer .quick-actions{margin-top:0;display:flex;gap:8px;flex-wrap:wrap;min-width:0}
+.edit-footer #editActionBar{justify-content:flex-end}
+.edit-footer .btn{white-space:nowrap}
+.edit-footer .btn.red{margin-inline-start:0}
 .drawer-highlight{border-color:rgba(91,140,255,.3);box-shadow:0 0 0 1px rgba(91,140,255,.12)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
 .empty{padding:20px;border-radius:18px;text-align:center;color:var(--muted)}
