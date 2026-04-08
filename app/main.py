@@ -97,6 +97,12 @@ def load_options() -> Dict[str, Any]:
 OPTIONS = load_options()
 HOMEII_NETWORKS = OPTIONS.get("networks", ["192.168.1.0/24"])
 
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
 app = FastAPI(title="HOMEii Network Monitor", version=APP_VERSION)
 _db_lock = threading.RLock()
 _worker_lock = threading.Lock()
@@ -2274,6 +2280,240 @@ def history_report_payload(conn: sqlite3.Connection, ip: str, from_ts: int | Non
     }
 
 
+def system_history_payload(from_ts: int | None = None, to_ts: int | None = None) -> Dict[str, Any]:
+    conn = db()
+    try:
+        local_tz = local_timezone()
+        now = int(time.time())
+        to_ts = int(to_ts or now)
+        default_from = datetime.fromtimestamp(to_ts, local_tz) - timedelta(days=13)
+        default_from = default_from.replace(hour=0, minute=0, second=0, microsecond=0)
+        from_ts = int(from_ts or default_from.timestamp())
+        if from_ts >= to_ts:
+            from_ts = max(0, to_ts - (14 * 86400))
+
+        device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()]
+        ips = [item["ip"] for item in device_rows if item.get("ip")]
+        labels = {
+            item["ip"]: (item.get("display_name") or item.get("name") or item.get("hostname") or item["ip"])
+            for item in device_rows
+            if item.get("ip")
+        }
+        if not ips:
+            return {
+                "window": {"from_ts": from_ts, "to_ts": to_ts},
+                "summary": {
+                    "availability_pct": 100.0,
+                    "disconnects": 0,
+                    "unstable": 0,
+                    "recoveries": 0,
+                    "changes": 0,
+                    "devices_affected": 0,
+                },
+                "daily_series": [],
+                "rankings": {"stable": [], "unstable": [], "offline": []},
+                "affected_devices": [],
+                "traffic_history_available": False,
+            }
+
+        placeholders = ",".join("?" for _ in ips)
+        history_by_ip: Dict[str, List[Dict[str, Any]]] = {}
+        for row in conn.execute(
+            f"""
+            SELECT ip, ts, old_status, new_status
+            FROM device_history
+            WHERE kind='status' AND ip IN ({placeholders}) AND ts>=? AND ts<?
+            ORDER BY ip ASC, ts ASC
+            """,
+            (*ips, from_ts, to_ts),
+        ).fetchall():
+            history_by_ip.setdefault(row["ip"], []).append(
+                {
+                    "ts": int(row["ts"] or 0),
+                    "old_status": row["old_status"] or "unknown",
+                    "new_status": row["new_status"] or "unknown",
+                }
+            )
+
+        start_statuses: Dict[str, str] = {}
+        for item in device_rows:
+            ip_value = item.get("ip")
+            if not ip_value:
+                continue
+            previous = conn.execute(
+                "SELECT new_status, old_status FROM device_history WHERE ip=? AND kind='status' AND ts<? ORDER BY ts DESC LIMIT 1",
+                (ip_value, from_ts),
+            ).fetchone()
+            start_statuses[ip_value] = (
+                (previous["new_status"] if previous and previous["new_status"] else None)
+                or (previous["old_status"] if previous and previous["old_status"] else None)
+                or (item.get("status") or "unknown")
+            )
+
+        def bucket_stats(ip_value: str, bucket_start: int, bucket_end: int, initial_status: str) -> Dict[str, Any]:
+            status = initial_status or "unknown"
+            cursor = bucket_start
+            score_seconds = 0.0
+            disconnects = 0
+            unstable = 0
+            recoveries = 0
+            changes = 0
+            bucket_rows = [
+                row for row in history_by_ip.get(ip_value, [])
+                if bucket_start <= int(row["ts"]) < bucket_end
+            ]
+            for row in bucket_rows:
+                event_ts = int(row["ts"])
+                if event_ts > cursor:
+                    score_seconds += ((event_ts - cursor) * availability_score_for_status(status)) / 100.0
+                status = row["new_status"] or status
+                changes += 1
+                if status == "offline":
+                    disconnects += 1
+                elif status == "unstable":
+                    unstable += 1
+                elif status == "online" and (row["old_status"] or "") in ("offline", "unstable"):
+                    recoveries += 1
+                cursor = event_ts
+            if bucket_end > cursor:
+                score_seconds += ((bucket_end - cursor) * availability_score_for_status(status)) / 100.0
+            duration = max(1, bucket_end - bucket_start)
+            return {
+                "availability_pct": round((score_seconds / duration) * 100, 1),
+                "disconnects": disconnects,
+                "unstable": unstable,
+                "recoveries": recoveries,
+                "changes": changes,
+                "end_state": status,
+            }
+
+        aggregate_rows = conn.execute(
+            f"""
+            SELECT ip,
+                   SUM(CASE WHEN new_status='offline' THEN 1 ELSE 0 END) AS offline_count,
+                   SUM(CASE WHEN new_status='unstable' THEN 1 ELSE 0 END) AS unstable_count,
+                   SUM(CASE WHEN new_status='online' AND old_status IN ('offline','unstable') THEN 1 ELSE 0 END) AS recovery_count,
+                   COUNT(*) AS total_changes
+            FROM device_history
+            WHERE kind='status' AND ip IN ({placeholders}) AND ts>=? AND ts<?
+            GROUP BY ip
+            """,
+            (*ips, from_ts, to_ts),
+        ).fetchall()
+        aggregates: Dict[str, Dict[str, int]] = {}
+        for row in aggregate_rows:
+            aggregates[row["ip"]] = {
+                "offline_count": int(row["offline_count"] or 0),
+                "unstable_count": int(row["unstable_count"] or 0),
+                "recovery_count": int(row["recovery_count"] or 0),
+                "total_changes": int(row["total_changes"] or 0),
+            }
+
+        overall_availability_values: List[float] = []
+        total_disconnects = 0
+        total_unstable = 0
+        total_recoveries = 0
+        total_changes = 0
+        affected_devices: List[Dict[str, Any]] = []
+        stable_rank: List[Dict[str, Any]] = []
+        unstable_rank: List[Dict[str, Any]] = []
+        offline_rank: List[Dict[str, Any]] = []
+
+        for item in device_rows:
+            ip_value = item.get("ip")
+            if not ip_value:
+                continue
+            overall_stats = bucket_stats(ip_value, from_ts, to_ts, start_statuses.get(ip_value, "unknown"))
+            overall_availability_values.append(float(overall_stats["availability_pct"]))
+            aggregate = aggregates.get(ip_value, {"offline_count": 0, "unstable_count": 0, "recovery_count": 0, "total_changes": 0})
+            total_disconnects += aggregate["offline_count"]
+            total_unstable += aggregate["unstable_count"]
+            total_recoveries += aggregate["recovery_count"]
+            total_changes += aggregate["total_changes"]
+            issue_score = (aggregate["offline_count"] * 4) + (aggregate["unstable_count"] * 2) + aggregate["total_changes"]
+            entry = {
+                "ip": ip_value,
+                "name": labels.get(ip_value, ip_value),
+                "offline_count": aggregate["offline_count"],
+                "unstable_count": aggregate["unstable_count"],
+                "recovery_count": aggregate["recovery_count"],
+                "total_changes": aggregate["total_changes"],
+                "availability_pct": overall_stats["availability_pct"],
+                "value": issue_score,
+            }
+            stable_rank.append({**entry, "value": round(overall_stats["availability_pct"], 1)})
+            unstable_rank.append(entry)
+            offline_rank.append({**entry, "value": aggregate["offline_count"]})
+            if aggregate["offline_count"] or aggregate["unstable_count"]:
+                affected_devices.append(entry)
+
+        stable_rank = sorted(stable_rank, key=lambda item: (-item["value"], item["total_changes"], item["name"]))[:5]
+        unstable_rank = sorted(unstable_rank, key=lambda item: (-item["value"], -item["offline_count"], -item["unstable_count"], item["name"]))[:5]
+        offline_rank = [item for item in sorted(offline_rank, key=lambda item: (-item["value"], -item["unstable_count"], item["name"])) if item["value"] > 0][:5]
+        affected_devices = sorted(affected_devices, key=lambda item: (-item["offline_count"], -item["unstable_count"], item["name"]))[:10]
+
+        start_local = datetime.fromtimestamp(from_ts, local_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        end_local = datetime.fromtimestamp(to_ts, local_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_series: List[Dict[str, Any]] = []
+        rolling_statuses = dict(start_statuses)
+        cursor_day = start_local
+        while cursor_day <= end_local:
+            bucket_start = max(from_ts, int(cursor_day.timestamp()))
+            bucket_end = min(to_ts, int((cursor_day + timedelta(days=1)).timestamp()))
+            if bucket_end > bucket_start:
+                day_availability: List[float] = []
+                day_disconnects = 0
+                day_unstable = 0
+                day_recoveries = 0
+                day_changes = 0
+                next_statuses = dict(rolling_statuses)
+                for item in device_rows:
+                    ip_value = item.get("ip")
+                    if not ip_value:
+                        continue
+                    stats = bucket_stats(ip_value, bucket_start, bucket_end, rolling_statuses.get(ip_value, "unknown"))
+                    day_availability.append(float(stats["availability_pct"]))
+                    day_disconnects += int(stats["disconnects"])
+                    day_unstable += int(stats["unstable"])
+                    day_recoveries += int(stats["recoveries"])
+                    day_changes += int(stats["changes"])
+                    next_statuses[ip_value] = stats["end_state"]
+                daily_series.append(
+                    {
+                        "ts": bucket_start,
+                        "availability_pct": round(sum(day_availability) / max(1, len(day_availability)), 1),
+                        "disconnects": day_disconnects,
+                        "unstable": day_unstable,
+                        "recoveries": day_recoveries,
+                        "changes": day_changes,
+                    }
+                )
+                rolling_statuses = next_statuses
+            cursor_day += timedelta(days=1)
+
+        return {
+            "window": {"from_ts": from_ts, "to_ts": to_ts},
+            "summary": {
+                "availability_pct": round(sum(overall_availability_values) / max(1, len(overall_availability_values)), 1),
+                "disconnects": total_disconnects,
+                "unstable": total_unstable,
+                "recoveries": total_recoveries,
+                "changes": total_changes,
+                "devices_affected": len(affected_devices),
+            },
+            "daily_series": daily_series[-14:],
+            "rankings": {
+                "stable": stable_rank,
+                "unstable": unstable_rank,
+                "offline": offline_rank,
+            },
+            "affected_devices": affected_devices,
+            "traffic_history_available": False,
+        }
+    finally:
+        conn.close()
+
+
 def device_detail_payload_with_window(ip: str, from_ts: int | None = None, to_ts: int | None = None) -> Dict[str, Any]:
     conn = db()
     try:
@@ -2626,22 +2866,22 @@ def ha_diagnostics_payload() -> Dict[str, Any]:
 
 @app.get("/")
 def root():
-    return FileResponse("/app/web/index.html")
+    return FileResponse("/app/web/index.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/settings.html")
 def settings_page():
-    return FileResponse("/app/web/settings.html")
+    return FileResponse("/app/web/settings.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/viewer")
 def viewer_page():
-    return FileResponse("/app/web/index.html")
+    return FileResponse("/app/web/index.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/viewer.html")
 def viewer_html_page():
-    return FileResponse("/app/web/index.html")
+    return FileResponse("/app/web/index.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/logo")
@@ -2674,6 +2914,12 @@ def api_devices():
 def api_device_detail(ip: str, from_ts: int | None = Query(None), to_ts: int | None = Query(None)):
     ensure_background_workers()
     return device_detail_payload_with_window(ip, from_ts, to_ts)
+
+
+@app.get("/api/history/summary")
+def api_history_summary(from_ts: int | None = Query(None), to_ts: int | None = Query(None)):
+    ensure_background_workers()
+    return system_history_payload(from_ts, to_ts)
 
 
 @app.get("/api/alerts")
