@@ -2086,11 +2086,200 @@ def status_payload() -> Dict[str, Any]:
 
 
 def device_detail_payload(ip: str) -> Dict[str, Any]:
+    return device_detail_payload_with_window(ip)
+
+
+def availability_score_for_status(status: str) -> float:
+    normalized = str(status or "unknown").lower()
+    if normalized == "online":
+        return 100.0
+    if normalized in ("unstable", "new"):
+        return 50.0
+    return 0.0
+
+
+def local_timezone() -> ZoneInfo:
+    tz_name = str(os.environ.get("TZ") or "Asia/Jerusalem")
+    try:
+        return ZoneInfo(tz_name)
+    except Exception:
+        return ZoneInfo("Asia/Jerusalem")
+
+
+def history_report_payload(conn: sqlite3.Connection, ip: str, from_ts: int | None = None, to_ts: int | None = None) -> Dict[str, Any]:
+    local_tz = local_timezone()
+    now = int(time.time())
+    to_ts = int(to_ts or now)
+    default_from = datetime.fromtimestamp(to_ts, local_tz) - timedelta(days=13)
+    default_from = default_from.replace(hour=0, minute=0, second=0, microsecond=0)
+    from_ts = int(from_ts or default_from.timestamp())
+    if from_ts >= to_ts:
+        from_ts = max(0, to_ts - (14 * 86400))
+
+    device_row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+    device = row_to_device(device_row) if device_row else {}
+    fallback_status = (device.get("status") or "unknown") if device else "unknown"
+    previous = conn.execute(
+        "SELECT new_status, old_status FROM device_history WHERE ip=? AND kind='status' AND ts<? ORDER BY ts DESC LIMIT 1",
+        (ip, from_ts),
+    ).fetchone()
+    start_status = (
+        (previous["new_status"] if previous and previous["new_status"] else None)
+        or (previous["old_status"] if previous and previous["old_status"] else None)
+        or fallback_status
+    )
+
+    rows = [
+        {
+            "ts": int(item["ts"] or 0),
+            "old_status": item["old_status"] or "unknown",
+            "new_status": item["new_status"] or "unknown",
+        }
+        for item in conn.execute(
+            "SELECT ts, old_status, new_status FROM device_history WHERE ip=? AND kind='status' AND ts>=? AND ts<? ORDER BY ts ASC",
+            (ip, from_ts, to_ts),
+        ).fetchall()
+    ]
+
+    def bucket_stats(bucket_start: int, bucket_end: int, initial_status: str) -> Dict[str, Any]:
+        status = initial_status or "unknown"
+        cursor = bucket_start
+        score_seconds = 0.0
+        disconnects = 0
+        unstable = 0
+        recoveries = 0
+        changes = 0
+        bucket_rows = [row for row in rows if bucket_start <= int(row["ts"]) < bucket_end]
+        for row in bucket_rows:
+            event_ts = int(row["ts"])
+            if event_ts > cursor:
+                score_seconds += ((event_ts - cursor) * availability_score_for_status(status)) / 100.0
+            status = row["new_status"] or status
+            changes += 1
+            if status == "offline":
+                disconnects += 1
+            elif status == "unstable":
+                unstable += 1
+            elif status == "online" and (row["old_status"] or "") in ("offline", "unstable"):
+                recoveries += 1
+            cursor = event_ts
+        if bucket_end > cursor:
+            score_seconds += ((bucket_end - cursor) * availability_score_for_status(status)) / 100.0
+        duration = max(1, bucket_end - bucket_start)
+        return {
+            "availability_pct": round((score_seconds / duration) * 100, 1),
+            "disconnects": disconnects,
+            "unstable": unstable,
+            "recoveries": recoveries,
+            "changes": changes,
+            "end_state": status,
+        }
+
+    overall = bucket_stats(from_ts, to_ts, start_status)
+
+    start_local = datetime.fromtimestamp(from_ts, local_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    end_local = datetime.fromtimestamp(to_ts, local_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    daily_series: list[dict[str, Any]] = []
+    rolling_status = start_status
+    cursor_day = start_local
+    while cursor_day <= end_local:
+        bucket_start = max(from_ts, int(cursor_day.timestamp()))
+        bucket_end = min(to_ts, int((cursor_day + timedelta(days=1)).timestamp()))
+        if bucket_end > bucket_start:
+            stats = bucket_stats(bucket_start, bucket_end, rolling_status)
+            daily_series.append(
+                {
+                    "ts": bucket_start,
+                    "availability_pct": stats["availability_pct"],
+                    "disconnects": stats["disconnects"],
+                    "unstable": stats["unstable"],
+                    "recoveries": stats["recoveries"],
+                    "changes": stats["changes"],
+                }
+            )
+            rolling_status = stats["end_state"]
+        cursor_day += timedelta(days=1)
+
+    device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()]
+    labels = {item["ip"]: (item.get("display_name") or item.get("name") or item.get("hostname") or item["ip"]) for item in device_rows if item.get("ip")}
+    aggregate_rows = conn.execute(
+        """
+        SELECT ip,
+               SUM(CASE WHEN new_status='offline' THEN 1 ELSE 0 END) AS offline_count,
+               SUM(CASE WHEN new_status='unstable' THEN 1 ELSE 0 END) AS unstable_count,
+               SUM(CASE WHEN new_status='online' AND old_status IN ('offline','unstable') THEN 1 ELSE 0 END) AS recovery_count,
+               COUNT(*) AS total_changes
+        FROM device_history
+        WHERE kind='status' AND ts>=? AND ts<?
+        GROUP BY ip
+        """,
+        (from_ts, to_ts),
+    ).fetchall()
+    aggregates: dict[str, dict[str, int]] = {}
+    for row in aggregate_rows:
+        aggregates[row["ip"]] = {
+            "offline_count": int(row["offline_count"] or 0),
+            "unstable_count": int(row["unstable_count"] or 0),
+            "recovery_count": int(row["recovery_count"] or 0),
+            "total_changes": int(row["total_changes"] or 0),
+        }
+
+    stable_rank = []
+    unstable_rank = []
+    offline_rank = []
+    affected_devices = []
+    for item in device_rows:
+        ip_value = item.get("ip")
+        if not ip_value:
+            continue
+        aggregate = aggregates.get(ip_value, {"offline_count": 0, "unstable_count": 0, "recovery_count": 0, "total_changes": 0})
+        issue_score = (aggregate["offline_count"] * 4) + (aggregate["unstable_count"] * 2) + aggregate["total_changes"]
+        entry = {
+            "ip": ip_value,
+            "name": labels.get(ip_value, ip_value),
+            "offline_count": aggregate["offline_count"],
+            "unstable_count": aggregate["unstable_count"],
+            "recovery_count": aggregate["recovery_count"],
+            "total_changes": aggregate["total_changes"],
+            "value": issue_score,
+        }
+        stable_rank.append({**entry, "value": issue_score})
+        unstable_rank.append({**entry, "value": issue_score})
+        offline_rank.append({**entry, "value": aggregate["offline_count"]})
+        if aggregate["offline_count"] or aggregate["unstable_count"]:
+            affected_devices.append(entry)
+
+    stable_rank = sorted(stable_rank, key=lambda item: (item["value"], item["offline_count"], item["unstable_count"], item["name"]))[:5]
+    unstable_rank = sorted(unstable_rank, key=lambda item: (-item["value"], -item["offline_count"], -item["unstable_count"], item["name"]))[:5]
+    offline_rank = [item for item in sorted(offline_rank, key=lambda item: (-item["value"], -item["unstable_count"], item["name"])) if item["value"] > 0][:5]
+    affected_devices = sorted(affected_devices, key=lambda item: (-item["offline_count"], -item["unstable_count"], item["name"]))[:8]
+
+    return {
+        "window": {"from_ts": from_ts, "to_ts": to_ts},
+        "summary": {
+            "availability_pct": overall["availability_pct"],
+            "disconnects": overall["disconnects"],
+            "unstable": overall["unstable"],
+            "recoveries": overall["recoveries"],
+            "changes": overall["changes"],
+        },
+        "daily_series": daily_series[-14:],
+        "rankings": {
+            "stable": stable_rank,
+            "unstable": unstable_rank,
+            "offline": offline_rank,
+        },
+        "affected_devices": affected_devices,
+        "traffic_history_available": False,
+    }
+
+
+def device_detail_payload_with_window(ip: str, from_ts: int | None = None, to_ts: int | None = None) -> Dict[str, Any]:
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
         if not row:
-            return {"device": None, "history": [], "alerts": [], "events": []}
+            return {"device": None, "history": [], "alerts": [], "events": [], "history_report": None}
         device = row_to_device(row)
         history = [
             {
@@ -2111,7 +2300,7 @@ def device_detail_payload(ip: str) -> Dict[str, Any]:
             "SELECT id, ts, level, event_type, ip, message FROM events WHERE ip=? ORDER BY id DESC LIMIT 20",
             (ip,),
         ).fetchall()]
-        return {"device": device, "history": history, "alerts": alerts, "events": events}
+        return {"device": device, "history": history, "alerts": alerts, "events": events, "history_report": history_report_payload(conn, ip, from_ts, to_ts)}
     finally:
         conn.close()
 
@@ -2482,9 +2671,9 @@ def api_devices():
 
 
 @app.get("/api/device/{ip}/detail")
-def api_device_detail(ip: str):
+def api_device_detail(ip: str, from_ts: int | None = Query(None), to_ts: int | None = Query(None)):
     ensure_background_workers()
-    return device_detail_payload(ip)
+    return device_detail_payload_with_window(ip, from_ts, to_ts)
 
 
 @app.get("/api/alerts")
