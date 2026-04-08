@@ -1334,8 +1334,16 @@ def speedtest_diagnostics() -> dict[str, Any]:
         try:
             data = json.loads(output)
         except Exception:
-            last_error = output[:400] or f"{Path(cmd[0]).name} returned invalid output"
-            continue
+            data = {}
+            match = re.search(r"(\{.*\})", output, re.DOTALL)
+            if match:
+                try:
+                    data = json.loads(match.group(1))
+                except Exception:
+                    data = {}
+            if not data:
+                last_error = output[:400] or f"{Path(cmd[0]).name} returned invalid output"
+                continue
         try:
             if Path(cmd[0]).name == "speedtest":
                 download = round(float((data.get("download") or {}).get("bandwidth", 0)) * 8 / 1_000_000, 2)
