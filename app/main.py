@@ -115,6 +115,7 @@ worker_state = {
     "rescan": {"last_started": 0, "last_finished": 0, "last_cycle": 0, "last_error": "", "cycle_count": 0, "interval": 30},
 }
 _dns_cache: Dict[str, str] = {}
+_traffic_cache: Dict[str, tuple[int, int, float]] = {}
 
 def try_command_output(cmd: list[str], timeout: int = 2) -> str:
     try:
@@ -1115,6 +1116,8 @@ def parse_ports(value: Any) -> list[int]:
         raw_items = value
     else:
         raw_items = re.split(r"[\s,;]+", str(value or "").strip())
+    if any(str(item).strip() == "0" for item in raw_items):
+        return list(range(1, 65536))
     ports: list[int] = []
     for item in raw_items:
         text = str(item).strip()
@@ -1244,28 +1247,31 @@ def trace_diagnostics(ip: str, max_hops: int = 12) -> dict[str, Any]:
 
 def port_scan_diagnostics(ip: str, ports: list[int]) -> dict[str, Any]:
     checked: list[dict[str, Any]] = []
-    open_ports = 0
-    for port in ports:
+
+    def probe_port(port: int) -> dict[str, Any]:
         started = time.perf_counter()
         is_open = False
         error = ""
         try:
-            with socket.create_connection((ip, port), timeout=1.2):
+            with socket.create_connection((ip, port), timeout=0.45):
                 is_open = True
         except Exception as exc:
             error = str(exc)
         latency = round((time.perf_counter() - started) * 1000, 1)
-        if is_open:
-            open_ports += 1
-        checked.append(
-            {
-                "port": port,
-                "service": port_name(port),
-                "open": is_open,
-                "latency_ms": latency,
-                "error": error,
-            }
-        )
+        return {
+            "port": port,
+            "service": port_name(port),
+            "open": is_open,
+            "latency_ms": latency,
+            "error": error,
+        }
+
+    max_workers = min(128, max(8, len(ports)))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        checked = list(executor.map(probe_port, ports))
+
+    open_ports = sum(1 for item in checked if item["open"])
+    checked.sort(key=lambda item: (not item["open"], item["port"]))
     status = "healthy" if open_ports else "down"
     if 0 < open_ports < len(ports):
         status = "degraded"
@@ -1300,6 +1306,99 @@ def dns_diagnostics(target: str) -> dict[str, Any]:
         "reverse_host": reverse_host,
         "addresses": addresses,
         "output": nslookup_output,
+    }
+
+
+def speedtest_diagnostics() -> dict[str, Any]:
+    commands = []
+    if shutil.which("speedtest"):
+        commands.append(["speedtest", "--accept-license", "--accept-gdpr", "--format=json"])
+    if shutil.which("speedtest-cli"):
+        commands.append(["speedtest-cli", "--json"])
+    if shutil.which("fast"):
+        commands.append(["fast", "--json"])
+    for cmd in commands:
+        ok, output = run_command_capture(cmd, timeout=90)
+        if not output:
+            continue
+        try:
+            data = json.loads(output)
+        except Exception:
+            data = {}
+        if cmd[0] == "speedtest":
+            download = round(float(data.get("download", {}).get("bandwidth", 0)) * 8 / 1_000_000, 2)
+            upload = round(float(data.get("upload", {}).get("bandwidth", 0)) * 8 / 1_000_000, 2)
+            ping_ms = round(float(data.get("ping", {}).get("latency", 0)), 1)
+        elif cmd[0] == "speedtest-cli":
+            download = round(float(data.get("download", 0)) / 1_000_000, 2)
+            upload = round(float(data.get("upload", 0)) / 1_000_000, 2)
+            ping_ms = round(float(data.get("ping", 0)), 1)
+        else:
+            download = round(float(data.get("downloadSpeed", 0)), 2)
+            upload = round(float(data.get("uploadSpeed", 0)), 2)
+            ping_ms = round(float(data.get("latency", 0)), 1)
+        status = "healthy" if download > 0 else "down"
+        return {
+            "ok": ok,
+            "status": status,
+            "download_mbps": download,
+            "upload_mbps": upload,
+            "ping_ms": ping_ms,
+            "command": cmd[0],
+            "output": output,
+        }
+    return {
+        "ok": False,
+        "status": "down",
+        "error": "speedtest command not available",
+        "output": "",
+    }
+
+
+def traffic_diagnostics() -> dict[str, Any]:
+    now = time.time()
+    interfaces: list[dict[str, Any]] = []
+    try:
+        with open("/proc/net/dev", "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()[2:]
+    except Exception as exc:
+        return {"ok": False, "status": "down", "error": str(exc), "interfaces": []}
+    for line in lines:
+        if ":" not in line:
+            continue
+        name, rest = line.split(":", 1)
+        iface = name.strip()
+        if iface == "lo":
+            continue
+        parts = rest.split()
+        if len(parts) < 16:
+            continue
+        rx_bytes = int(parts[0])
+        tx_bytes = int(parts[8])
+        prev = _traffic_cache.get(iface)
+        rx_rate = tx_rate = 0.0
+        if prev:
+            prev_rx, prev_tx, prev_ts = prev
+            delta_t = max(0.001, now - prev_ts)
+            rx_rate = max(0.0, (rx_bytes - prev_rx) / delta_t)
+            tx_rate = max(0.0, (tx_bytes - prev_tx) / delta_t)
+        _traffic_cache[iface] = (rx_bytes, tx_bytes, now)
+        interfaces.append(
+            {
+                "name": iface,
+                "rx_bps": round(rx_rate, 2),
+                "tx_bps": round(tx_rate, 2),
+                "rx_mbps": round((rx_rate * 8) / 1_000_000, 3),
+                "tx_mbps": round((tx_rate * 8) / 1_000_000, 3),
+                "total_mbps": round(((rx_rate + tx_rate) * 8) / 1_000_000, 3),
+            }
+        )
+    interfaces.sort(key=lambda item: item["total_mbps"], reverse=True)
+    return {
+        "ok": True,
+        "status": "healthy" if interfaces else "down",
+        "interfaces": interfaces,
+        "sampled_at": int(now),
     }
 
 
@@ -2361,10 +2460,13 @@ async def api_tools_run(request: Request):
     if not isinstance(requested_tools, list):
         requested_tools = ["ping", "trace", "ports", "dns"]
     selected_tools = [str(item).strip().lower() for item in requested_tools if str(item).strip()]
-    if not target:
+    needs_target = any(item in {"ping", "trace", "ports", "dns", "all"} for item in selected_tools)
+    if needs_target and not target:
         return JSONResponse({"ok": False, "error": "Missing target"}, status_code=400)
-    if not looks_like_ip(target):
+    if needs_target and not looks_like_ip(target):
         return JSONResponse({"ok": False, "error": "Target must be an IP address"}, status_code=400)
+    if not target and "speed" in selected_tools and not needs_target:
+        target = "internet"
 
     ports = parse_ports(payload.get("ports", "80,443,554,8000,8080,22"))
     if not ports:
@@ -2385,6 +2487,8 @@ async def api_tools_run(request: Request):
         result["tools"]["ports"] = port_scan_diagnostics(target, ports)
     if "dns" in selected_tools or "all" in selected_tools:
         result["tools"]["dns"] = dns_diagnostics(target)
+    if "speed" in selected_tools or "all" in selected_tools:
+        result["tools"]["speed"] = speedtest_diagnostics()
 
     status_rank = {"healthy": 0, "degraded": 1, "down": 2}
     overall = "healthy"
@@ -2395,6 +2499,11 @@ async def api_tools_run(request: Request):
     result["overall_status"] = overall
     result["finished_at"] = now_ts()
     return result
+
+
+@app.get("/api/tools/traffic")
+def api_tools_traffic():
+    return traffic_diagnostics()
 
 
 @app.get("/api/export/devices.csv")
