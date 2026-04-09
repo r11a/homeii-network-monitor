@@ -36,6 +36,7 @@ LEGACY_EVENTS = Path("/data/events.json")
 
 THREADS = 40
 PING_INTERVAL = 30
+TRAFFIC_SAMPLE_INTERVAL = 120
 FAIL_THRESHOLD = 2
 CRITICAL_FAIL_THRESHOLD = 1
 RECOVER_THRESHOLD = 1
@@ -123,6 +124,8 @@ worker_state = {
 }
 _dns_cache: Dict[str, str] = {}
 _traffic_cache: Dict[str, tuple[int, int, float]] = {}
+_traffic_sample_recorded_at = 0
+_history_pruned_at = 0
 
 def try_command_output(cmd: list[str], timeout: int = 2) -> str:
     try:
@@ -294,6 +297,8 @@ CREATE TABLE IF NOT EXISTS devices (
   maintenance INTEGER DEFAULT 0,
   mute_alerts INTEGER DEFAULT 0,
   scan_profile TEXT DEFAULT 'normal',
+  quarantined INTEGER DEFAULT 0,
+  quarantined_at INTEGER DEFAULT 0,
   tags_json TEXT DEFAULT '[]'
 );
 
@@ -326,6 +331,15 @@ CREATE TABLE IF NOT EXISTS events (
   message TEXT DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS traffic_samples (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts INTEGER NOT NULL,
+  iface TEXT DEFAULT '',
+  rx_mbps REAL DEFAULT 0,
+  tx_mbps REAL DEFAULT 0,
+  total_mbps REAL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -344,6 +358,7 @@ DEFAULT_SETTINGS = {
     "network_names_json": json.dumps({}),
     "discovery_mode": "auto_manual",
     "discovery_protocols_json": json.dumps(KNOWN_PROTOCOLS),
+    "history_retention_days": "30",
 }
 
 
@@ -367,6 +382,8 @@ def init_db() -> None:
             ensure_column(conn, "devices", "maintenance", "maintenance INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "mute_alerts", "mute_alerts INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "scan_profile", "scan_profile TEXT DEFAULT 'normal'")
+            ensure_column(conn, "devices", "quarantined", "quarantined INTEGER DEFAULT 0")
+            ensure_column(conn, "devices", "quarantined_at", "quarantined_at INTEGER DEFAULT 0")
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
                     "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v)
@@ -615,6 +632,8 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "maintenance": bool(row["maintenance"]) if "maintenance" in row.keys() else False,
         "mute_alerts": bool(row["mute_alerts"]) if "mute_alerts" in row.keys() else False,
         "scan_profile": row["scan_profile"] if "scan_profile" in row.keys() and (row["scan_profile"] or "").strip() in ("slow", "normal", "fast") else "normal",
+        "quarantined": bool(row["quarantined"]) if "quarantined" in row.keys() else False,
+        "quarantined_at": int(row["quarantined_at"] or 0) if "quarantined_at" in row.keys() else 0,
         "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
         "display_name": choose_display_name(row["name"] or "", row["hostname"] or "", row["vendor"] or "", row["ip"]),
@@ -732,6 +751,38 @@ def set_setting(key: str, value: str) -> None:
                 (key, value),
             )
             conn.commit()
+        finally:
+            conn.close()
+
+
+def history_retention_days() -> int:
+    try:
+        value = int(str(get_setting("history_retention_days", DEFAULT_SETTINGS["history_retention_days"]) or "30").strip())
+    except Exception:
+        value = int(DEFAULT_SETTINGS["history_retention_days"])
+    return max(1, min(value, 365))
+
+
+def history_cutoff_ts(now: int | None = None) -> int:
+    reference = int(now or now_ts())
+    return max(0, reference - (history_retention_days() * 86400))
+
+
+def prune_old_history(force: bool = False) -> None:
+    global _history_pruned_at
+    current_ts = now_ts()
+    if not force and current_ts - int(_history_pruned_at or 0) < 900:
+        return
+    cutoff = history_cutoff_ts(current_ts)
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute("DELETE FROM device_history WHERE ts<?", (cutoff,))
+            conn.execute("DELETE FROM events WHERE ts<?", (cutoff,))
+            conn.execute("DELETE FROM traffic_samples WHERE ts<?", (cutoff,))
+            conn.execute("DELETE FROM alerts WHERE status='resolved' AND updated_at<?", (cutoff,))
+            conn.commit()
+            _history_pruned_at = current_ts
         finally:
             conn.close()
 
@@ -1055,7 +1106,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "maintenance": False, "mute_alerts": False, "scan_profile": "normal", "tags": []
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "maintenance": False, "mute_alerts": False, "scan_profile": "normal", "quarantined": False, "quarantined_at": 0, "tags": []
         }
         base.update(fields)
         base["scan_profile"] = normalize_scan_profile(base.get("scan_profile"))
@@ -1063,8 +1114,8 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,maintenance,mute_alerts,scan_profile,tags_json
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,maintenance,mute_alerts,scan_profile,quarantined,quarantined_at,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
@@ -1072,7 +1123,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
               updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network,
-              maintenance=excluded.maintenance, mute_alerts=excluded.mute_alerts, scan_profile=excluded.scan_profile, tags_json=excluded.tags_json
+              maintenance=excluded.maintenance, mute_alerts=excluded.mute_alerts, scan_profile=excluded.scan_profile, quarantined=excluded.quarantined, quarantined_at=excluded.quarantined_at, tags_json=excluded.tags_json
             """,
             (
                 ip,
@@ -1081,7 +1132,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
                 1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
                 int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
                 int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
-                base["notes"], base.get("assigned_network", ""), 1 if base.get("maintenance") else 0, 1 if base.get("mute_alerts") else 0, base["scan_profile"], json.dumps(base["tags"]),
+                base["notes"], base.get("assigned_network", ""), 1 if base.get("maintenance") else 0, 1 if base.get("mute_alerts") else 0, base["scan_profile"], 1 if base.get("quarantined") else 0, int(base.get("quarantined_at") or 0), json.dumps(base["tags"]),
             ),
         )
         conn.commit()
@@ -1480,6 +1531,38 @@ def traffic_diagnostics() -> dict[str, Any]:
     }
 
 
+def record_traffic_sample(force: bool = False) -> None:
+    global _traffic_sample_recorded_at
+    current_ts = now_ts()
+    if not force and current_ts - int(_traffic_sample_recorded_at or 0) < TRAFFIC_SAMPLE_INTERVAL:
+        return
+    snapshot = traffic_diagnostics()
+    if not snapshot.get("ok"):
+        return
+    interfaces = snapshot.get("interfaces") or []
+    if not interfaces:
+        return
+    sampled_at = int(snapshot.get("sampled_at") or current_ts)
+    with _db_lock:
+        conn = db()
+        try:
+            for iface in interfaces:
+                conn.execute(
+                    "INSERT INTO traffic_samples(ts,iface,rx_mbps,tx_mbps,total_mbps) VALUES(?,?,?,?,?)",
+                    (
+                        sampled_at,
+                        str(iface.get("name") or ""),
+                        float(iface.get("rx_mbps") or 0.0),
+                        float(iface.get("tx_mbps") or 0.0),
+                        float(iface.get("total_mbps") or 0.0),
+                    ),
+                )
+            conn.commit()
+            _traffic_sample_recorded_at = sampled_at
+        finally:
+            conn.close()
+
+
 
 def arp_scan_networks() -> List[Dict[str, str]]:
     results: List[Dict[str, str]] = []
@@ -1593,7 +1676,7 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
             row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
         finally:
             conn.close()
-    if row and row["ignored"]:
+    if row and (row["ignored"] or row["quarantined"]):
         return
     discovery_mode = get_discovery_mode()
     allow_new = discovery_mode != "manual_only"
@@ -1618,7 +1701,7 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
         try:
             current = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
             row = current or row
-            if row and row["ignored"]:
+            if row and (row["ignored"] or row["quarantined"]):
                 return
             name = choose_display_name(row["name"] if row else "", host, vendor, ip)
             category = row["category"] if row and row["category"] else auto_category(f"{name} {host}", vendor)
@@ -1707,7 +1790,7 @@ def run_full_scan(mode: str = "manual") -> None:
                 conn = db()
                 try:
                     row = conn.execute("SELECT * FROM devices WHERE ip=?", (item["ip"],)).fetchone()
-                    if row and row["ignored"]:
+                    if row and (row["ignored"] or row["quarantined"]):
                         continue
                     if row is None and discovery_mode == "manual_only":
                         continue
@@ -1964,7 +2047,7 @@ def run_monitor_pass(critical_only: bool = False) -> None:
     set_worker_status(worker_name, last_started=now_ts(), interval=interval)
     conn = db()
     try:
-        query = "SELECT ip FROM devices WHERE ignored=0"
+        query = "SELECT ip FROM devices WHERE ignored=0 AND quarantined=0"
         query += " AND critical=1" if critical_only else " AND critical=0"
         ips = [r[0] for r in conn.execute(query).fetchall()]
     finally:
@@ -2017,6 +2100,8 @@ def rescan_loop() -> None:
     while True:
         try:
             set_worker_status("rescan", last_started=now_ts(), interval=30)
+            prune_old_history()
+            record_traffic_sample()
             if now_ts() - int(scan_state.get("last_finished") or 0) >= SCAN_RESCHEDULE_SECONDS:
                 run_full_scan("auto")
             set_worker_status("rescan", last_finished=now_ts(), last_cycle=now_ts(), cycle_count=int(worker_state["rescan"]["cycle_count"]) + 1, last_error="")
@@ -2027,12 +2112,17 @@ def rescan_loop() -> None:
 
 
 
-def get_devices(include_ignored: bool = False) -> List[Dict[str, Any]]:
+def get_devices(include_ignored: bool = False, include_quarantined: bool = False) -> List[Dict[str, Any]]:
     conn = db()
     try:
         query = "SELECT * FROM devices"
+        filters: list[str] = []
         if not include_ignored:
-            query += " WHERE ignored=0"
+            filters.append("ignored=0")
+        if not include_quarantined:
+            filters.append("quarantined=0")
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
         query += " ORDER BY pinned DESC, critical DESC, CASE status WHEN 'offline' THEN 0 WHEN 'unstable' THEN 1 WHEN 'new' THEN 2 WHEN 'online' THEN 3 ELSE 4 END, name COLLATE NOCASE, ip"
         return [row_to_device(r) for r in conn.execute(query).fetchall()]
     finally:
@@ -2206,7 +2296,7 @@ def history_report_payload(conn: sqlite3.Connection, ip: str, from_ts: int | Non
             rolling_status = stats["end_state"]
         cursor_day += timedelta(days=1)
 
-    device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()]
+    device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0 AND quarantined=0").fetchall()]
     labels = {item["ip"]: (item.get("display_name") or item.get("name") or item.get("hostname") or item["ip"]) for item in device_rows if item.get("ip")}
     aggregate_rows = conn.execute(
         """
@@ -2292,7 +2382,7 @@ def system_history_payload(from_ts: int | None = None, to_ts: int | None = None)
         if from_ts >= to_ts:
             from_ts = max(0, to_ts - (14 * 86400))
 
-        device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0").fetchall()]
+        device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0 AND quarantined=0").fetchall()]
         ips = [item["ip"] for item in device_rows if item.get("ip")]
         labels = {
             item["ip"]: (item.get("display_name") or item.get("name") or item.get("hostname") or item["ip"])
@@ -2514,6 +2604,57 @@ def system_history_payload(from_ts: int | None = None, to_ts: int | None = None)
                 }
             )
 
+        traffic_rows = conn.execute(
+            """
+            SELECT ts, iface, AVG(total_mbps) AS avg_mbps, MAX(total_mbps) AS peak_mbps
+            FROM traffic_samples
+            WHERE ts>=? AND ts<?
+            GROUP BY ts, iface
+            ORDER BY ts ASC
+            """,
+            (from_ts, to_ts),
+        ).fetchall()
+        traffic_summary = {
+            "avg_mbps": 0.0,
+            "peak_mbps": 0.0,
+            "samples": 0,
+            "peak_iface": "",
+        }
+        traffic_daily: List[Dict[str, Any]] = []
+        if traffic_rows:
+            per_day: Dict[str, Dict[str, Any]] = {}
+            total_values: List[float] = []
+            peak_iface = ""
+            peak_value = 0.0
+            for row in traffic_rows:
+                ts_value = int(row["ts"] or 0)
+                avg_value = float(row["avg_mbps"] or 0.0)
+                peak_row_value = float(row["peak_mbps"] or 0.0)
+                total_values.append(avg_value)
+                if peak_row_value >= peak_value:
+                    peak_value = peak_row_value
+                    peak_iface = str(row["iface"] or "")
+                day_key = datetime.fromtimestamp(ts_value, local_tz).strftime("%Y-%m-%d")
+                bucket = per_day.setdefault(day_key, {"ts": ts_value, "total": 0.0, "count": 0, "peak": 0.0})
+                bucket["ts"] = min(int(bucket["ts"]), ts_value)
+                bucket["total"] += avg_value
+                bucket["count"] += 1
+                bucket["peak"] = max(float(bucket["peak"]), peak_row_value)
+            traffic_daily = [
+                {
+                    "ts": bucket["ts"],
+                    "avg_mbps": round(bucket["total"] / max(1, bucket["count"]), 2),
+                    "peak_mbps": round(float(bucket["peak"]), 2),
+                }
+                for _, bucket in sorted(per_day.items(), key=lambda item: item[0])
+            ][-14:]
+            traffic_summary = {
+                "avg_mbps": round(sum(total_values) / max(1, len(total_values)), 2),
+                "peak_mbps": round(peak_value, 2),
+                "samples": len(traffic_rows),
+                "peak_iface": peak_iface,
+            }
+
         return {
             "window": {"from_ts": from_ts, "to_ts": to_ts},
             "summary": {
@@ -2532,7 +2673,9 @@ def system_history_payload(from_ts: int | None = None, to_ts: int | None = None)
             },
             "affected_devices": affected_devices,
             "recent_changes": recent_changes,
-            "traffic_history_available": False,
+            "traffic_history_available": bool(traffic_rows),
+            "traffic_summary": traffic_summary,
+            "traffic_daily": traffic_daily,
         }
     finally:
         conn.close()
@@ -2931,7 +3074,7 @@ def api_viewer_categories(hours: int = 24, buckets: int = 24):
 @app.get("/api/devices")
 def api_devices():
     ensure_background_workers()
-    return {"devices": get_devices()}
+    return {"devices": get_devices(include_quarantined=True)}
 
 
 @app.get("/api/device/{ip}/detail")
@@ -3041,10 +3184,10 @@ def api_tools_traffic():
 
 @app.get("/api/export/devices.csv")
 def api_export_devices_csv():
-    rows = get_devices(include_ignored=True)
+    rows = get_devices(include_ignored=True, include_quarantined=True)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ip", "display_name", "hostname", "vendor", "category", "status", "assigned_network", "mac", "last_seen", "approved", "manual", "critical", "pinned", "maintenance", "mute_alerts", "scan_profile", "notes"])
+    writer.writerow(["ip", "display_name", "hostname", "vendor", "category", "status", "assigned_network", "mac", "last_seen", "approved", "manual", "critical", "pinned", "maintenance", "mute_alerts", "scan_profile", "quarantined", "quarantined_at", "notes"])
     for device in rows:
         writer.writerow([
             device.get("ip", ""),
@@ -3063,6 +3206,8 @@ def api_export_devices_csv():
             1 if device.get("maintenance") else 0,
             1 if device.get("mute_alerts") else 0,
             device.get("scan_profile", "normal"),
+            1 if device.get("quarantined") else 0,
+            int(device.get("quarantined_at") or 0),
             device.get("notes", ""),
         ])
     return Response(
@@ -3138,6 +3283,8 @@ async def api_import_devices(file: UploadFile = File(...)):
             "maintenance": csv_bool(row.get("maintenance")),
             "mute_alerts": csv_bool(row.get("mute_alerts")),
             "scan_profile": normalize_scan_profile(row.get("scan_profile")),
+            "quarantined": csv_bool(row.get("quarantined")),
+            "quarantined_at": csv_int(row.get("quarantined_at"), 0),
             "notes": str(row.get("notes", "")).strip(),
             "updated_at": now_ts(),
             "source": "import",
@@ -3241,7 +3388,7 @@ def api_accept(ip: str):
 def api_accept_all():
     conn = db()
     try:
-        rows = conn.execute("SELECT ip FROM devices WHERE ignored=0 AND approved=0").fetchall()
+        rows = conn.execute("SELECT ip FROM devices WHERE ignored=0 AND approved=0 AND quarantined=0").fetchall()
     finally:
         conn.close()
     for row in rows:
@@ -3267,13 +3414,31 @@ def api_remove(ip: str):
     with _db_lock:
         conn = db()
         try:
-            conn.execute("DELETE FROM devices WHERE ip=?", (ip,))
-            conn.execute("DELETE FROM device_history WHERE ip=?", (ip,))
+            conn.execute(
+                "UPDATE devices SET quarantined=1, quarantined_at=?, updated_at=? WHERE ip=?",
+                (now_ts(), now_ts(), ip),
+            )
             conn.execute("UPDATE alerts SET status='resolved', updated_at=? WHERE ip=? AND status='open'", (now_ts(), ip))
             conn.commit()
         finally:
             conn.close()
-    log_event("info", f"Removed device {ip}", "device_removed", ip)
+    log_event("warning", f"Quarantined device {ip}", "device_quarantined", ip)
+    return {"ok": True}
+
+
+@app.get("/api/restore/{ip}")
+def api_restore(ip: str):
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute(
+                "UPDATE devices SET quarantined=0, quarantined_at=0, updated_at=? WHERE ip=?",
+                (now_ts(), ip),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    log_event("success", f"Restored device {ip}", "device_restored", ip)
     return {"ok": True}
 
 
@@ -3383,9 +3548,12 @@ def api_bulk_delete(ips: str):
     conn = db()
     try:
         for ip in ip_list:
-            conn.execute("DELETE FROM devices WHERE ip=?", (ip,))
+            conn.execute(
+                "UPDATE devices SET quarantined=1, quarantined_at=?, updated_at=? WHERE ip=?",
+                (now_ts(), now_ts(), ip),
+            )
         conn.commit()
-        log_event("warning", f"Bulk removed {len(ip_list)} devices", "bulk_delete")
+        log_event("warning", f"Bulk quarantined {len(ip_list)} devices", "bulk_quarantine")
         return {"ok": True, "deleted": len(ip_list)}
     finally:
         conn.close()
@@ -3470,13 +3638,18 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", status_animation: str = "blink", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", status_animation: str = "blink", history_retention_days: str = "30", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
     set_setting("auto_refresh", auto_refresh or "30")
     set_setting("default_view", default_view or "table")
     set_setting("dashboard_style", dashboard_style or "advanced")
     set_setting("theme", theme if theme in ("light", "dark") else "light")
     set_setting("language", language if language in ("he", "en") else "he")
     set_setting("status_animation", status_animation if status_animation in ("blink", "static") else "blink")
+    try:
+        retention_value = max(1, min(int(str(history_retention_days or "30").strip() or "30"), 365))
+    except Exception:
+        retention_value = int(DEFAULT_SETTINGS["history_retention_days"])
+    set_setting("history_retention_days", str(retention_value))
     set_setting("discovery_mode", discovery_mode if discovery_mode in ("auto_manual", "manual_only", "auto_only") else "auto_manual")
     set_discovery_protocols(discovery_protocols or KNOWN_PROTOCOLS)
     saved_networks = get_networks()
@@ -3490,6 +3663,7 @@ def api_save_settings(auto_refresh: str = "30", default_view: str = "table", das
         set_setting("network_names_json", json.dumps(normalized_names, ensure_ascii=False))
     except Exception:
         pass
+    prune_old_history(force=True)
     return {"ok": True, "networks": get_networks(), "network_names": get_network_names(), "network_stats": network_stats_payload(), "discovery_mode": get_discovery_mode(), "discovery_protocols": get_discovery_protocols(), "reassigned": reassigned}
 
 
@@ -3507,6 +3681,7 @@ async def api_save_settings_post(request: Request):
         theme=str(payload.get("theme", "light") or "light"),
         language=str(payload.get("language", "he") or "he"),
         status_animation=str(payload.get("status_animation", "blink") or "blink"),
+        history_retention_days=str(payload.get("history_retention_days", "30") or "30"),
         networks="\n".join(networks_raw) if isinstance(networks_raw, list) else str(networks_raw),
         network_names=json.dumps(payload.get("network_names", {}) or {}, ensure_ascii=False),
         discovery_mode=str(payload.get("discovery_mode", "auto_manual") or "auto_manual"),
