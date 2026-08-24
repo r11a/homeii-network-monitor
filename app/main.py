@@ -28,7 +28,7 @@ try:
 except ModuleNotFoundError:
     from vendor_lookup import lookup_vendor
 
-APP_VERSION = "6.0.1"
+APP_VERSION = "6.1.0"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
