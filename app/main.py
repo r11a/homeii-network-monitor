@@ -28,7 +28,7 @@ try:
 except ModuleNotFoundError:
     from vendor_lookup import lookup_vendor
 
-APP_VERSION = "6.2.0"
+APP_VERSION = "6.2.1"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -383,6 +383,7 @@ DEFAULT_SETTINGS = {
     "discovery_protocols_json": json.dumps(KNOWN_PROTOCOLS),
     "history_retention_days": "30",
     "alert_profile": "normal",
+    "auto_restore_quarantined": "1",
 }
 
 
@@ -2124,6 +2125,97 @@ def monitor_one_safe(ip: str) -> None:
             mark_device_recovered_with_policy(d, prev_state)
 
 
+def restore_reachable_quarantined() -> int:
+    if get_setting("auto_restore_quarantined", "1") != "1":
+        return 0
+    conn = db()
+    try:
+        ips = [row[0] for row in conn.execute("SELECT ip FROM devices WHERE ignored=0 AND quarantined=1").fetchall()]
+    finally:
+        conn.close()
+    restored: list[str] = []
+
+    def check(ip: str) -> tuple[str, bool]:
+        ok, _, _ = probe_device(ip)
+        return ip, ok
+
+    with ThreadPoolExecutor(max_workers=min(THREADS, max(1, len(ips)))) as executor:
+        for ip, ok in executor.map(check, ips):
+            if ok:
+                restored.append(ip)
+    if not restored:
+        return 0
+    ts = now_ts()
+    with _db_lock:
+        conn = db()
+        try:
+            for ip in restored:
+                conn.execute(
+                    "UPDATE devices SET quarantined=0, quarantined_at=0, approved=1, status='online', "
+                    "fail_count=0, success_count=1, last_seen=?, updated_at=? WHERE ip=?",
+                    (ts, ts, ip),
+                )
+                conn.execute(
+                    "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
+                    (ip, ts, "quarantined", "online", "auto_restore"),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    for ip in restored:
+        resolve_alerts_for_ip(ip)
+        log_event("info", f"Restored reachable quarantined device {ip}", "device_auto_restored", ip)
+    return len(restored)
+
+
+def reconcile_network_inventory() -> dict[str, int]:
+    run_full_scan("admin_reconcile")
+    conn = db()
+    try:
+        rows = conn.execute("SELECT ip, quarantined FROM devices WHERE ignored=0").fetchall()
+    finally:
+        conn.close()
+
+    results: list[tuple[str, bool, bool]] = []
+
+    def check(row: sqlite3.Row) -> tuple[str, bool, bool]:
+        ok, _, _ = probe_device(row["ip"])
+        return row["ip"], bool(row["quarantined"]), ok
+
+    with ThreadPoolExecutor(max_workers=min(THREADS, max(1, len(rows)))) as executor:
+        results = list(executor.map(check, rows))
+
+    ts = now_ts()
+    online = quarantined = restored = 0
+    with _db_lock:
+        conn = db()
+        try:
+            for ip, was_quarantined, ok in results:
+                if ok:
+                    online += 1
+                    restored += int(was_quarantined)
+                    conn.execute(
+                        "UPDATE devices SET quarantined=0, quarantined_at=0, approved=1, status='online', "
+                        "fail_count=0, success_count=1, last_seen=?, updated_at=? WHERE ip=?",
+                        (ts, ts, ip),
+                    )
+                else:
+                    quarantined += 1
+                    conn.execute(
+                        "UPDATE devices SET quarantined=1, quarantined_at=CASE WHEN quarantined=1 THEN quarantined_at ELSE ? END, "
+                        "status='offline', success_count=0, updated_at=? WHERE ip=?",
+                        (ts, ts, ip),
+                    )
+            conn.commit()
+        finally:
+            conn.close()
+    set_setting("auto_restore_quarantined", "1")
+    summary = {"checked": len(results), "online": online, "quarantined": quarantined, "restored": restored}
+    scan_state["reconciliation"] = summary
+    log_system_event("warning", f"Admin inventory reconciliation completed: {summary}", "inventory_reconciled")
+    return summary
+
+
 def run_monitor_pass(critical_only: bool = False) -> None:
     worker_name = "critical_monitor" if critical_only else "monitor"
     interval = critical_interval_seconds() if critical_only else interval_from_settings()
@@ -2156,6 +2248,8 @@ def run_monitor_pass(critical_only: bool = False) -> None:
     if error_count:
         print(f"[HOMEii] {worker_name} pass had {error_count} error(s): {first_error}", flush=True)
         log_system_event("error", f"{worker_name} pass had {error_count} error(s): {first_error}", f"{worker_name}_pass_error")
+    if not critical_only:
+        restore_reachable_quarantined()
 
 
 def monitor_cycle(critical_only: bool = False) -> None:
@@ -3448,10 +3542,34 @@ def run_scan_job(mode: str = "manual") -> None:
     run_monitor_pass(True)
 
 
+def run_reconciliation_job() -> None:
+    scan_state["reconciliation"] = {"running": True, "started_at": now_ts()}
+    try:
+        summary = reconcile_network_inventory()
+        scan_state["reconciliation"] = {**summary, "running": False, "finished_at": now_ts(), "error": ""}
+    except Exception as exc:
+        scan_state["reconciliation"] = {"running": False, "finished_at": now_ts(), "error": str(exc)}
+        log_system_event("error", f"Inventory reconciliation failed: {exc}", "inventory_reconcile_error")
+
+
 @app.get("/api/scan")
 def api_scan(mode: str = Query("manual")):
     threading.Thread(target=run_scan_job, args=(mode,), daemon=True).start()
     return {"ok": True, "scan": scan_state}
+
+
+@app.post("/api/admin/reconcile-inventory")
+def api_admin_reconcile_inventory():
+    current = scan_state.get("reconciliation", {})
+    if current.get("running"):
+        return {"ok": False, "already_running": True, "reconciliation": current}
+    threading.Thread(target=run_reconciliation_job, daemon=True).start()
+    return {"ok": True, "reconciliation": {"running": True}}
+
+
+@app.get("/api/admin/reconcile-inventory")
+def api_admin_reconcile_inventory_status():
+    return {"ok": True, "reconciliation": scan_state.get("reconciliation", {})}
 
 
 
@@ -3735,7 +3853,7 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", status_animation: str = "blink", history_retention_days: str = "30", alert_profile: str = "normal", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", status_animation: str = "blink", history_retention_days: str = "30", alert_profile: str = "normal", auto_restore_quarantined: str = "1", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
     set_setting("auto_refresh", auto_refresh or "30")
     set_setting("default_view", default_view or "table")
     set_setting("dashboard_style", dashboard_style or "advanced")
@@ -3743,6 +3861,7 @@ def api_save_settings(auto_refresh: str = "30", default_view: str = "table", das
     set_setting("language", language if language in ("he", "en") else "he")
     set_setting("status_animation", status_animation if status_animation in ("blink", "static") else "blink")
     set_setting("alert_profile", normalize_alert_profile(alert_profile))
+    set_setting("auto_restore_quarantined", "1" if str(auto_restore_quarantined).lower() in ("1", "true", "yes", "on") else "0")
     try:
         retention_value = max(1, min(int(str(history_retention_days or "30").strip() or "30"), 365))
     except Exception:
@@ -3781,6 +3900,7 @@ async def api_save_settings_post(request: Request):
         status_animation=str(payload.get("status_animation", "blink") or "blink"),
         history_retention_days=str(payload.get("history_retention_days", "30") or "30"),
         alert_profile=str(payload.get("alert_profile", "normal") or "normal"),
+        auto_restore_quarantined=str(payload.get("auto_restore_quarantined", "1") or "1"),
         networks="\n".join(networks_raw) if isinstance(networks_raw, list) else str(networks_raw),
         network_names=json.dumps(payload.get("network_names", {}) or {}, ensure_ascii=False),
         discovery_mode=str(payload.get("discovery_mode", "auto_manual") or "auto_manual"),
