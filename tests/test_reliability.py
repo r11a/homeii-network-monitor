@@ -16,7 +16,7 @@ from app.main import (  # noqa: E402
     record_login_attempt,
     stale_worker_names,
 )
-import app.main as main  # noqa: E402
+import app.core as main  # noqa: E402
 
 
 class ProbeStateTests(unittest.TestCase):

@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.3.2
+
+- Split the oversized application entry point into dedicated API, configuration, security, state-machine, and runtime modules while retaining the existing ASGI entry point.
+- Added a professional device inventory with card/table views, search, sorting, filters, and administrator-only manual device creation.
+- Redesigned device cards around operational state, health, identity, network assignment, scan profile, and real 24-hour availability data.
+- Added a lightweight server-sent event stream so device and alert changes refresh the interface immediately without overlapping refresh requests.
+- Improved mobile device inventory layout and stopped presenting missing availability history as synthetic 100% uptime.
+
 ## 6.3.1
 
 - Added the missing Home Assistant add-on changelog.
