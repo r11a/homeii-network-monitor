@@ -1,4 +1,4 @@
-const CACHE = 'homeii-shell-v6.1.0-brand'
+const CACHE = 'homeii-shell-v6.2.0-brand'
 const SHELL = ['./', './manifest.webmanifest', './icons/homeii-192.png']
 
 self.addEventListener('install', (event) => {

@@ -28,7 +28,7 @@ try:
 except ModuleNotFoundError:
     from vendor_lookup import lookup_vendor
 
-APP_VERSION = "6.1.0"
+APP_VERSION = "6.2.0"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -3739,7 +3739,7 @@ def api_save_settings(auto_refresh: str = "30", default_view: str = "table", das
     set_setting("auto_refresh", auto_refresh or "30")
     set_setting("default_view", default_view or "table")
     set_setting("dashboard_style", dashboard_style or "advanced")
-    set_setting("theme", theme if theme in ("light", "dark") else "light")
+    set_setting("theme", theme if theme in ("light", "dark", "granite", "navy") else "granite")
     set_setting("language", language if language in ("he", "en") else "he")
     set_setting("status_animation", status_animation if status_animation in ("blink", "static") else "blink")
     set_setting("alert_profile", normalize_alert_profile(alert_profile))
