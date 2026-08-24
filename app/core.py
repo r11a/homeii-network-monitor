@@ -57,6 +57,7 @@ worker_state = {
     "rescan": {"last_started": 0, "last_finished": 0, "last_cycle": 0, "last_error": "", "cycle_count": 0, "interval": 30},
 }
 _dns_cache: Dict[str, str] = {}
+category_check_state: Dict[str, Dict[str, Any]] = {}
 _traffic_cache: Dict[str, tuple[int, int, float]] = {}
 _traffic_sample_recorded_at = 0
 _history_pruned_at = 0
@@ -237,6 +238,20 @@ def create_database_backup(prefix: str = "homeii-backup") -> Path:
     return backup_path
 
 
+def maintain_automatic_backups(force: bool = False) -> dict[str, Any]:
+    backup_dir = BASE_DIR / "backups"
+    backups = sorted(backup_dir.glob("homeii-auto-*.db"), key=lambda path: path.stat().st_mtime, reverse=True) if backup_dir.exists() else []
+    last_backup = int(backups[0].stat().st_mtime) if backups else 0
+    created = None
+    if force or now_ts() - last_backup >= 86400:
+        created = create_database_backup("homeii-auto")
+        backups = sorted(backup_dir.glob("homeii-auto-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)
+    for stale in backups[3:]:
+        stale.unlink(missing_ok=True)
+    retained = backups[:3]
+    return {"created": str(created) if created else "", "retained": len(retained), "last_backup": int(retained[0].stat().st_mtime) if retained else 0}
+
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS devices (
   ip TEXT PRIMARY KEY,
@@ -265,6 +280,7 @@ CREATE TABLE IF NOT EXISTS devices (
   device_profile TEXT DEFAULT 'generic',
   quarantined INTEGER DEFAULT 0,
   quarantined_at INTEGER DEFAULT 0,
+  trashed_at INTEGER DEFAULT 0,
   tags_json TEXT DEFAULT '[]'
 );
 
@@ -288,6 +304,18 @@ CREATE TABLE IF NOT EXISTS alerts (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS label_definitions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL CHECK(kind IN ('category','tag')),
+  name TEXT NOT NULL COLLATE NOCASE,
+  color TEXT NOT NULL DEFAULT '#5da9ff',
+  icon TEXT NOT NULL DEFAULT 'tag',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  UNIQUE(kind, name)
+);
+
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts INTEGER NOT NULL,
@@ -295,6 +323,18 @@ CREATE TABLE IF NOT EXISTS events (
   event_type TEXT DEFAULT 'info',
   ip TEXT DEFAULT '',
   message TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts INTEGER NOT NULL,
+  actor TEXT NOT NULL DEFAULT '',
+  actor_role TEXT NOT NULL DEFAULT '',
+  client_ip TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL,
+  target TEXT NOT NULL DEFAULT '',
+  outcome TEXT NOT NULL DEFAULT 'success',
+  details_json TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS traffic_samples (
@@ -324,6 +364,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'viewer',
   active INTEGER NOT NULL DEFAULT 1,
   viewer_edge_to_edge INTEGER NOT NULL DEFAULT 0,
+  can_manage_alerts INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   last_login INTEGER DEFAULT 0
@@ -349,10 +390,16 @@ CREATE INDEX IF NOT EXISTS idx_alerts_status_created
   ON alerts(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_ip_status
   ON alerts(ip, status);
+CREATE INDEX IF NOT EXISTS idx_label_definitions_kind_order
+  ON label_definitions(kind, sort_order, name);
 CREATE INDEX IF NOT EXISTS idx_events_ts
   ON events(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_events_ip_ts
   ON events(ip, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_ts
+  ON audit_log(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_log_actor_ts
+  ON audit_log(actor, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_traffic_samples_ts
   ON traffic_samples(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry
@@ -399,8 +446,8 @@ def init_db() -> None:
             if migration_table:
                 row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
                 current_schema = int((row and row[0]) or 0)
-            if database_existed and current_schema < 7:
-                backup_path = BASE_DIR / "backups" / f"homeii-pre-schema-7-{now_ts()}.db"
+            if database_existed and current_schema < 9:
+                backup_path = BASE_DIR / "backups" / f"homeii-pre-schema-9-{now_ts()}.db"
                 backup_path.parent.mkdir(parents=True, exist_ok=True)
                 backup_conn = sqlite3.connect(backup_path)
                 try:
@@ -416,9 +463,13 @@ def init_db() -> None:
             ensure_column(conn, "devices", "device_profile", "device_profile TEXT DEFAULT 'generic'")
             ensure_column(conn, "devices", "quarantined", "quarantined INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "quarantined_at", "quarantined_at INTEGER DEFAULT 0")
+            ensure_column(conn, "devices", "trashed_at", "trashed_at INTEGER DEFAULT 0")
+            ensure_column(conn, "alerts", "acknowledged_at", "acknowledged_at INTEGER DEFAULT 0")
+            ensure_column(conn, "alerts", "acknowledged_by", "acknowledged_by TEXT DEFAULT ''")
+            ensure_column(conn, "users", "can_manage_alerts", "can_manage_alerts INTEGER NOT NULL DEFAULT 0")
             conn.execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES(?, ?)",
-                (7, now_ts()),
+                (9, now_ts()),
             )
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
@@ -671,6 +722,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "device_profile": normalize_device_profile(row["device_profile"]) if "device_profile" in row.keys() else "generic",
         "quarantined": bool(row["quarantined"]) if "quarantined" in row.keys() else False,
         "quarantined_at": int(row["quarantined_at"] or 0) if "quarantined_at" in row.keys() else 0,
+        "trashed_at": int(row["trashed_at"] or 0) if "trashed_at" in row.keys() else 0,
         "tags": tags,
         "last_seen_relative": last_seen_relative(int(row["last_seen"] or 0)),
         "display_name": choose_display_name(row["name"] or "", row["hostname"] or "", row["vendor"] or "", row["ip"]),
@@ -715,6 +767,22 @@ def log_event(level: str, message: str, event_type: str, ip: str = "") -> None:
 
 def log_system_event(level: str, message: str, event_type: str) -> None:
     log_event(level, message, event_type, "")
+
+
+def log_audit(actor: str, actor_role: str, client_ip: str, action: str, target: str, outcome: str = "success", details: dict[str, Any] | None = None) -> None:
+    safe_details = details or {}
+    for sensitive in ("password", "password_hash", "token", "cookie", "authorization"):
+        safe_details.pop(sensitive, None)
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute(
+                "INSERT INTO audit_log(ts,actor,actor_role,client_ip,action,target,outcome,details_json) VALUES(?,?,?,?,?,?,?,?)",
+                (now_ts(), actor[:120], actor_role[:30], client_ip[:80], action[:160], target[:240], outcome[:30], json.dumps(safe_details, ensure_ascii=False)[:4000]),
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
 def db_status_payload() -> dict:
     try:
@@ -764,6 +832,95 @@ def resolve_alerts_for_ip(ip: str, title: str | None = None) -> None:
                     (now_ts(), ip),
                 )
             conn.commit()
+        finally:
+            conn.close()
+
+
+def acknowledge_alert(alert_id: int, username: str) -> bool:
+    with _db_lock:
+        conn = db()
+        try:
+            cursor = conn.execute(
+                "UPDATE alerts SET acknowledged_at=?, acknowledged_by=?, updated_at=? "
+                "WHERE id=? AND status='open'",
+                (now_ts(), username, now_ts(), alert_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+
+def label_definitions_payload() -> dict[str, list[dict[str, Any]]]:
+    conn = db()
+    try:
+        rows = [dict(row) for row in conn.execute(
+            "SELECT id,kind,name,color,icon,sort_order FROM label_definitions "
+            "ORDER BY kind,sort_order,name COLLATE NOCASE"
+        ).fetchall()]
+        known_categories = {row["name"].casefold() for row in rows if row["kind"] == "category"}
+        for row in conn.execute("SELECT DISTINCT category FROM devices WHERE category<>'' ORDER BY category COLLATE NOCASE"):
+            if row[0].casefold() not in known_categories:
+                rows.append({"id": 0, "kind": "category", "name": row[0], "color": "#5da9ff", "icon": "boxes", "sort_order": 999})
+        return {
+            "categories": [row for row in rows if row["kind"] == "category"],
+            "tags": [row for row in rows if row["kind"] == "tag"],
+        }
+    finally:
+        conn.close()
+
+
+def save_label_definition(kind: str, name: str, color: str, icon: str) -> dict[str, Any]:
+    kind = kind.strip().lower()
+    name = name.strip()[:80]
+    color = color.strip() if re.fullmatch(r"#[0-9a-fA-F]{6}", color.strip()) else "#5da9ff"
+    icon = re.sub(r"[^a-z0-9_-]", "", icon.strip().lower())[:40] or "tag"
+    if kind not in {"category", "tag"} or not name:
+        raise ValueError("invalid_label_definition")
+    ts = now_ts()
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute(
+                "INSERT INTO label_definitions(kind,name,color,icon,created_at,updated_at) VALUES(?,?,?,?,?,?) "
+                "ON CONFLICT(kind,name) DO UPDATE SET color=excluded.color,icon=excluded.icon,updated_at=excluded.updated_at",
+                (kind, name, color, icon, ts, ts),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return {"kind": kind, "name": name, "color": color, "icon": icon}
+
+
+def clone_device(source_ip: str, target_ip: str, name: str) -> dict[str, Any]:
+    try:
+        source_ip = str(ipaddress.ip_address(source_ip.strip()))
+        target_ip = str(ipaddress.ip_address(target_ip.strip()))
+    except ValueError as exc:
+        raise ValueError("invalid_clone_target") from exc
+    if source_ip == target_ip:
+        raise ValueError("invalid_clone_target")
+    with _db_lock:
+        conn = db()
+        try:
+            source = conn.execute("SELECT * FROM devices WHERE ip=?", (source_ip,)).fetchone()
+            if not source:
+                raise ValueError("device_not_found")
+            if conn.execute("SELECT 1 FROM devices WHERE ip=?", (target_ip,)).fetchone():
+                raise ValueError("device_exists")
+            ts = now_ts()
+            conn.execute(
+                "INSERT INTO devices(ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,"
+                "fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,maintenance,mute_alerts,"
+                "scan_profile,device_profile,quarantined,quarantined_at,tags_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (target_ip, name.strip() or f"{source['name']} copy", "", source["category"], "", "", "unknown", 0,
+                 source["critical"], source["pinned"], 1, 0, 1, 0, 0, 0, ts, ts, "clone", source["notes"],
+                 source["assigned_network"], 0, source["mute_alerts"], source["scan_profile"], source["device_profile"], 0, 0,
+                 source["tags_json"] or "[]"),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM devices WHERE ip=?", (target_ip,)).fetchone()
+            return row_to_device(row)
         finally:
             conn.close()
 
@@ -2033,9 +2190,13 @@ def monitor_one_safe(ip: str) -> None:
 
     if post_action:
         action, name, prev_state = post_action
+        log_audit(
+            "system", "system", "local", "device_state_changed", ip, "success",
+            {"name": name, "previous_status": prev_state, "new_status": action, "probe_reachable": bool(ok)},
+        )
         if action == "offline":
             log_event("error", f"{name} went offline", "device_offline", ip)
-            create_alert_for_device(d, "high", ALERT_TITLE_OFFLINE, f"{name} is offline")
+            create_alert_for_device(d, "critical" if d.get("critical") else "high", ALERT_TITLE_OFFLINE, f"{name} is offline")
         elif action == "unstable":
             msg = f"{name} is unstable"
             log_event("warning", msg, "device_unstable", ip)
@@ -2141,7 +2302,7 @@ def run_monitor_pass(critical_only: bool = False) -> None:
     set_worker_status(worker_name, last_started=now_ts(), interval=interval)
     conn = db()
     try:
-        query = "SELECT ip FROM devices WHERE ignored=0 AND quarantined=0"
+        query = "SELECT ip FROM devices WHERE ignored=0 AND quarantined=0 AND trashed_at=0"
         query += " AND critical=1" if critical_only else " AND critical=0"
         ips = [r[0] for r in conn.execute(query).fetchall()]
     finally:
@@ -2191,6 +2352,98 @@ def critical_monitor_loop() -> None:
     monitor_cycle(True)
 
 
+def maintain_recycle_bin(force: bool = False) -> dict[str, int]:
+    """Trash long-offline devices, restore reachable ones, and expire old trash."""
+    last_run = int(getattr(maintain_recycle_bin, "last_run", 0))
+    if not force and now_ts() - last_run < 300:
+        return {"trashed": 0, "restored": 0, "deleted": 0}
+    maintain_recycle_bin.last_run = now_ts()
+    now = now_ts()
+    offline_cutoff = now - (48 * 3600)
+    expiry_cutoff = now - (14 * 86400)
+    with _db_lock:
+        conn = db()
+        try:
+            cursor = conn.execute(
+                "UPDATE devices SET trashed_at=?,updated_at=? WHERE ignored=0 AND quarantined=0 "
+                "AND trashed_at=0 AND status='offline' "
+                "AND COALESCE(NULLIF(last_seen,0),NULLIF(first_seen,0),updated_at)<?",
+                (now, now, offline_cutoff),
+            )
+            trashed = cursor.rowcount
+            candidates = [row[0] for row in conn.execute(
+                "SELECT ip FROM devices WHERE trashed_at>0 AND trashed_at>=? ORDER BY trashed_at DESC LIMIT 256",
+                (expiry_cutoff,),
+            ).fetchall()]
+            deleted = conn.execute("DELETE FROM devices WHERE trashed_at>0 AND trashed_at<?", (expiry_cutoff,)).rowcount
+            conn.commit()
+        finally:
+            conn.close()
+    restored = 0
+    for ip in candidates:
+        if ping(ip):
+            with _db_lock:
+                conn = db()
+                try:
+                    conn.execute(
+                        "UPDATE devices SET trashed_at=0,status='online',last_seen=?,updated_at=?,fail_count=0 WHERE ip=?",
+                        (now_ts(), now_ts(), ip),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+            log_event("info", f"Device restored automatically from recycle bin: {ip}", "device_recycled_restore", ip)
+            restored += 1
+    return {"trashed": trashed, "restored": restored, "deleted": deleted}
+
+
+def trash_all_offline_devices() -> int:
+    with _db_lock:
+        conn = db()
+        try:
+            cursor = conn.execute(
+                "UPDATE devices SET trashed_at=?,updated_at=? WHERE status='offline' AND ignored=0 AND quarantined=0 AND trashed_at=0",
+                (now_ts(), now_ts()),
+            )
+            conn.commit()
+            affected = cursor.rowcount
+            log_audit("system", "system", "local", "offline_devices_trashed", "recycle_bin", "success", {"count": affected})
+            return affected
+        finally:
+            conn.close()
+
+
+def run_category_check(category: str) -> None:
+    category = category.strip()
+    category_check_state[category] = {"running": True, "started_at": now_ts(), "finished_at": 0, "total": 0, "online": 0, "offline": 0}
+    conn = db()
+    try:
+        ips = [row[0] for row in conn.execute(
+            "SELECT ip FROM devices WHERE category=? AND ignored=0 AND quarantined=0 AND trashed_at=0",
+            (category,),
+        ).fetchall()]
+    finally:
+        conn.close()
+    category_check_state[category]["total"] = len(ips)
+    with ThreadPoolExecutor(max_workers=min(32, max(1, len(ips)))) as executor:
+        list(executor.map(monitor_one_safe, ips))
+    conn = db()
+    try:
+        counts = {row[0]: row[1] for row in conn.execute(
+            "SELECT status,COUNT(*) FROM devices WHERE category=? AND trashed_at=0 GROUP BY status", (category,)
+        ).fetchall()}
+    finally:
+        conn.close()
+    category_check_state[category].update({
+        "running": False, "finished_at": now_ts(), "online": counts.get("online", 0),
+        "offline": counts.get("offline", 0), "unstable": counts.get("unstable", 0),
+    })
+    log_audit(
+        "system", "system", "local", "category_check_completed", category, "success",
+        {"total": len(ips), "online": counts.get("online", 0), "offline": counts.get("offline", 0), "unstable": counts.get("unstable", 0)},
+    )
+
+
 
 def rescan_loop() -> None:
     while not _shutdown_event.is_set():
@@ -2198,6 +2451,8 @@ def rescan_loop() -> None:
             set_worker_status("rescan", last_started=now_ts(), interval=30)
             prune_old_history()
             record_traffic_sample()
+            maintain_recycle_bin()
+            maintain_automatic_backups()
             if now_ts() - int(scan_state.get("last_finished") or 0) >= SCAN_RESCHEDULE_SECONDS:
                 run_full_scan("auto")
             set_worker_status("rescan", last_finished=now_ts(), last_cycle=now_ts(), cycle_count=int(worker_state["rescan"]["cycle_count"]) + 1, last_error="")
@@ -2208,7 +2463,7 @@ def rescan_loop() -> None:
 
 
 
-def get_devices(include_ignored: bool = False, include_quarantined: bool = False) -> List[Dict[str, Any]]:
+def get_devices(include_ignored: bool = False, include_quarantined: bool = False, include_trashed: bool = False) -> List[Dict[str, Any]]:
     conn = db()
     try:
         query = "SELECT * FROM devices"
@@ -2217,6 +2472,8 @@ def get_devices(include_ignored: bool = False, include_quarantined: bool = False
             filters.append("ignored=0")
         if not include_quarantined:
             filters.append("quarantined=0")
+        if not include_trashed:
+            filters.append("trashed_at=0")
         if filters:
             query += " WHERE " + " AND ".join(filters)
         query += " ORDER BY pinned DESC, critical DESC, CASE status WHEN 'offline' THEN 0 WHEN 'unstable' THEN 1 WHEN 'new' THEN 2 WHEN 'online' THEN 3 ELSE 4 END, name COLLATE NOCASE, ip"
@@ -2414,7 +2671,7 @@ def history_report_payload(conn: sqlite3.Connection, ip: str, from_ts: int | Non
             rolling_status = stats["end_state"]
         cursor_day += timedelta(days=1)
 
-    device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0 AND quarantined=0").fetchall()]
+    device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0 AND quarantined=0 AND trashed_at=0").fetchall()]
     labels = {item["ip"]: (item.get("display_name") or item.get("name") or item.get("hostname") or item["ip"]) for item in device_rows if item.get("ip")}
     aggregate_rows = conn.execute(
         """
@@ -2500,7 +2757,7 @@ def system_history_payload(from_ts: int | None = None, to_ts: int | None = None)
         if from_ts >= to_ts:
             from_ts = max(0, to_ts - (14 * 86400))
 
-        device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0 AND quarantined=0").fetchall()]
+        device_rows = [row_to_device(row) for row in conn.execute("SELECT * FROM devices WHERE ignored=0 AND quarantined=0 AND trashed_at=0").fetchall()]
         ips = [item["ip"] for item in device_rows if item.get("ip")]
         labels = {
             item["ip"]: (item.get("display_name") or item.get("name") or item.get("hostname") or item["ip"])

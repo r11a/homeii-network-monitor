@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-APP_VERSION = "6.3.2"
+APP_VERSION = "6.4.0"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -77,4 +77,3 @@ def load_options() -> Dict[str, Any]:
 
 OPTIONS = load_options()
 HOMEII_NETWORKS = OPTIONS.get("networks", ["192.168.1.0/24"])
-

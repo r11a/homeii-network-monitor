@@ -4,7 +4,7 @@ from homeassistant.const import Platform
 
 DOMAIN = "homeii_network_monitor"
 DEFAULT_SCAN_INTERVAL = 30
-DEFAULT_URL = "http://homeassistant.local:8108"
+DEFAULT_URL = "http://homeassistant.local:8383"
 CONF_SCAN_INTERVAL = "scan_interval"
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 

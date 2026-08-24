@@ -151,7 +151,7 @@ def api_alerts(limit: int = 50):
     conn = db()
     try:
         rows = conn.execute(
-            "SELECT id, ip, severity, title, message, status, created_at, updated_at FROM alerts ORDER BY id DESC LIMIT ?",
+            "SELECT id, ip, severity, title, message, status, created_at, updated_at, acknowledged_at, acknowledged_by FROM alerts ORDER BY id DESC LIMIT ?",
             (max(1, min(limit, 500)),),
         ).fetchall()
         return {"alerts": [dict(r) for r in rows]}
@@ -249,6 +249,7 @@ def public_user(user: sqlite3.Row | Dict[str, Any]) -> Dict[str, Any]:
         "id": user["id"], "username": user["username"],
         "display_name": user["display_name"] or user["username"], "role": user["role"],
         "active": bool(user["active"]), "viewer_edge_to_edge": bool(user["viewer_edge_to_edge"]),
+        "can_manage_alerts": bool(user["can_manage_alerts"]) if "can_manage_alerts" in user.keys() else False,
         "last_login": int(user["last_login"] or 0),
     }
 
@@ -257,7 +258,7 @@ def session_user(request: Request) -> Dict[str, Any] | None:
     if ingress_request(request):
         username = request.headers.get("x-remote-user-name") or "home-assistant"
         display_name = request.headers.get("x-remote-user-display-name") or username
-        return {"id": 0, "username": username, "display_name": display_name, "role": "admin", "active": True, "viewer_edge_to_edge": False, "ingress": True}
+        return {"id": 0, "username": username, "display_name": display_name, "role": "admin", "active": True, "viewer_edge_to_edge": False, "can_manage_alerts": True, "ingress": True}
     token = request.cookies.get("homeii_session", "")
     if not token:
         return None
@@ -316,12 +317,14 @@ async def enforce_api_permissions(request: Request, call_next):
     admin_prefixes = (
         "/api/admin/", "/api/tools/", "/api/export/",
         "/api/import/", "/api/save_settings", "/api/save_networks",
+        "/api/recycle-bin", "/api/audit",
     )
     operator_get_prefixes = (
         "/api/scan", "/api/accept", "/api/add/", "/api/add_all",
         "/api/remove/", "/api/restore/", "/api/delete_device", "/api/ignore/",
         "/api/update", "/api/toggle_", "/api/bulk_", "/api/ping_now/",
-        "/api/add_manual", "/api/resolve_alert/",
+        "/api/add_manual", "/api/resolve_alert/", "/api/acknowledge_alert/",
+        "/api/devices/", "/api/labels",
     )
 
     if any(path.startswith(prefix) for prefix in admin_prefixes):
@@ -333,6 +336,20 @@ async def enforce_api_permissions(request: Request, call_next):
         if denied:
             return denied
     return await call_next(request)
+
+
+@app.middleware("http")
+async def audit_api_mutations(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        user = session_user(request) or {"username": "anonymous", "role": "anonymous"}
+        log_audit(
+            user.get("username", "anonymous"), user.get("role", "anonymous"),
+            request.client.host if request.client else "", f"{request.method} {request.url.path}",
+            request.url.path, "success" if response.status_code < 400 else "failed",
+            {"status_code": response.status_code},
+        )
+    return response
 
 
 @app.get("/api/auth/session")
@@ -447,7 +464,7 @@ async def api_admin_create_user(request: Request):
     conn = db()
     try:
         now = now_ts()
-        conn.execute("INSERT INTO users(username,display_name,password_hash,role,active,viewer_edge_to_edge,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", (username, str(payload.get("display_name", "")).strip(), password_hash(password), role, 1, 1 if payload.get("viewer_edge_to_edge") else 0, now, now))
+        conn.execute("INSERT INTO users(username,display_name,password_hash,role,active,viewer_edge_to_edge,can_manage_alerts,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)", (username, str(payload.get("display_name", "")).strip(), password_hash(password), role, 1, 1 if payload.get("viewer_edge_to_edge") else 0, 1 if payload.get("can_manage_alerts") else 0, now, now))
         conn.commit()
     except sqlite3.IntegrityError:
         return JSONResponse({"error": "username_exists"}, status_code=409)
@@ -463,8 +480,8 @@ async def api_admin_update_user(user_id: int, request: Request):
     role = str(payload.get("role", "viewer"))
     if role not in {"admin", "user", "viewer"} or (current.get("id") == user_id and not payload.get("active", True)):
         return JSONResponse({"error": "invalid_user"}, status_code=400)
-    fields = ["display_name=?", "role=?", "active=?", "viewer_edge_to_edge=?", "updated_at=?"]
-    values: List[Any] = [str(payload.get("display_name", "")).strip(), role, 1 if payload.get("active", True) else 0, 1 if payload.get("viewer_edge_to_edge") else 0, now_ts()]
+    fields = ["display_name=?", "role=?", "active=?", "viewer_edge_to_edge=?", "can_manage_alerts=?", "updated_at=?"]
+    values: List[Any] = [str(payload.get("display_name", "")).strip(), role, 1 if payload.get("active", True) else 0, 1 if payload.get("viewer_edge_to_edge") else 0, 1 if payload.get("can_manage_alerts") else 0, now_ts()]
     password = str(payload.get("password", ""))
     if password:
         if len(password) < 8:
@@ -916,8 +933,9 @@ def api_toggle_pinned(ip: str):
 
 
 @app.get("/api/ping_now/{ip}")
-def api_ping_now(ip: str):
+def api_ping_now(ip: str, request: Request):
     ok = ping(ip)
+    checked_at = now_ts()
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -928,7 +946,13 @@ def api_ping_now(ip: str):
                 d["last_seen"] = now_ts()
             d["updated_at"] = now_ts()
             upsert_device(ip, d)
-        return {"ok": ok}
+        user = session_user(request) or {"username": "system", "role": "system"}
+        log_audit(
+            user.get("username", "system"), user.get("role", "system"),
+            request.client.host if request.client else "", "manual_device_check", ip,
+            "success" if ok else "unreachable", {"reachable": bool(ok), "checked_at": checked_at},
+        )
+        return {"ok": ok, "status": "online" if ok else "offline", "checked_at": checked_at}
     finally:
         conn.close()
 
@@ -969,6 +993,123 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
     return {"ok": True}
 
 
+@app.post("/api/add_manual")
+async def api_add_manual_post(request: Request):
+    payload = await request.json()
+    result = api_add_manual(
+        ip=str(payload.get("ip", "")).strip(),
+        name=str(payload.get("name", "")).strip(),
+        category=str(payload.get("category", "")).strip(),
+        notes=str(payload.get("notes", "")).strip(),
+    )
+    tags = payload.get("tags", [])
+    if result.get("ok") and isinstance(tags, list):
+        conn = db()
+        try:
+            conn.execute(
+                "UPDATE devices SET tags_json=?, updated_at=? WHERE ip=?",
+                (json.dumps([str(tag).strip() for tag in tags if str(tag).strip()]), now_ts(), str(payload.get("ip", "")).strip()),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return result
+
+
+@app.get("/api/labels")
+def api_labels():
+    return label_definitions_payload()
+
+
+@app.post("/api/labels")
+async def api_save_label(request: Request):
+    payload = await request.json()
+    try:
+        saved = save_label_definition(
+            str(payload.get("kind", "")), str(payload.get("name", "")),
+            str(payload.get("color", "")), str(payload.get("icon", "")),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return {"ok": True, "label": saved, **label_definitions_payload()}
+
+
+@app.post("/api/categories/{category}/check")
+def api_check_category(category: str):
+    category = unquote(category).strip()
+    if not category:
+        return JSONResponse({"error": "category_required"}, status_code=400)
+    if category_check_state.get(category, {}).get("running"):
+        return {"ok": True, "state": category_check_state[category]}
+    start_worker(f"category-{hashlib.sha256(category.encode()).hexdigest()[:10]}", run_category_check, category)
+    return {"ok": True, "state": {"running": True, "category": category}}
+
+
+@app.get("/api/categories/{category}/check")
+def api_category_check_status(category: str):
+    return {"state": category_check_state.get(unquote(category).strip(), {"running": False})}
+
+
+@app.get("/api/recycle-bin")
+def api_recycle_bin():
+    maintain_recycle_bin(force=True)
+    devices = get_devices(include_ignored=True, include_quarantined=True, include_trashed=True)
+    return {"devices": [device for device in devices if device.get("trashed_at")], "retention_days": 14, "offline_hours": 48}
+
+
+@app.post("/api/recycle-bin/trash-offline")
+def api_trash_all_offline():
+    return {"ok": True, "trashed": trash_all_offline_devices()}
+
+
+@app.post("/api/admin/backup-now")
+def api_backup_now():
+    return {"ok": True, **maintain_automatic_backups(force=True)}
+
+
+@app.post("/api/recycle-bin/{ip}/restore")
+def api_restore_recycled(ip: str):
+    conn = db()
+    try:
+        cursor = conn.execute("UPDATE devices SET trashed_at=0,updated_at=? WHERE ip=?", (now_ts(), ip))
+        conn.commit()
+        return {"ok": cursor.rowcount > 0}
+    finally:
+        conn.close()
+
+
+@app.delete("/api/recycle-bin/{ip}")
+def api_delete_recycled(ip: str):
+    conn = db()
+    try:
+        cursor = conn.execute("DELETE FROM devices WHERE ip=? AND trashed_at>0", (ip,))
+        conn.commit()
+        return {"ok": cursor.rowcount > 0}
+    finally:
+        conn.close()
+
+
+@app.get("/api/audit")
+def api_audit(limit: int = 200):
+    conn = db()
+    try:
+        rows = conn.execute("SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (max(1, min(limit, 1000)),)).fetchall()
+        return {"records": [dict(row) for row in rows]}
+    finally:
+        conn.close()
+
+
+@app.post("/api/devices/{source_ip}/clone")
+async def api_clone_device(source_ip: str, request: Request):
+    payload = await request.json()
+    try:
+        device = clone_device(source_ip, str(payload.get("ip", "")), str(payload.get("name", "")))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    log_event("info", f"Device cloned from {source_ip}", "device_cloned", device["ip"])
+    return {"ok": True, "device": device}
+
+
 @app.get("/api/resolve_alert/{alert_id}")
 def api_resolve_alert(alert_id: int):
     conn = db()
@@ -976,6 +1117,31 @@ def api_resolve_alert(alert_id: int):
         conn.execute("UPDATE alerts SET status='resolved', updated_at=? WHERE id=?", (now_ts(), alert_id))
         conn.commit()
         return {"ok": True}
+    finally:
+        conn.close()
+
+
+@app.post("/api/acknowledge_alert/{alert_id}")
+def api_acknowledge_alert(alert_id: int, request: Request):
+    user = require_role(request, "admin", "user")
+    if user.get("role") != "admin" and not user.get("can_manage_alerts"):
+        return JSONResponse({"error": "permission_denied"}, status_code=403)
+    return {"ok": acknowledge_alert(alert_id, user.get("username", "operator"))}
+
+
+@app.delete("/api/alerts")
+def api_clear_alerts(request: Request, scope: str = "resolved"):
+    user = require_role(request, "admin", "user")
+    if user.get("role") != "admin" and not user.get("can_manage_alerts"):
+        return JSONResponse({"error": "permission_denied"}, status_code=403)
+    conn = db()
+    try:
+        if scope == "all":
+            cursor = conn.execute("DELETE FROM alerts")
+        else:
+            cursor = conn.execute("DELETE FROM alerts WHERE status='resolved'")
+        conn.commit()
+        return {"ok": True, "deleted": cursor.rowcount}
     finally:
         conn.close()
 

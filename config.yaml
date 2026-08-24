@@ -1,7 +1,7 @@
 name: "HOMEii Network Monitor"
 slug: "homeii-network-monitor"
 description: "SQLite-based network monitor with configurable discovery, stable network assignment and vendor detection"
-version: "6.3.2"
+version: "6.4.0"
 build: .
 startup: services
 boot: auto
@@ -11,11 +11,11 @@ arch:
   - amd64
   - aarch64
 ports:
-  8108/tcp: 8108
-webui: "http://[HOST]:[PORT:8108]"
+  8383/tcp: 8383
+webui: "http://[HOST]:[PORT:8383]"
 ingress: true
-ingress_port: 8108
-watchdog: "http://[HOST]:[PORT:8108]/api/health/live"
+ingress_port: 8383
+watchdog: "http://[HOST]:[PORT:8383]/api/health/live"
 panel_icon: mdi:shield-check-outline
 options:
   networks:

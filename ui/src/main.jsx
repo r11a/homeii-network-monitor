@@ -1,9 +1,9 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/assistant'
-import '@fontsource-variable/space-grotesk'
+import '@fontsource-variable/heebo'
 import App from './App'
 import './styles.css'
+import './accessibility.css'
 
 if ('serviceWorker' in navigator) {
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}))

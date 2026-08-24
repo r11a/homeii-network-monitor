@@ -1,5 +1,15 @@
 # Changelog
 
+## 6.4.0
+
+- Moved direct Web access to port `8383`; the external console requires a HOMEii username and password while Home Assistant Ingress continues to use the authenticated HA identity.
+- Added category and tag definitions, device cloning, category checks, alert acknowledgement, audit logging and administrator operations.
+- Added recycle-bin lifecycle management for long-offline devices and automatic rotating SQLite backups.
+- Expanded dashboard health visualization, incident presentation and operational controls.
+- Added category and device health drill-downs with real 24-hour availability, disconnect rankings, last-check timestamps and on-demand checks.
+- Standardized the entire interface on bundled Heebo typography with accessible mobile sizing and corrected contrast tokens for light and dark themes.
+- Expanded audit coverage to user actions, manual checks, category checks and automatic device state changes.
+
 ## 6.3.2
 
 - Split the oversized application entry point into dedicated API, configuration, security, state-machine, and runtime modules while retaining the existing ASGI entry point.

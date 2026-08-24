@@ -90,7 +90,7 @@ class MigrationSafetyTests(unittest.TestCase):
             try:
                 main.BASE_DIR, main.DB_PATH = base, target
                 main.init_db()
-                backups = list((base / "backups").glob("homeii-pre-schema-7-*.db"))
+                backups = list((base / "backups").glob("homeii-pre-schema-9-*.db"))
                 self.assertEqual(len(backups), 1)
             finally:
                 main.BASE_DIR, main.DB_PATH = original_base, original_db
