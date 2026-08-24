@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import Any
@@ -28,9 +29,11 @@ class HomeiiDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:
-            status = await self.client.async_fetch_status()
-            devices = await self.client.async_fetch_devices()
-            alerts = await self.client.async_fetch_alerts()
+            status, devices, alerts = await asyncio.gather(
+                self.client.async_fetch_status(),
+                self.client.async_fetch_devices(),
+                self.client.async_fetch_alerts(),
+            )
         except HomeiiApiClientError as err:
             raise UpdateFailed(str(err)) from err
         return {

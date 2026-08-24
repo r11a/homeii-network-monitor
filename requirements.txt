@@ -1,0 +1,5 @@
+fastapi==0.141.1
+uvicorn==0.52.4
+mac-vendor-lookup==0.1.15
+python-multipart==0.0.32
+speedtest-cli==2.1.3

@@ -8,5 +8,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/r11a/homeii-network-monitor/issues",
   "single_config_entry": true,
-  "version": "6.3.0"
+  "version": "6.3.1"
 }

@@ -11,7 +11,26 @@ from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DEFAULT_URL, DOMAI
 
 
 class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    VERSION = 2
+
+    @staticmethod
+    def _schema(default_url: str, default_interval: int) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required(CONF_URL, default=default_url): str,
+                vol.Required(
+                    CONF_SCAN_INTERVAL,
+                    default=default_interval,
+                ): vol.All(vol.Coerce(int), vol.Range(min=5, max=300)),
+            }
+        )
+
+    async def _validate(self, user_input):
+        client = HomeiiApiClient(
+            user_input[CONF_URL],
+            async_get_clientsession(self.hass),
+        )
+        return await client.async_fetch_status()
 
     async def async_step_user(self, user_input=None):
         errors = {}
@@ -20,12 +39,8 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(DOMAIN)
             self._abort_if_unique_id_configured()
 
-            client = HomeiiApiClient(
-                user_input[CONF_URL],
-                async_get_clientsession(self.hass),
-            )
             try:
-                status = await client.async_fetch_status()
+                status = await self._validate(user_input)
             except HomeiiApiClientError:
                 errors["base"] = "cannot_connect"
             else:
@@ -38,13 +53,30 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     },
                 )
 
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_URL, default=DEFAULT_URL): str,
-                vol.Required(
-                    CONF_SCAN_INTERVAL,
-                    default=DEFAULT_SCAN_INTERVAL,
-                ): vol.All(vol.Coerce(int), vol.Range(min=5, max=300)),
-            }
-        )
+        schema = self._schema(DEFAULT_URL, DEFAULT_SCAN_INTERVAL)
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+
+    async def async_step_reconfigure(self, user_input=None):
+        entry = self._get_reconfigure_entry()
+        errors = {}
+        if user_input is not None:
+            try:
+                await self._validate(user_input)
+            except HomeiiApiClientError:
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data_updates={
+                        CONF_URL: user_input[CONF_URL].rstrip("/"),
+                        CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
+                    },
+                )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self._schema(
+                entry.data.get(CONF_URL, DEFAULT_URL),
+                int(entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)),
+            ),
+            errors=errors,
+        )

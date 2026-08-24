@@ -8,6 +8,14 @@
           "url": "Addon URL",
           "scan_interval": "Refresh interval (seconds)"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure HOMEii Network Monitor",
+        "description": "Update the addon API address and refresh interval.",
+        "data": {
+          "url": "Addon URL",
+          "scan_interval": "Refresh interval (seconds)"
+        }
       }
     },
     "error": {

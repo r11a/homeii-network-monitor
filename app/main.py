@@ -1,5 +1,6 @@
 import csv
 import base64
+from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import ipaddress
@@ -32,7 +33,7 @@ try:
 except ModuleNotFoundError:
     from vendor_lookup import lookup_vendor
 
-APP_VERSION = "6.3.0"
+APP_VERSION = "6.3.1"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -123,12 +124,25 @@ NO_CACHE_HEADERS = {
     "Expires": "0",
 }
 
-app = FastAPI(title="HOMEii Network Monitor", version=APP_VERSION)
+@asynccontextmanager
+async def app_lifespan(_: FastAPI):
+    start_background_workers()
+    start_worker("startup_scan", run_full_scan, "startup")
+    try:
+        yield
+    finally:
+        stop_background_workers()
+
+
+app = FastAPI(title="HOMEii Network Monitor", version=APP_VERSION, lifespan=app_lifespan)
 app.mount("/assets", StaticFiles(directory="/app/web/assets", check_dir=False), name="assets")
 app.mount("/icons", StaticFiles(directory="/app/web/icons", check_dir=False), name="icons")
 _db_lock = threading.RLock()
 _worker_lock = threading.Lock()
 _worker_threads: Dict[str, threading.Thread] = {}
+_shutdown_event = threading.Event()
+_login_lock = threading.Lock()
+_login_attempts: Dict[str, List[int]] = {}
 scan_state = {
     "running": False,
     "last_started": 0,
@@ -283,15 +297,45 @@ def background_worker_payload() -> Dict[str, Any]:
     return payload
 
 
+def stale_worker_names(workers: Dict[str, Any] | None = None, timestamp: int | None = None) -> List[str]:
+    snapshot = workers if workers is not None else background_worker_payload()
+    current_time = timestamp if timestamp is not None else now_ts()
+    stale: List[str] = []
+    for name in ("monitor", "critical_monitor", "rescan"):
+        state = snapshot.get(name, {})
+        interval = max(5, int(state.get("interval") or PING_INTERVAL))
+        last_cycle = int(state.get("last_cycle") or 0)
+        if not state.get("alive") or not last_cycle or current_time - last_cycle > max(90, interval * 3):
+            stale.append(name)
+    return stale
+
+
 def db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 30000")
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA synchronous = NORMAL")
     return conn
 
 
 def ensure_dirs() -> None:
     BASE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def create_database_backup(prefix: str = "homeii-backup") -> Path:
+    backup_dir = BASE_DIR / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    backup_path = backup_dir / f"{prefix}-{now_ts()}.db"
+    with _db_lock:
+        source = db()
+        target = sqlite3.connect(backup_path)
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+            source.close()
+    return backup_path
 
 
 SCHEMA = """
@@ -393,6 +437,27 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   created_at INTEGER NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_devices_operational
+  ON devices(ignored, quarantined, critical, status);
+CREATE INDEX IF NOT EXISTS idx_devices_network
+  ON devices(assigned_network, status);
+CREATE INDEX IF NOT EXISTS idx_device_history_ip_ts
+  ON device_history(ip, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_device_history_ts
+  ON device_history(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_alerts_status_created
+  ON alerts(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_alerts_ip_status
+  ON alerts(ip, status);
+CREATE INDEX IF NOT EXISTS idx_events_ts
+  ON events(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_events_ip_ts
+  ON events(ip, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_traffic_samples_ts
+  ON traffic_samples(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry
+  ON auth_sessions(expires_at);
 """
 
 DEFAULT_SETTINGS = {
@@ -422,11 +487,27 @@ def ensure_column(conn: sqlite3.Connection, table: str, name: str, ddl: str) -> 
 
 def init_db() -> None:
     ensure_dirs()
+    database_existed = DB_PATH.exists() and DB_PATH.stat().st_size > 0
     with _db_lock:
         conn = db()
         try:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
+            migration_table = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'"
+            ).fetchone()
+            current_schema = 0
+            if migration_table:
+                row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
+                current_schema = int((row and row[0]) or 0)
+            if database_existed and current_schema < 7:
+                backup_path = BASE_DIR / "backups" / f"homeii-pre-schema-7-{now_ts()}.db"
+                backup_path.parent.mkdir(parents=True, exist_ok=True)
+                backup_conn = sqlite3.connect(backup_path)
+                try:
+                    conn.backup(backup_conn)
+                finally:
+                    backup_conn.close()
             conn.executescript(SCHEMA)
             ensure_column(conn, "devices", "approved", "approved INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "assigned_network", "assigned_network TEXT DEFAULT ''")
@@ -438,7 +519,7 @@ def init_db() -> None:
             ensure_column(conn, "devices", "quarantined_at", "quarantined_at INTEGER DEFAULT 0")
             conn.execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES(?, ?)",
-                (6, now_ts()),
+                (7, now_ts()),
             )
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
@@ -1949,91 +2030,27 @@ def run_full_scan(mode: str = "manual") -> None:
 
 
 def monitor_one(ip: str) -> None:
-    conn = db()
-    try:
-        row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
-        if not row:
-            return
-        d = row_to_device(row)
-        fail_threshold = failure_threshold_for_device(d)
-        if d["ignored"]:
-            return
-        ok, detected_source, ident = probe_device(ip)
-        prev_state = d["status"] or "unknown"
-        changed = False
-        ts = now_ts()
+    monitor_one_safe(ip)
 
-        if ok:
-            d["fail_count"] = 0
-            d["success_count"] += 1
-            d["last_seen"] = ts
-            if ident.get("mac"):
-                d["mac"] = ident["mac"]
-            if ident.get("vendor") and (not d["vendor"] or d["vendor"] == "—"):
-                d["vendor"] = ident["vendor"]
-            host = reverse_dns(ip)
-            if host and d["hostname"] != host:
-                d["hostname"] = host
-            d["name"] = choose_display_name(d.get("name",""), d.get("hostname",""), d.get("vendor",""), ip)
-            if not d.get("assigned_network"):
-                d["assigned_network"] = infer_assigned_network(ip)
-            if (not d["vendor"] or d["vendor"] == "—") and d.get("mac") and "vendor" in set(get_discovery_protocols()):
-                maybe_vendor = vendor_from_mac(d["mac"])
-                if maybe_vendor:
-                    d["vendor"] = maybe_vendor
-            d["name"] = choose_display_name(d.get("name",""), d.get("hostname",""), d.get("vendor",""), ip)
-            if not d["category"]:
-                d["category"] = auto_category(f"{d['name']} {d['hostname']}", d["vendor"])
-            if detected_source:
-                d["source"] = detected_source
-            if get_discovery_mode() == "manual_only" and not d.get("approved") and not d.get("manual"):
-                return
-            if not d.get("approved") and not d.get("manual"):
-                d["status"] = "new"
-            elif prev_state in ("offline", "unstable", "new", "unknown") and d["success_count"] >= RECOVER_THRESHOLD:
-                d["status"] = "online"
-                changed = True
-        else:
-            d["success_count"] = 0
-            d["fail_count"] += 1
-            if not d.get("approved") and not d.get("manual"):
-                d["status"] = "new"
-            elif d["fail_count"] >= fail_threshold and prev_state != "offline":
-                d["status"] = "offline"
-                changed = True
 
-        if changed and d["status"] != prev_state:
-            d["state_changes_today"] += 1
-            conn.execute(
-                "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
-                (ip, ts, prev_state, d["status"], "status"),
-            )
-            if should_mark_unstable(conn, ip, d) and d["status"] == "online":
-                d["status"] = "unstable"
-            if d["status"] == "offline":
-                log_event("error", f"{d['name'] or ip} went offline", "device_offline", ip)
-                create_alert_for_device(d, "high", ALERT_TITLE_OFFLINE, f"{d['name'] or ip} is offline")
-            elif d["status"] == "unstable":
-                msg = f"{d['name'] or ip} is unstable"
-                log_event("warning", msg, "device_unstable", ip)
-                create_alert_for_device(d, "medium", ALERT_TITLE_UNSTABLE, msg)
-            elif d["status"] == "online":
-                mark_device_recovered_with_policy(d, prev_state)
-
-        d["updated_at"] = ts
-        conn.execute(
-            """
-            UPDATE devices SET hostname=?, category=?, vendor=?, mac=?, status=?, last_seen=?, fail_count=?,
-                success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=?, maintenance=?, mute_alerts=?, scan_profile=? WHERE ip=?
-            """,
-            (
-                d["hostname"], d["category"], d["vendor"], d["mac"], d["status"], int(d["last_seen"] or 0),
-                d["fail_count"], d["success_count"], d["state_changes_today"], d["updated_at"], d["name"], d["source"], 1 if d.get("approved") else 0, 1 if d.get("maintenance") else 0, 1 if d.get("mute_alerts") else 0, d.get("scan_profile", "normal"), ip,
-            ),
-        )
-        conn.commit()
-    finally:
-        conn.close()
+def next_probe_status(
+    previous: str,
+    managed: bool,
+    reachable: bool,
+    fail_count: int,
+    success_count: int,
+    fail_threshold: int,
+) -> str:
+    previous = previous or "unknown"
+    if not managed:
+        return "new"
+    if reachable:
+        if previous in ("offline", "unstable", "new", "unknown") and success_count >= RECOVER_THRESHOLD:
+            return "online"
+        return previous
+    if fail_count >= max(1, fail_threshold):
+        return "offline"
+    return previous
 
 
 def monitor_one_safe(ip: str) -> None:
@@ -2066,7 +2083,6 @@ def monitor_one_safe(ip: str) -> None:
             if d["ignored"]:
                 return
             prev_state = d["status"] or "unknown"
-            changed = False
             ts = now_ts()
 
             if ok:
@@ -2092,35 +2108,33 @@ def monitor_one_safe(ip: str) -> None:
                     d["source"] = detected_source
                 if discovery_mode == "manual_only" and not d.get("approved") and not d.get("manual"):
                     return
-                if not d.get("approved") and not d.get("manual"):
-                    d["status"] = "new"
-                elif prev_state in ("offline", "unstable", "new", "unknown") and d["success_count"] >= RECOVER_THRESHOLD:
-                    d["status"] = "online"
-                    changed = True
             else:
                 d["success_count"] = 0
                 d["fail_count"] += 1
-                if not d.get("approved") and not d.get("manual"):
-                    d["status"] = "new"
-                elif d["fail_count"] >= fail_threshold and prev_state != "offline":
-                    d["status"] = "offline"
-                    changed = True
 
-            if changed and d["status"] != prev_state:
-                d["state_changes_today"] += 1
-                next_state = d["status"]
-                conn.execute(
-                    "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
-                    (ip, ts, prev_state, next_state, "status"),
-                )
+            d["status"] = next_probe_status(
+                prev_state,
+                bool(d.get("approved") or d.get("manual")),
+                ok,
+                d["fail_count"],
+                d["success_count"],
+                fail_threshold,
+            )
+
             if should_mark_unstable(conn, ip, d) and d["status"] == "online":
                 d["status"] = "unstable"
-                if d["status"] == "offline":
-                    post_action = ("offline", d["name"] or ip, prev_state)
-                elif d["status"] == "unstable":
-                    post_action = ("unstable", d["name"] or ip, prev_state)
-                elif d["status"] == "online":
-                    post_action = ("online", d["name"] or ip, prev_state)
+
+            final_state = d["status"]
+            if final_state != prev_state:
+                d["state_changes_today"] += 1
+                conn.execute(
+                    "INSERT INTO device_history(ip,ts,old_status,new_status,kind) VALUES(?,?,?,?,?)",
+                    (ip, ts, prev_state, final_state, "status"),
+                )
+                if final_state in ("offline", "unstable") or (
+                    final_state == "online" and prev_state in ("offline", "unstable")
+                ):
+                    post_action = (final_state, d["name"] or ip, prev_state)
 
             d["updated_at"] = ts
             conn.execute(
@@ -2279,7 +2293,7 @@ def run_monitor_pass(critical_only: bool = False) -> None:
 
 
 def monitor_cycle(critical_only: bool = False) -> None:
-    while True:
+    while not _shutdown_event.is_set():
         try:
             run_monitor_pass(critical_only)
         except Exception as e:
@@ -2287,7 +2301,7 @@ def monitor_cycle(critical_only: bool = False) -> None:
             set_worker_status(worker_name, last_finished=now_ts(), last_error=str(e))
             print(f"[HOMEii] {worker_name} failed: {e}", flush=True)
             log_system_event("error", f"{worker_name} failed: {e}", f"{worker_name}_error")
-        time.sleep(critical_interval_seconds() if critical_only else interval_from_settings())
+        _shutdown_event.wait(critical_interval_seconds() if critical_only else interval_from_settings())
 
 
 def monitor_loop() -> None:
@@ -2300,7 +2314,7 @@ def critical_monitor_loop() -> None:
 
 
 def rescan_loop() -> None:
-    while True:
+    while not _shutdown_event.is_set():
         try:
             set_worker_status("rescan", last_started=now_ts(), interval=30)
             prune_old_history()
@@ -2311,7 +2325,7 @@ def rescan_loop() -> None:
         except Exception as e:
             set_worker_status("rescan", last_finished=now_ts(), last_error=str(e))
             log_system_event("error", f"rescan failed: {e}", "rescan_error")
-        time.sleep(30)
+        _shutdown_event.wait(30)
 
 
 
@@ -2361,6 +2375,8 @@ def status_payload() -> Dict[str, Any]:
         alerts = [dict(r) for r in conn.execute("SELECT id, ip, severity, title, message, status, created_at, updated_at FROM alerts WHERE status='open' ORDER BY id DESC LIMIT 12").fetchall()]
     finally:
         conn.close()
+    workers = background_worker_payload()
+    stale_workers = stale_worker_names(workers)
     return {
         "version": APP_VERSION,
         "networks": get_networks(),
@@ -2378,7 +2394,9 @@ def status_payload() -> Dict[str, Any]:
         "network_stats": network_stats_payload(devices),
         "discovery_mode": get_discovery_mode(),
         "discovery_protocols": get_discovery_protocols(),
-        "workers": background_worker_payload(),
+        "workers": workers,
+        "monitoring_stale": bool(stale_workers),
+        "stale_workers": stale_workers,
         "db_ok": DB_PATH.exists(),
         "db_path": str(DB_PATH),
     }
@@ -3272,6 +3290,41 @@ def logo():
     return JSONResponse({"error": "logo not found"}, status_code=404)
 
 
+@app.get("/api/health/live")
+def api_health_live():
+    return {"status": "ok", "version": APP_VERSION, "timestamp": now_ts()}
+
+
+@app.get("/api/health/ready")
+def api_health_ready():
+    database_ok = False
+    database_error = ""
+    try:
+        conn = db()
+        try:
+            result = conn.execute("PRAGMA quick_check").fetchone()
+            database_ok = bool(result and result[0] == "ok")
+        finally:
+            conn.close()
+    except Exception as exc:
+        database_error = str(exc)
+
+    now = now_ts()
+    workers = background_worker_payload()
+    stale_workers = stale_worker_names(workers, now)
+    ready = database_ok and not stale_workers and not _shutdown_event.is_set()
+    payload = {
+        "status": "ready" if ready else "degraded",
+        "version": APP_VERSION,
+        "database_ok": database_ok,
+        "database_error": database_error,
+        "stale_workers": stale_workers,
+        "workers": workers,
+        "timestamp": now,
+    }
+    return JSONResponse(payload, status_code=200 if ready else 503)
+
+
 @app.get("/api/status")
 def api_status():
     ensure_background_workers()
@@ -3456,10 +3509,74 @@ def require_role(request: Request, *roles: str) -> Dict[str, Any]:
     return user
 
 
+def login_client_key(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def login_attempt_allowed(client_key: str) -> bool:
+    cutoff = now_ts() - 300
+    with _login_lock:
+        attempts = [stamp for stamp in _login_attempts.get(client_key, []) if stamp >= cutoff]
+        _login_attempts[client_key] = attempts
+        return len(attempts) < 5
+
+
+def record_login_attempt(client_key: str, success: bool) -> None:
+    with _login_lock:
+        if success:
+            _login_attempts.pop(client_key, None)
+        else:
+            _login_attempts.setdefault(client_key, []).append(now_ts())
+
+
 @app.exception_handler(PermissionError)
 async def permission_error_handler(_request: Request, exc: PermissionError):
     code = 401 if str(exc) == "authentication_required" else 403
     return JSONResponse({"error": str(exc)}, status_code=code)
+
+
+@app.middleware("http")
+async def enforce_api_permissions(request: Request, call_next):
+    path = request.url.path
+    if not path.startswith("/api/") or path.startswith("/api/health/"):
+        return await call_next(request)
+
+    public_auth = {"/api/auth/session", "/api/auth/setup", "/api/auth/login", "/api/auth/logout"}
+    if path in public_auth:
+        return await call_next(request)
+
+    def authorize(*roles: str) -> JSONResponse | None:
+        try:
+            require_role(request, *roles)
+        except PermissionError as exc:
+            code = 401 if str(exc) == "authentication_required" else 403
+            return JSONResponse({"error": str(exc)}, status_code=code)
+        return None
+
+    if path == "/api/settings" and request.method == "GET":
+        denied = authorize("admin", "user", "viewer")
+        return denied or await call_next(request)
+
+    admin_prefixes = (
+        "/api/admin/", "/api/tools/", "/api/export/",
+        "/api/import/", "/api/save_settings", "/api/save_networks",
+    )
+    operator_get_prefixes = (
+        "/api/scan", "/api/accept", "/api/add/", "/api/add_all",
+        "/api/remove/", "/api/restore/", "/api/delete_device", "/api/ignore/",
+        "/api/update", "/api/toggle_", "/api/bulk_", "/api/ping_now/",
+        "/api/add_manual", "/api/resolve_alert/",
+    )
+
+    if any(path.startswith(prefix) for prefix in admin_prefixes):
+        denied = authorize("admin")
+        if denied:
+            return denied
+    elif request.method != "GET" or any(path.startswith(prefix) for prefix in operator_get_prefixes):
+        denied = authorize("admin", "user")
+        if denied:
+            return denied
+    return await call_next(request)
 
 
 @app.get("/api/auth/session")
@@ -3499,12 +3616,16 @@ async def api_auth_setup(request: Request):
     finally:
         conn.close()
     response = JSONResponse({"ok": True})
-    response.set_cookie("homeii_session", token, httponly=True, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
+    secure_cookie = request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    response.set_cookie("homeii_session", token, httponly=True, secure=secure_cookie, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
     return response
 
 
 @app.post("/api/auth/login")
 async def api_auth_login(request: Request):
+    client_key = login_client_key(request)
+    if not login_attempt_allowed(client_key):
+        return JSONResponse({"error": "rate_limited"}, status_code=429, headers={"Retry-After": "300"})
     payload = await request.json()
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", ""))
@@ -3512,12 +3633,14 @@ async def api_auth_login(request: Request):
     try:
         row = conn.execute("SELECT * FROM users WHERE username=? COLLATE NOCASE AND active=1", (username,)).fetchone()
         if not row or not password_matches(password, row["password_hash"]):
+            record_login_attempt(client_key, False)
             return JSONResponse({"error": "invalid_credentials"}, status_code=401)
         conn.execute("UPDATE users SET last_login=? WHERE id=?", (now_ts(), row["id"]))
         conn.commit()
         user = public_user(row)
     finally:
         conn.close()
+    record_login_attempt(client_key, True)
     token = secrets.token_urlsafe(40)
     conn = db()
     try:
@@ -3526,7 +3649,8 @@ async def api_auth_login(request: Request):
     finally:
         conn.close()
     response = JSONResponse({"ok": True, "user": user})
-    response.set_cookie("homeii_session", token, httponly=True, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
+    secure_cookie = request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    response.set_cookie("homeii_session", token, httponly=True, secure=secure_cookie, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
     return response
 
 
@@ -3657,6 +3781,17 @@ def api_export_settings_json():
         content=json.dumps(payload, ensure_ascii=False, indent=2),
         media_type="application/json; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="homeii_settings.json"'},
+    )
+
+
+@app.get("/api/export/database.db")
+def api_export_database(request: Request):
+    require_role(request, "admin")
+    backup_path = create_database_backup()
+    return FileResponse(
+        backup_path,
+        media_type="application/vnd.sqlite3",
+        filename=backup_path.name,
     )
 
 
@@ -4180,11 +4315,18 @@ def start_worker(name: str, target, *args) -> None:
 
 
 def start_background_workers() -> None:
+    _shutdown_event.clear()
     start_worker("monitor", monitor_loop)
     start_worker("critical_monitor", critical_monitor_loop)
     start_worker("rescan", rescan_loop)
-    start_worker("special_hosts", discover_special_hosts)
-    start_worker("startup_scan", run_full_scan, "startup")
+
+
+def stop_background_workers() -> None:
+    _shutdown_event.set()
+    for thread in list(_worker_threads.values()):
+        if thread.is_alive():
+            thread.join(timeout=2)
+    _worker_threads.clear()
 
 
 def ensure_background_workers() -> None:
@@ -4198,10 +4340,4 @@ def ensure_background_workers() -> None:
         start_worker("critical_monitor_kick", run_monitor_pass, True)
 
 
-@app.on_event("startup")
-def app_startup() -> None:
-    start_background_workers()
-
-
 init_db()
-start_background_workers()
