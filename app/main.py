@@ -1,4 +1,7 @@
 import csv
+import base64
+import hashlib
+import hmac
 import ipaddress
 import io
 import json
@@ -6,6 +9,7 @@ import os
 import shlex
 import shutil
 import re
+import secrets
 import socket
 import sqlite3
 import subprocess
@@ -28,7 +32,7 @@ try:
 except ModuleNotFoundError:
     from vendor_lookup import lookup_vendor
 
-APP_VERSION = "6.2.1"
+APP_VERSION = "6.3.0"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -143,6 +147,7 @@ _dns_cache: Dict[str, str] = {}
 _traffic_cache: Dict[str, tuple[int, int, float]] = {}
 _traffic_sample_recorded_at = 0
 _history_pruned_at = 0
+SESSION_TTL_SECONDS = 60 * 60 * 24 * 14
 
 def try_command_output(cmd: list[str], timeout: int = 2) -> str:
     try:
@@ -366,6 +371,27 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  display_name TEXT DEFAULT '',
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'viewer',
+  active INTEGER NOT NULL DEFAULT 1,
+  viewer_edge_to_edge INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  last_login INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS auth_sessions (
+  token_hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 """
 
@@ -3362,6 +3388,217 @@ async def api_tools_run(request: Request):
     result["overall_status"] = overall
     result["finished_at"] = now_ts()
     return result
+
+
+def password_hash(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 240_000)
+    return f"pbkdf2_sha256$240000${base64.b64encode(salt).decode()}${base64.b64encode(digest).decode()}"
+
+
+def password_matches(password: str, stored: str) -> bool:
+    try:
+        algorithm, rounds, salt_value, digest_value = stored.split("$", 3)
+        if algorithm != "pbkdf2_sha256":
+            return False
+        salt = base64.b64decode(salt_value)
+        expected = base64.b64decode(digest_value)
+        actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(rounds))
+        return hmac.compare_digest(actual, expected)
+    except (ValueError, TypeError):
+        return False
+
+
+def ingress_request(request: Request) -> bool:
+    return bool(
+        request.headers.get("x-ingress-path")
+        and (
+            request.headers.get("x-remote-user-id")
+            or request.headers.get("x-remote-user-name")
+        )
+    )
+
+
+def public_user(user: sqlite3.Row | Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": user["id"], "username": user["username"],
+        "display_name": user["display_name"] or user["username"], "role": user["role"],
+        "active": bool(user["active"]), "viewer_edge_to_edge": bool(user["viewer_edge_to_edge"]),
+        "last_login": int(user["last_login"] or 0),
+    }
+
+
+def session_user(request: Request) -> Dict[str, Any] | None:
+    if ingress_request(request):
+        username = request.headers.get("x-remote-user-name") or "home-assistant"
+        display_name = request.headers.get("x-remote-user-display-name") or username
+        return {"id": 0, "username": username, "display_name": display_name, "role": "admin", "active": True, "viewer_edge_to_edge": False, "ingress": True}
+    token = request.cookies.get("homeii_session", "")
+    if not token:
+        return None
+    token_digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    conn = db()
+    try:
+        conn.execute("DELETE FROM auth_sessions WHERE expires_at<?", (now_ts(),))
+        row = conn.execute("SELECT users.* FROM auth_sessions JOIN users ON users.id=auth_sessions.user_id WHERE auth_sessions.token_hash=? AND auth_sessions.expires_at>=? AND users.active=1", (token_digest, now_ts())).fetchone()
+        conn.commit()
+        return public_user(row) if row else None
+    finally:
+        conn.close()
+
+
+def require_role(request: Request, *roles: str) -> Dict[str, Any]:
+    user = session_user(request)
+    if not user:
+        raise PermissionError("authentication_required")
+    if roles and user["role"] not in roles:
+        raise PermissionError("permission_denied")
+    return user
+
+
+@app.exception_handler(PermissionError)
+async def permission_error_handler(_request: Request, exc: PermissionError):
+    code = 401 if str(exc) == "authentication_required" else 403
+    return JSONResponse({"error": str(exc)}, status_code=code)
+
+
+@app.get("/api/auth/session")
+def api_auth_session(request: Request):
+    user = session_user(request)
+    conn = db()
+    try:
+        setup_required = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
+    finally:
+        conn.close()
+    return {"authenticated": bool(user), "setup_required": setup_required, "user": user}
+
+
+@app.post("/api/auth/setup")
+async def api_auth_setup(request: Request):
+    payload = await request.json()
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", ""))
+    display_name = str(payload.get("display_name", "")).strip()
+    if len(username) < 3 or len(password) < 8:
+        return JSONResponse({"error": "invalid_credentials"}, status_code=400)
+    conn = db()
+    try:
+        if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]:
+            return JSONResponse({"error": "setup_complete"}, status_code=409)
+        now = now_ts()
+        cursor = conn.execute("INSERT INTO users(username,display_name,password_hash,role,active,created_at,updated_at) VALUES(?,?,?,?,1,?,?)", (username, display_name, password_hash(password), "admin", now, now))
+        conn.commit()
+        user_id = cursor.lastrowid
+    finally:
+        conn.close()
+    token = secrets.token_urlsafe(40)
+    conn = db()
+    try:
+        conn.execute("INSERT INTO auth_sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)", (hashlib.sha256(token.encode("utf-8")).hexdigest(), user_id, now_ts() + SESSION_TTL_SECONDS, now_ts()))
+        conn.commit()
+    finally:
+        conn.close()
+    response = JSONResponse({"ok": True})
+    response.set_cookie("homeii_session", token, httponly=True, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
+    return response
+
+
+@app.post("/api/auth/login")
+async def api_auth_login(request: Request):
+    payload = await request.json()
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", ""))
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM users WHERE username=? COLLATE NOCASE AND active=1", (username,)).fetchone()
+        if not row or not password_matches(password, row["password_hash"]):
+            return JSONResponse({"error": "invalid_credentials"}, status_code=401)
+        conn.execute("UPDATE users SET last_login=? WHERE id=?", (now_ts(), row["id"]))
+        conn.commit()
+        user = public_user(row)
+    finally:
+        conn.close()
+    token = secrets.token_urlsafe(40)
+    conn = db()
+    try:
+        conn.execute("INSERT INTO auth_sessions(token_hash,user_id,expires_at,created_at) VALUES(?,?,?,?)", (hashlib.sha256(token.encode("utf-8")).hexdigest(), user["id"], now_ts() + SESSION_TTL_SECONDS, now_ts()))
+        conn.commit()
+    finally:
+        conn.close()
+    response = JSONResponse({"ok": True, "user": user})
+    response.set_cookie("homeii_session", token, httponly=True, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
+    return response
+
+
+@app.post("/api/auth/logout")
+def api_auth_logout(request: Request):
+    token = request.cookies.get("homeii_session", "")
+    if token:
+        conn = db()
+        try:
+            conn.execute("DELETE FROM auth_sessions WHERE token_hash=?", (hashlib.sha256(token.encode("utf-8")).hexdigest(),))
+            conn.commit()
+        finally:
+            conn.close()
+    response = JSONResponse({"ok": True})
+    response.delete_cookie("homeii_session", path="/")
+    return response
+
+
+@app.get("/api/admin/users")
+def api_admin_users(request: Request):
+    require_role(request, "admin")
+    conn = db()
+    try:
+        return {"users": [public_user(row) for row in conn.execute("SELECT * FROM users ORDER BY username").fetchall()]}
+    finally:
+        conn.close()
+
+
+@app.post("/api/admin/users")
+async def api_admin_create_user(request: Request):
+    require_role(request, "admin")
+    payload = await request.json()
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", ""))
+    role = str(payload.get("role", "viewer"))
+    if len(username) < 3 or len(password) < 8 or role not in {"admin", "user", "viewer"}:
+        return JSONResponse({"error": "invalid_user"}, status_code=400)
+    conn = db()
+    try:
+        now = now_ts()
+        conn.execute("INSERT INTO users(username,display_name,password_hash,role,active,viewer_edge_to_edge,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", (username, str(payload.get("display_name", "")).strip(), password_hash(password), role, 1, 1 if payload.get("viewer_edge_to_edge") else 0, now, now))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return JSONResponse({"error": "username_exists"}, status_code=409)
+    finally:
+        conn.close()
+    return {"ok": True}
+
+
+@app.patch("/api/admin/users/{user_id}")
+async def api_admin_update_user(user_id: int, request: Request):
+    current = require_role(request, "admin")
+    payload = await request.json()
+    role = str(payload.get("role", "viewer"))
+    if role not in {"admin", "user", "viewer"} or (current.get("id") == user_id and not payload.get("active", True)):
+        return JSONResponse({"error": "invalid_user"}, status_code=400)
+    fields = ["display_name=?", "role=?", "active=?", "viewer_edge_to_edge=?", "updated_at=?"]
+    values: List[Any] = [str(payload.get("display_name", "")).strip(), role, 1 if payload.get("active", True) else 0, 1 if payload.get("viewer_edge_to_edge") else 0, now_ts()]
+    password = str(payload.get("password", ""))
+    if password:
+        if len(password) < 8:
+            return JSONResponse({"error": "invalid_password"}, status_code=400)
+        fields.append("password_hash=?")
+        values.append(password_hash(password))
+    values.append(user_id)
+    conn = db()
+    try:
+        conn.execute(f"UPDATE users SET {','.join(fields)} WHERE id=?", values)
+        conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True}
 
 
 @app.get("/api/tools/traffic")

@@ -16,7 +16,7 @@
 <p align="center"><strong>Network intelligence built natively for Home Assistant.</strong><br>Discover, classify and monitor every device with real-time alerts, historical availability and a premium NOC interface.</p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-6.2.1-c47a3b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-6.3.0-c47a3b?style=for-the-badge">
   <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Add--on%20%2B%20Integration-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/UI-React%2019-27e6a4?style=for-the-badge&logo=react&logoColor=07110d">
   <img alt="License" src="https://img.shields.io/github/license/r11a/homeii-network-monitor?style=for-the-badge&color=ffb52e">
@@ -60,6 +60,10 @@ The backend remains the monitoring authority. React consumes the existing API, s
 3. Install **HOMEii Network Monitor**.
 4. Start the add-on and open its Web UI or Ingress panel.
 
+On the first direct Web UI visit, HOMEii asks you to create the primary administrator. Later visits require a username and password. Home Assistant Ingress uses the authenticated Home Assistant user and currently opens with the administrator workspace, without a second login.
+
+Administrators can create `admin`, `user` and `viewer` accounts under **Settings > Users**. Viewer accounts can be locked to an edge-to-edge, read-only control-room display.
+
 ## Install The Integration
 
 1. Copy `custom_components/homeii_network_monitor` to `/config/custom_components/`.
@@ -71,7 +75,7 @@ Ready-made cards and dashboards are available in [`examples/home_assistant`](exa
 
 ## Upgrade From 5.x
 
-The database remains at `/data/homeii/homeii.db`. On startup, 6.2.1 applies additive, idempotent migrations and records schema version `6` in `schema_migrations`. Devices, settings, alerts, events, traffic samples and historical availability are retained.
+The database remains at `/data/homeii/homeii.db`. On startup, 6.3.0 applies additive, idempotent migrations and records schema version `6` in `schema_migrations`. Devices, settings, alerts, events, traffic samples and historical availability are retained.
 
 Back up the add-on before a major upgrade as a normal operational precaution. No destructive migration is performed by HOMEii 6.
 

@@ -208,6 +208,7 @@ __marimo__/
 
 # HOMEii local and frontend artifacts
 .tmp-v6-data/
+.tmp-*/
 .repo-history/
 ui/node_modules/
 ui/dist/
