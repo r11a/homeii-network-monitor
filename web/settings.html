@@ -251,7 +251,7 @@ body[data-lang="en"] .tool-inline{direction:ltr;text-align:left}
     <div class="brand">
       <div>
         <div class="brand-title">HOMEii Network</div>
-        <div class="brand-sub">מוניטור <span id="versionText">6.0.0</span> • הגדרות</div>
+        <div class="brand-sub">מוניטור <span id="versionText">6.0.1</span> • הגדרות</div>
       </div>
       <div class="logo"><img src="./logo" alt="" onerror="this.style.display='none'; this.parentNode.textContent='H';"></div>
     </div>
@@ -1042,7 +1042,7 @@ function applyTranslations() {
     btn.textContent = tr(navKeys[btn.dataset.page] || '');
   });
 
-  const version = qs('versionText').textContent || '6.0.0';
+  const version = qs('versionText').textContent || '6.0.1';
   document.querySelector('.brand-sub').textContent = tr('brandSub', { version });
   document.querySelector('.hero-sub').textContent = tr('heroSub');
 
@@ -1410,7 +1410,7 @@ function renderSettingsData(status, settingsData) {
   state.status = status;
   state.settings = settingsData.settings || {};
   state.dbPath = settingsData.db_path || '';
-  qs('versionText').textContent = status.version || '6.0.0';
+  qs('versionText').textContent = status.version || '6.0.1';
   qs('setRefresh').value = state.settings.auto_refresh || 30;
   qs('setHistoryRetention').value = state.settings.history_retention_days || 30;
   qs('setAlertProfile').value = state.settings.alert_profile || 'normal';

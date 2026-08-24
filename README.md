@@ -1,9 +1,13 @@
-<p align="center"><img src="docs/brand/homeii-banner.svg" alt="HOMEii Network Monitor" width="100%"></p>
+<p align="center">
+  <img src="docs/brand/homeii-logo-premium.png" alt="HOMEii Network Monitor logo" width="210">
+</p>
+<h1 align="center">HOMEii Network Monitor</h1>
+<p align="center"><strong>Premium network intelligence for Home Assistant</strong></p>
 
 <p align="center"><strong>Network intelligence built natively for Home Assistant.</strong><br>Discover, classify and monitor every device with real-time alerts, historical availability and a premium NOC interface.</p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-6.0.0-35d7ef?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-6.0.1-c47a3b?style=for-the-badge">
   <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Add--on%20%2B%20Integration-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/UI-React%2019-27e6a4?style=for-the-badge&logo=react&logoColor=07110d">
   <img alt="License" src="https://img.shields.io/github/license/r11a/homeii-network-monitor?style=for-the-badge&color=ffb52e">
@@ -58,7 +62,7 @@ Ready-made cards and dashboards are available in [`examples/home_assistant`](exa
 
 ## Upgrade From 5.x
 
-The database remains at `/data/homeii/homeii.db`. On startup, 6.0.0 applies additive, idempotent migrations and records schema version `6` in `schema_migrations`. Devices, settings, alerts, events, traffic samples and historical availability are retained.
+The database remains at `/data/homeii/homeii.db`. On startup, 6.0.1 applies additive, idempotent migrations and records schema version `6` in `schema_migrations`. Devices, settings, alerts, events, traffic samples and historical availability are retained.
 
 Back up the add-on before a major upgrade as a normal operational precaution. No destructive migration is performed by HOMEii 6.
 

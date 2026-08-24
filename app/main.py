@@ -28,7 +28,7 @@ try:
 except ModuleNotFoundError:
     from vendor_lookup import lookup_vendor
 
-APP_VERSION = "6.0.0"
+APP_VERSION = "6.0.1"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
@@ -3146,9 +3146,9 @@ def viewer_html_page():
 
 @app.get("/logo")
 def logo():
-    path = "/app/web/logo.gif"
+    path = "/app/web/logo.png"
     if os.path.exists(path):
-        return FileResponse(path, media_type="image/gif")
+        return FileResponse(path, media_type="image/png", headers=NO_CACHE_HEADERS)
     return JSONResponse({"error": "logo not found"}, status_code=404)
 
 
