@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import unquote
@@ -21,14 +21,15 @@ from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, File, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 try:
     from app.vendor_lookup import lookup_vendor
 except ModuleNotFoundError:
     from vendor_lookup import lookup_vendor
 
-APP_VERSION = "5.0.0"
-BASE_DIR = Path("/data/homeii")
+APP_VERSION = "6.0.0"
+BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
 LEGACY_IGNORED = Path("/data/ignored_devices.json")
@@ -47,6 +48,20 @@ UNSTABLE_RECOVERY_THRESHOLD = 3
 MAX_EVENTS = 300
 SCAN_RESCHEDULE_SECONDS = 180
 KNOWN_PROTOCOLS = ["ping", "arp", "dns", "special", "vendor"]
+ALERT_PROFILE_CONFIGS = {
+    "quiet": {"fail": 1, "window": 1200, "changes": 2, "offline": 1, "recovery": 1},
+    "normal": {"fail": 0, "window": 0, "changes": 0, "offline": 0, "recovery": 0},
+    "aggressive": {"fail": -1, "window": -600, "changes": -1, "offline": -1, "recovery": -1},
+}
+DEVICE_PROFILE_CONFIGS = {
+    "generic": {"fail": 0, "window": 0, "changes": 0, "offline": 0, "recovery": 0},
+    "phone": {"fail": 1, "window": 1800, "changes": 2, "offline": 1, "recovery": 1},
+    "iot": {"fail": 1, "window": 2400, "changes": 3, "offline": 1, "recovery": 1},
+    "camera": {"fail": 0, "window": -300, "changes": -1, "offline": 0, "recovery": 0},
+    "server": {"fail": -1, "window": -600, "changes": -2, "offline": -1, "recovery": -1},
+    "network": {"fail": -1, "window": -900, "changes": -2, "offline": -1, "recovery": -1},
+    "printer": {"fail": 1, "window": 900, "changes": 1, "offline": 0, "recovery": 0},
+}
 ALERT_TITLE_NEW = "New device detected"
 ALERT_TITLE_OFFLINE = "Device offline"
 ALERT_TITLE_BACK_ONLINE = "Device back online"
@@ -105,6 +120,8 @@ NO_CACHE_HEADERS = {
 }
 
 app = FastAPI(title="HOMEii Network Monitor", version=APP_VERSION)
+app.mount("/assets", StaticFiles(directory="/app/web/assets", check_dir=False), name="assets")
+app.mount("/icons", StaticFiles(directory="/app/web/icons", check_dir=False), name="icons")
 _db_lock = threading.RLock()
 _worker_lock = threading.Lock()
 _worker_threads: Dict[str, threading.Thread] = {}
@@ -297,6 +314,7 @@ CREATE TABLE IF NOT EXISTS devices (
   maintenance INTEGER DEFAULT 0,
   mute_alerts INTEGER DEFAULT 0,
   scan_profile TEXT DEFAULT 'normal',
+  device_profile TEXT DEFAULT 'generic',
   quarantined INTEGER DEFAULT 0,
   quarantined_at INTEGER DEFAULT 0,
   tags_json TEXT DEFAULT '[]'
@@ -344,10 +362,15 @@ CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INTEGER PRIMARY KEY,
+  applied_at INTEGER NOT NULL
+);
 """
 
 DEFAULT_SETTINGS = {
-    "theme": "light",
+    "theme": "dark",
     "language": "he",
     "scan_interval": str(PING_INTERVAL),
     "auto_refresh": "30",
@@ -359,6 +382,7 @@ DEFAULT_SETTINGS = {
     "discovery_mode": "auto_manual",
     "discovery_protocols_json": json.dumps(KNOWN_PROTOCOLS),
     "history_retention_days": "30",
+    "alert_profile": "normal",
 }
 
 
@@ -382,8 +406,13 @@ def init_db() -> None:
             ensure_column(conn, "devices", "maintenance", "maintenance INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "mute_alerts", "mute_alerts INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "scan_profile", "scan_profile TEXT DEFAULT 'normal'")
+            ensure_column(conn, "devices", "device_profile", "device_profile TEXT DEFAULT 'generic'")
             ensure_column(conn, "devices", "quarantined", "quarantined INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "quarantined_at", "quarantined_at INTEGER DEFAULT 0")
+            conn.execute(
+                "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES(?, ?)",
+                (6, now_ts()),
+            )
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
                     "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v)
@@ -632,6 +661,7 @@ def row_to_device(row: sqlite3.Row) -> Dict[str, Any]:
         "maintenance": bool(row["maintenance"]) if "maintenance" in row.keys() else False,
         "mute_alerts": bool(row["mute_alerts"]) if "mute_alerts" in row.keys() else False,
         "scan_profile": row["scan_profile"] if "scan_profile" in row.keys() and (row["scan_profile"] or "").strip() in ("slow", "normal", "fast") else "normal",
+        "device_profile": normalize_device_profile(row["device_profile"]) if "device_profile" in row.keys() else "generic",
         "quarantined": bool(row["quarantined"]) if "quarantined" in row.keys() else False,
         "quarantined_at": int(row["quarantined_at"] or 0) if "quarantined_at" in row.keys() else 0,
         "tags": tags,
@@ -1053,29 +1083,81 @@ def normalize_scan_profile(value: Any) -> str:
     return profile if profile in ("slow", "normal", "fast") else "normal"
 
 
+def normalize_device_profile(value: Any) -> str:
+    profile = str(value or "").strip().lower()
+    return profile if profile in DEVICE_PROFILE_CONFIGS else "generic"
+
+
+def normalize_alert_profile(value: Any) -> str:
+    profile = str(value or "").strip().lower()
+    return profile if profile in ALERT_PROFILE_CONFIGS else "normal"
+
+
+def current_alert_profile() -> str:
+    return normalize_alert_profile(get_setting("alert_profile", DEFAULT_SETTINGS["alert_profile"]))
+
+
+def scan_profile_adjustments(profile: str) -> Dict[str, int]:
+    if profile == "fast":
+        return {"fail": -1, "window": -600, "changes": -1, "offline": -1, "recovery": -1}
+    if profile == "slow":
+        return {"fail": 1, "window": 1200, "changes": 1, "offline": 1, "recovery": 1}
+    return {"fail": 0, "window": 0, "changes": 0, "offline": 0, "recovery": 0}
+
+
+def clamp_thresholds(fail: int, window: int, changes: int, offline: int, recovery: int) -> tuple[int, int, int, int, int]:
+    return (
+        max(1, min(fail, 6)),
+        max(600, min(window, 14400)),
+        max(1, min(changes, 12)),
+        max(1, min(offline, 8)),
+        max(1, min(recovery, 8)),
+    )
+
+
 def failure_threshold_for_device(device: Dict[str, Any]) -> int:
     if device.get("critical"):
         return CRITICAL_FAIL_THRESHOLD
     profile = normalize_scan_profile(device.get("scan_profile"))
-    if profile == "fast":
-        return 1
-    if profile == "slow":
-        return 3
-    return FAIL_THRESHOLD
-
-
-def unstable_thresholds_for_device(device: Dict[str, Any]) -> tuple[int, int, int, int]:
-    profile = normalize_scan_profile(device.get("scan_profile"))
-    if device.get("critical") or profile == "fast":
-        return (1200, 5, 2, 2)
-    if profile == "slow":
-        return (3600, 8, 4, 4)
-    return (
+    device_profile = normalize_device_profile(device.get("device_profile"))
+    alert_profile = current_alert_profile()
+    fail, _, _, _, _ = clamp_thresholds(
+        FAIL_THRESHOLD
+        + int(ALERT_PROFILE_CONFIGS[alert_profile]["fail"])
+        + int(DEVICE_PROFILE_CONFIGS[device_profile]["fail"])
+        + int(scan_profile_adjustments(profile)["fail"]),
         UNSTABLE_WINDOW,
         UNSTABLE_CHANGE_THRESHOLD,
         UNSTABLE_OFFLINE_THRESHOLD,
         UNSTABLE_RECOVERY_THRESHOLD,
     )
+    return fail
+
+
+def unstable_thresholds_for_device(device: Dict[str, Any]) -> tuple[int, int, int, int]:
+    alert_profile = current_alert_profile()
+    alert_cfg = ALERT_PROFILE_CONFIGS[alert_profile]
+    if device.get("critical"):
+        _, window, changes, offline, recovery = clamp_thresholds(
+            CRITICAL_FAIL_THRESHOLD,
+            900 + int(alert_cfg["window"]),
+            4 + int(alert_cfg["changes"]),
+            2 + int(alert_cfg["offline"]),
+            2 + int(alert_cfg["recovery"]),
+        )
+        return (window, changes, offline, recovery)
+    profile = normalize_scan_profile(device.get("scan_profile"))
+    device_profile = normalize_device_profile(device.get("device_profile"))
+    preset = DEVICE_PROFILE_CONFIGS[device_profile]
+    scan_cfg = scan_profile_adjustments(profile)
+    _, window, changes, offline, recovery = clamp_thresholds(
+        FAIL_THRESHOLD,
+        UNSTABLE_WINDOW + int(alert_cfg["window"]) + int(preset["window"]) + int(scan_cfg["window"]),
+        UNSTABLE_CHANGE_THRESHOLD + int(alert_cfg["changes"]) + int(preset["changes"]) + int(scan_cfg["changes"]),
+        UNSTABLE_OFFLINE_THRESHOLD + int(alert_cfg["offline"]) + int(preset["offline"]) + int(scan_cfg["offline"]),
+        UNSTABLE_RECOVERY_THRESHOLD + int(alert_cfg["recovery"]) + int(preset["recovery"]) + int(scan_cfg["recovery"]),
+    )
+    return (window, changes, offline, recovery)
 
 
 def should_mark_unstable(conn: sqlite3.Connection, ip: str, device: Dict[str, Any]) -> bool:
@@ -1106,16 +1188,17 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
             "ip": ip, "name": "", "hostname": "", "category": "", "vendor": "", "mac": "",
             "status": "unknown", "last_seen": 0, "critical": False, "pinned": False, "manual": False,
             "ignored": False, "approved": False, "fail_count": 0, "success_count": 0, "state_changes_today": 0,
-            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "maintenance": False, "mute_alerts": False, "scan_profile": "normal", "quarantined": False, "quarantined_at": 0, "tags": []
+            "first_seen": now_ts(), "updated_at": now_ts(), "source": "", "notes": "", "assigned_network": "", "maintenance": False, "mute_alerts": False, "scan_profile": "normal", "device_profile": "generic", "quarantined": False, "quarantined_at": 0, "tags": []
         }
         base.update(fields)
         base["scan_profile"] = normalize_scan_profile(base.get("scan_profile"))
+        base["device_profile"] = normalize_device_profile(base.get("device_profile"))
         conn.execute(
             """
             INSERT INTO devices(
               ip,name,hostname,category,vendor,mac,status,last_seen,critical,pinned,manual,ignored,approved,
-              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,maintenance,mute_alerts,scan_profile,quarantined,quarantined_at,tags_json
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              fail_count,success_count,state_changes_today,first_seen,updated_at,source,notes,assigned_network,maintenance,mute_alerts,scan_profile,device_profile,quarantined,quarantined_at,tags_json
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(ip) DO UPDATE SET
               name=excluded.name, hostname=excluded.hostname, category=excluded.category, vendor=excluded.vendor,
               mac=excluded.mac, status=excluded.status, last_seen=excluded.last_seen, critical=excluded.critical,
@@ -1123,7 +1206,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
               fail_count=excluded.fail_count, success_count=excluded.success_count,
               state_changes_today=excluded.state_changes_today, first_seen=excluded.first_seen,
               updated_at=excluded.updated_at, source=excluded.source, notes=excluded.notes, assigned_network=excluded.assigned_network,
-              maintenance=excluded.maintenance, mute_alerts=excluded.mute_alerts, scan_profile=excluded.scan_profile, quarantined=excluded.quarantined, quarantined_at=excluded.quarantined_at, tags_json=excluded.tags_json
+              maintenance=excluded.maintenance, mute_alerts=excluded.mute_alerts, scan_profile=excluded.scan_profile, device_profile=excluded.device_profile, quarantined=excluded.quarantined, quarantined_at=excluded.quarantined_at, tags_json=excluded.tags_json
             """,
             (
                 ip,
@@ -1132,7 +1215,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
                 1 if base["pinned"] else 0, 1 if base["manual"] else 0, 1 if base["ignored"] else 0, 1 if base.get("approved") else 0,
                 int(base["fail_count"] or 0), int(base["success_count"] or 0), int(base["state_changes_today"] or 0),
                 int(base["first_seen"] or now_ts()), int(base["updated_at"] or now_ts()), base["source"],
-                base["notes"], base.get("assigned_network", ""), 1 if base.get("maintenance") else 0, 1 if base.get("mute_alerts") else 0, base["scan_profile"], 1 if base.get("quarantined") else 0, int(base.get("quarantined_at") or 0), json.dumps(base["tags"]),
+                base["notes"], base.get("assigned_network", ""), 1 if base.get("maintenance") else 0, 1 if base.get("mute_alerts") else 0, base["scan_profile"], base["device_profile"], 1 if base.get("quarantined") else 0, int(base.get("quarantined_at") or 0), json.dumps(base["tags"]),
             ),
         )
         conn.commit()
@@ -2016,12 +2099,12 @@ def monitor_one_safe(ip: str) -> None:
             conn.execute(
                 """
                 UPDATE devices SET hostname=?, category=?, vendor=?, mac=?, status=?, last_seen=?, fail_count=?,
-                    success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=?, assigned_network=?, maintenance=?, mute_alerts=?, scan_profile=? WHERE ip=?
+                    success_count=?, state_changes_today=?, updated_at=?, name=?, source=?, approved=?, assigned_network=?, maintenance=?, mute_alerts=?, scan_profile=?, device_profile=? WHERE ip=?
                 """,
                 (
                     d["hostname"], d["category"], d["vendor"], d["mac"], d["status"], int(d["last_seen"] or 0),
                     d["fail_count"], d["success_count"], d["state_changes_today"], d["updated_at"], d["name"], d["source"],
-                    1 if d.get("approved") else 0, d.get("assigned_network", ""), 1 if d.get("maintenance") else 0, 1 if d.get("mute_alerts") else 0, d.get("scan_profile", "normal"), ip,
+                    1 if d.get("approved") else 0, d.get("assigned_network", ""), 1 if d.get("maintenance") else 0, 1 if d.get("mute_alerts") else 0, d.get("scan_profile", "normal"), normalize_device_profile(d.get("device_profile")), ip,
                 ),
             )
             conn.commit()
@@ -2199,7 +2282,7 @@ def local_timezone() -> ZoneInfo:
     try:
         return ZoneInfo(tz_name)
     except Exception:
-        return ZoneInfo("Asia/Jerusalem")
+        return timezone.utc
 
 
 def history_report_payload(conn: sqlite3.Connection, ip: str, from_ts: int | None = None, to_ts: int | None = None) -> Dict[str, Any]:
@@ -2717,7 +2800,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
     try:
         local_tz = ZoneInfo(tz_name)
     except Exception:
-        local_tz = ZoneInfo("Asia/Jerusalem")
+        local_tz = timezone.utc
 
     now = datetime.now(local_tz)
     day_start_local = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -3036,9 +3119,19 @@ def root():
     return FileResponse("/app/web/index.html", headers=NO_CACHE_HEADERS)
 
 
+@app.get("/manifest.webmanifest")
+def pwa_manifest():
+    return FileResponse("/app/web/manifest.webmanifest", media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def pwa_service_worker():
+    return FileResponse("/app/web/sw.js", media_type="application/javascript", headers=NO_CACHE_HEADERS)
+
+
 @app.get("/settings.html")
 def settings_page():
-    return FileResponse("/app/web/settings.html", headers=NO_CACHE_HEADERS)
+    return FileResponse("/app/web/index.html", headers=NO_CACHE_HEADERS)
 
 
 @app.get("/viewer")
@@ -3187,7 +3280,7 @@ def api_export_devices_csv():
     rows = get_devices(include_ignored=True, include_quarantined=True)
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ip", "display_name", "hostname", "vendor", "category", "status", "assigned_network", "mac", "last_seen", "approved", "manual", "critical", "pinned", "maintenance", "mute_alerts", "scan_profile", "quarantined", "quarantined_at", "notes"])
+    writer.writerow(["ip", "display_name", "hostname", "vendor", "category", "status", "assigned_network", "mac", "last_seen", "approved", "manual", "critical", "pinned", "maintenance", "mute_alerts", "scan_profile", "device_profile", "quarantined", "quarantined_at", "notes"])
     for device in rows:
         writer.writerow([
             device.get("ip", ""),
@@ -3206,6 +3299,7 @@ def api_export_devices_csv():
             1 if device.get("maintenance") else 0,
             1 if device.get("mute_alerts") else 0,
             device.get("scan_profile", "normal"),
+            device.get("device_profile", "generic"),
             1 if device.get("quarantined") else 0,
             int(device.get("quarantined_at") or 0),
             device.get("notes", ""),
@@ -3283,6 +3377,7 @@ async def api_import_devices(file: UploadFile = File(...)):
             "maintenance": csv_bool(row.get("maintenance")),
             "mute_alerts": csv_bool(row.get("mute_alerts")),
             "scan_profile": normalize_scan_profile(row.get("scan_profile")),
+            "device_profile": normalize_device_profile(row.get("device_profile")),
             "quarantined": csv_bool(row.get("quarantined")),
             "quarantined_at": csv_int(row.get("quarantined_at"), 0),
             "notes": str(row.get("notes", "")).strip(),
@@ -3464,7 +3559,7 @@ def api_ignore(ip: str):
 
 
 @app.get("/api/update")
-def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", scan_profile: str = "normal", maintenance: int = -1, mute_alerts: int = -1, pinned: int = -1, critical: int = -1):
+def api_update(ip: str, name: str = "", category: str = "", tags: str = "", notes: str = "", assigned_network: str = "", scan_profile: str = "normal", device_profile: str = "generic", maintenance: int = -1, mute_alerts: int = -1, pinned: int = -1, critical: int = -1):
     conn = db()
     try:
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
@@ -3475,6 +3570,7 @@ def api_update(ip: str, name: str = "", category: str = "", tags: str = "", note
             d["notes"] = unquote(notes)
             d["assigned_network"] = unquote(assigned_network)
             d["scan_profile"] = normalize_scan_profile(unquote(scan_profile))
+            d["device_profile"] = normalize_device_profile(unquote(device_profile))
             d["tags"] = [x.strip() for x in unquote(tags).split(",") if x.strip()]
             if maintenance in (0,1):
                 d["maintenance"] = bool(maintenance)
@@ -3619,6 +3715,7 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
         "maintenance": False,
         "mute_alerts": False,
         "scan_profile": "normal",
+        "device_profile": "generic",
         "tags": [],
     }
     upsert_device(ip, d)
@@ -3638,13 +3735,14 @@ def api_resolve_alert(alert_id: int):
 
 
 @app.get("/api/save_settings")
-def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", status_animation: str = "blink", history_retention_days: str = "30", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
+def api_save_settings(auto_refresh: str = "30", default_view: str = "table", dashboard_style: str = "advanced", theme: str = "light", language: str = "he", status_animation: str = "blink", history_retention_days: str = "30", alert_profile: str = "normal", networks: str = "", network_names: str = "", discovery_mode: str = "auto_manual", discovery_protocols: str = ""):
     set_setting("auto_refresh", auto_refresh or "30")
     set_setting("default_view", default_view or "table")
     set_setting("dashboard_style", dashboard_style or "advanced")
     set_setting("theme", theme if theme in ("light", "dark") else "light")
     set_setting("language", language if language in ("he", "en") else "he")
     set_setting("status_animation", status_animation if status_animation in ("blink", "static") else "blink")
+    set_setting("alert_profile", normalize_alert_profile(alert_profile))
     try:
         retention_value = max(1, min(int(str(history_retention_days or "30").strip() or "30"), 365))
     except Exception:
@@ -3682,6 +3780,7 @@ async def api_save_settings_post(request: Request):
         language=str(payload.get("language", "he") or "he"),
         status_animation=str(payload.get("status_animation", "blink") or "blink"),
         history_retention_days=str(payload.get("history_retention_days", "30") or "30"),
+        alert_profile=str(payload.get("alert_profile", "normal") or "normal"),
         networks="\n".join(networks_raw) if isinstance(networks_raw, list) else str(networks_raw),
         network_names=json.dumps(payload.get("network_names", {}) or {}, ensure_ascii=False),
         discovery_mode=str(payload.get("discovery_mode", "auto_manual") or "auto_manual"),

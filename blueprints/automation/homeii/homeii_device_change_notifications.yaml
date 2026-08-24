@@ -1,0 +1,174 @@
+blueprint:
+  name: HOMEii Device Change Notifications
+  description: >
+    Send notifications when HOMEii devices go offline, come back online,
+    become unstable, or are newly discovered. Leave any action block empty
+    if you want to disable notifications for that event type.
+  domain: automation
+  input:
+    offline_sensor:
+      name: Disconnected devices detail sensor
+      description: Pick the HOMEii disconnected devices detail sensor.
+      selector:
+        entity:
+          domain: sensor
+    unstable_sensor:
+      name: Unstable devices detail sensor
+      description: Pick the HOMEii unstable devices detail sensor.
+      selector:
+        entity:
+          domain: sensor
+    new_sensor:
+      name: New devices detail sensor
+      description: Pick the HOMEii new devices detail sensor.
+      selector:
+        entity:
+          domain: sensor
+    offline_actions:
+      name: Offline notification actions
+      description: >
+        Actions to run when devices go offline.
+        Use {{ homeii_title }} and {{ homeii_message }} inside your action templates.
+      default: []
+      selector:
+        action: {}
+    recovered_actions:
+      name: Recovery notification actions
+      description: >
+        Actions to run when devices return online.
+        Use {{ homeii_title }} and {{ homeii_message }} inside your action templates.
+      default: []
+      selector:
+        action: {}
+    unstable_actions:
+      name: Unstable notification actions
+      description: >
+        Actions to run when devices become unstable.
+        Use {{ homeii_title }} and {{ homeii_message }} inside your action templates.
+      default: []
+      selector:
+        action: {}
+    new_actions:
+      name: New device notification actions
+      description: >
+        Actions to run when HOMEii discovers new devices.
+        Use {{ homeii_title }} and {{ homeii_message }} inside your action templates.
+      default: []
+      selector:
+        action: {}
+
+mode: queued
+max: 20
+
+triggers:
+  - trigger: state
+    entity_id: !input offline_sensor
+    id: offline
+  - trigger: state
+    entity_id: !input unstable_sensor
+    id: unstable
+  - trigger: state
+    entity_id: !input new_sensor
+    id: new
+
+variables:
+  current_items: "{{ trigger.to_state.attributes.items | default([], true) }}"
+  previous_items: "{{ trigger.from_state.attributes.items | default([], true) }}"
+  added_count: >-
+    {% set prev_ips = previous_items | map(attribute='ip') | list %}
+    {% set ns = namespace(count=0) %}
+    {% for item in current_items %}
+      {% if item.ip not in prev_ips %}
+        {% set ns.count = ns.count + 1 %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.count }}
+  removed_count: >-
+    {% set curr_ips = current_items | map(attribute='ip') | list %}
+    {% set ns = namespace(count=0) %}
+    {% for item in previous_items %}
+      {% if item.ip not in curr_ips %}
+        {% set ns.count = ns.count + 1 %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.count }}
+  added_devices_text: >-
+    {% set prev_ips = previous_items | map(attribute='ip') | list %}
+    {% set ns = namespace(items=[]) %}
+    {% for item in current_items %}
+      {% if item.ip not in prev_ips %}
+        {% set label = item.name or item.ip or 'Unknown device' %}
+        {% if item.ip %}
+          {% set label = label ~ ' (' ~ item.ip ~ ')' %}
+        {% endif %}
+        {% set ns.items = ns.items + [label] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.items | join(', ') }}
+  removed_devices_text: >-
+    {% set curr_ips = current_items | map(attribute='ip') | list %}
+    {% set ns = namespace(items=[]) %}
+    {% for item in previous_items %}
+      {% if item.ip not in curr_ips %}
+        {% set label = item.name or item.ip or 'Unknown device' %}
+        {% if item.ip %}
+          {% set label = label ~ ' (' ~ item.ip ~ ')' %}
+        {% endif %}
+        {% set ns.items = ns.items + [label] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.items | join(', ') }}
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: offline
+          - condition: template
+            value_template: "{{ added_count | int > 0 }}"
+        sequence:
+          - variables:
+              homeii_title: "HOMEii: Devices offline"
+              homeii_message: "{{ added_devices_text }}"
+              homeii_event: "offline"
+              homeii_count: "{{ added_count | int }}"
+          - sequence: !input offline_actions
+
+      - conditions:
+          - condition: trigger
+            id: offline
+          - condition: template
+            value_template: "{{ removed_count | int > 0 }}"
+        sequence:
+          - variables:
+              homeii_title: "HOMEii: Devices back online"
+              homeii_message: "{{ removed_devices_text }}"
+              homeii_event: "recovered"
+              homeii_count: "{{ removed_count | int }}"
+          - sequence: !input recovered_actions
+
+      - conditions:
+          - condition: trigger
+            id: unstable
+          - condition: template
+            value_template: "{{ added_count | int > 0 }}"
+        sequence:
+          - variables:
+              homeii_title: "HOMEii: Unstable devices"
+              homeii_message: "{{ added_devices_text }}"
+              homeii_event: "unstable"
+              homeii_count: "{{ added_count | int }}"
+          - sequence: !input unstable_actions
+
+      - conditions:
+          - condition: trigger
+            id: new
+          - condition: template
+            value_template: "{{ added_count | int > 0 }}"
+        sequence:
+          - variables:
+              homeii_title: "HOMEii: New devices discovered"
+              homeii_message: "{{ added_devices_text }}"
+              homeii_event: "new"
+              homeii_count: "{{ added_count | int }}"
+          - sequence: !input new_actions

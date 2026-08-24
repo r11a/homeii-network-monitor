@@ -1,0 +1,71 @@
+views:
+  - title: HOMEii
+    path: homeii
+    badges: []
+    cards:
+      - type: custom:homeii-dynamic-board-card
+        title: HOMEii Dynamic Board
+        offline_entity: sensor.homeii_network_monitor_disconnected_devices
+        offline_details_entity: sensor.homeii_network_monitor_disconnected_devices_details
+        unstable_entity: sensor.homeii_network_monitor_unstable_devices
+        unstable_details_entity: sensor.homeii_network_monitor_unstable_devices_details
+        new_entity: sensor.homeii_network_monitor_new_devices
+        new_details_entity: sensor.homeii_network_monitor_new_devices_details
+        alerts_entity: sensor.homeii_network_monitor_open_alerts
+        alerts_details_entity: sensor.homeii_network_monitor_open_alerts_details
+        online_entity: sensor.homeii_network_monitor_connected_devices
+        online_details_entity: sensor.homeii_network_monitor_connected_devices_details
+        critical_entity: sensor.homeii_network_monitor_critical_devices
+        critical_details_entity: sensor.homeii_network_monitor_critical_devices_details
+        pinned_entity: sensor.homeii_network_monitor_pinned_devices
+        pinned_details_entity: sensor.homeii_network_monitor_pinned_devices_details
+        default_view: offline
+        max_items: 10
+
+      - type: custom:homeii-category-board-card
+        title: HOMEii Category Board
+        summary_entity: sensor.homeii_network_monitor_category_summary
+        devices_entity: sensor.homeii_network_monitor_all_devices_details
+        max_categories: 8
+        max_items: 10
+        default_category: ""
+
+      - type: custom:homeii-overview-card
+        title: HOMEii Overview
+        total_entity: sensor.homeii_network_monitor_total_devices
+        online_entity: sensor.homeii_network_monitor_connected_devices
+        offline_entity: sensor.homeii_network_monitor_disconnected_devices
+        unstable_entity: sensor.homeii_network_monitor_unstable_devices
+        new_entity: sensor.homeii_network_monitor_new_devices
+        alerts_entity: sensor.homeii_network_monitor_open_alerts
+        critical_entity: sensor.homeii_network_monitor_critical_devices
+        pinned_entity: sensor.homeii_network_monitor_pinned_devices
+        last_scan_entity: sensor.homeii_network_monitor_last_scan_finished
+        category_summary_entity: sensor.homeii_network_monitor_category_summary
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:homeii-device-list-card
+            title: Disconnected Devices
+            entity: sensor.homeii_network_monitor_disconnected_devices_details
+            empty_text: No disconnected devices
+            max_items: 8
+
+          - type: custom:homeii-device-list-card
+            title: Unstable Devices
+            entity: sensor.homeii_network_monitor_unstable_devices_details
+            empty_text: No unstable devices
+            max_items: 8
+
+          - type: custom:homeii-device-list-card
+            title: New Devices
+            entity: sensor.homeii_network_monitor_new_devices_details
+            empty_text: No new devices
+            max_items: 8
+
+          - type: custom:homeii-category-health-card
+            title: Category Health
+            entity: sensor.homeii_network_monitor_category_summary
+            max_items: 8

@@ -1,0 +1,12 @@
+{
+  "domain": "homeii_network_monitor",
+  "name": "HOMEii Network Monitor",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/r11a/homeii-network-monitor",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/r11a/homeii-network-monitor/issues",
+  "single_config_entry": true,
+  "version": "6.0.0"
+}

@@ -251,7 +251,7 @@ body[data-lang="en"] .tool-inline{direction:ltr;text-align:left}
     <div class="brand">
       <div>
         <div class="brand-title">HOMEii Network</div>
-        <div class="brand-sub">מוניטור <span id="versionText">5.0.0</span> • הגדרות</div>
+        <div class="brand-sub">מוניטור <span id="versionText">6.0.0</span> • הגדרות</div>
       </div>
       <div class="logo"><img src="./logo" alt="" onerror="this.style.display='none'; this.parentNode.textContent='H';"></div>
     </div>
@@ -295,6 +295,7 @@ body[data-lang="en"] .tool-inline{direction:ltr;text-align:left}
         <div class="settings-form-grid">
           <div class="field"><label>רענון אוטומטי (שניות)</label><input id="setRefresh" type="number" min="5" step="5"></div>
           <div class="field"><label>שמירת היסטוריה (ימים)</label><input id="setHistoryRetention" type="number" min="1" max="365" step="1"></div>
+          <div class="field"><label>פרופיל התראות</label><select id="setAlertProfile"><option value="quiet">שקט</option><option value="normal">רגיל</option><option value="aggressive">אגרסיבי</option></select></div>
           <div class="field"><label>תצוגת ברירת מחדל</label><select id="setView"><option value="table">טבלה</option><option value="grid">כרטיסים</option></select></div>
           <div class="field"><label>סגנון דשבורד</label><select id="setStyle"><option value="advanced">מתקדם</option><option value="compact">קומפקטי</option></select></div>
           <div class="field"><label>מצב גילוי</label><select id="setDiscoveryMode"><option value="auto_manual">אוטומטי + ידני</option><option value="manual_only">ידני בלבד</option><option value="auto_only">אוטומטי בלבד</option></select></div>
@@ -514,6 +515,10 @@ const I18N = {
     generalDesc: 'הגדרות כלליות של הממשק, גילוי ותצוגת ברירת מחדל.',
     refreshSeconds: 'רענון אוטומטי (שניות)',
     historyRetentionDays: 'שמירת היסטוריה (ימים)',
+    alertProfile: 'פרופיל התראות',
+    alertProfileQuiet: 'שקט',
+    alertProfileNormal: 'רגיל',
+    alertProfileAggressive: 'אגרסיבי',
     defaultView: 'תצוגת ברירת מחדל',
     dashboardStyle: 'סגנון דשבורד',
     discoveryMode: 'מצב גילוי',
@@ -745,6 +750,10 @@ const I18N = {
     generalDesc: 'General interface, discovery, and default view settings.',
     refreshSeconds: 'Auto refresh (seconds)',
     historyRetentionDays: 'History retention (days)',
+    alertProfile: 'Alert profile',
+    alertProfileQuiet: 'Quiet',
+    alertProfileNormal: 'Normal',
+    alertProfileAggressive: 'Aggressive',
     defaultView: 'Default view',
     dashboardStyle: 'Dashboard style',
     discoveryMode: 'Discovery mode',
@@ -1033,7 +1042,7 @@ function applyTranslations() {
     btn.textContent = tr(navKeys[btn.dataset.page] || '');
   });
 
-  const version = qs('versionText').textContent || '5.0.0';
+  const version = qs('versionText').textContent || '6.0.0';
   document.querySelector('.brand-sub').textContent = tr('brandSub', { version });
   document.querySelector('.hero-sub').textContent = tr('heroSub');
 
@@ -1066,6 +1075,7 @@ function applyTranslations() {
   const labels = {
     setRefresh: 'refreshSeconds',
     setHistoryRetention: 'historyRetentionDays',
+    setAlertProfile: 'alertProfile',
     setView: 'defaultView',
     setStyle: 'dashboardStyle',
     setDiscoveryMode: 'discoveryMode',
@@ -1156,6 +1166,9 @@ function applyTranslations() {
   if (qs('setView')?.options[1]) qs('setView').options[1].text = tr('optionGrid');
   if (qs('setStyle')?.options[0]) qs('setStyle').options[0].text = tr('optionAdvanced');
   if (qs('setStyle')?.options[1]) qs('setStyle').options[1].text = tr('optionCompact');
+  if (qs('setAlertProfile')?.options[0]) qs('setAlertProfile').options[0].text = tr('alertProfileQuiet');
+  if (qs('setAlertProfile')?.options[1]) qs('setAlertProfile').options[1].text = tr('alertProfileNormal');
+  if (qs('setAlertProfile')?.options[2]) qs('setAlertProfile').options[2].text = tr('alertProfileAggressive');
   if (qs('setDiscoveryMode')?.options[0]) qs('setDiscoveryMode').options[0].text = tr('optionAutoManual');
   if (qs('setDiscoveryMode')?.options[1]) qs('setDiscoveryMode').options[1].text = tr('optionManualOnly');
   if (qs('setDiscoveryMode')?.options[2]) qs('setDiscoveryMode').options[2].text = tr('optionAutoOnly');
@@ -1303,6 +1316,7 @@ async function saveSettings() {
     body: JSON.stringify({
       auto_refresh: qs('setRefresh').value || 30,
       history_retention_days: qs('setHistoryRetention').value || 30,
+      alert_profile: qs('setAlertProfile').value || 'normal',
       default_view: qs('setView').value,
       dashboard_style: qs('setStyle').value,
       theme: qs('setTheme').value,
@@ -1319,7 +1333,14 @@ async function saveSettings() {
   applyTheme(qs('setTheme').value);
   applyTranslations();
   renderSettingsData(state.status || {}, {
-    settings: { ...state.settings, language: qs('setLanguage').value, theme: qs('setTheme').value, status_animation: qs('setStatusAnimation').value, history_retention_days: qs('setHistoryRetention').value || 30 },
+    settings: {
+      ...state.settings,
+      language: qs('setLanguage').value,
+      theme: qs('setTheme').value,
+      status_animation: qs('setStatusAnimation').value,
+      history_retention_days: qs('setHistoryRetention').value || 30,
+      alert_profile: qs('setAlertProfile').value || 'normal'
+    },
     networks: (state.networkDrafts || []).map(item => item.cidr),
     network_names: names,
     discovery_mode: qs('setDiscoveryMode').value,
@@ -1389,9 +1410,10 @@ function renderSettingsData(status, settingsData) {
   state.status = status;
   state.settings = settingsData.settings || {};
   state.dbPath = settingsData.db_path || '';
-  qs('versionText').textContent = status.version || '5.0.0';
+  qs('versionText').textContent = status.version || '6.0.0';
   qs('setRefresh').value = state.settings.auto_refresh || 30;
   qs('setHistoryRetention').value = state.settings.history_retention_days || 30;
+  qs('setAlertProfile').value = state.settings.alert_profile || 'normal';
   qs('setView').value = state.settings.default_view || 'table';
   qs('setStyle').value = state.settings.dashboard_style || 'advanced';
   qs('setTheme').value = state.settings.theme || 'light';

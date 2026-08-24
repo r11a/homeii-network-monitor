@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect HOMEii Network Monitor",
+        "description": "Connect Home Assistant to the HOMEii addon API.",
+        "data": {
+          "url": "Addon URL",
+          "scan_interval": "Refresh interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the HOMEii API"
+    },
+    "abort": {
+      "single_instance_allowed": "Only one HOMEii Network Monitor integration can be configured"
+    }
+  }
+}

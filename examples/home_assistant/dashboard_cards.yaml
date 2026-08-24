@@ -1,0 +1,89 @@
+# HOMEii Network Monitor dashboard example
+# Copy cards manually into a Lovelace dashboard and adjust entity IDs if needed.
+
+type: vertical-stack
+cards:
+  - type: entities
+    title: HOMEii Actions
+    entities:
+      - entity: button.homeii_network_monitor_scan_now
+      - entity: button.homeii_network_monitor_refresh_data
+      - entity: button.homeii_network_monitor_accept_all_new_devices
+
+  - type: glance
+    title: HOMEii Overview
+    columns: 4
+    entities:
+      - entity: sensor.homeii_network_monitor_total_devices
+        name: Total
+      - entity: sensor.homeii_network_monitor_connected_devices
+        name: Online
+      - entity: sensor.homeii_network_monitor_disconnected_devices
+        name: Offline
+      - entity: sensor.homeii_network_monitor_unstable_devices
+        name: Unstable
+      - entity: sensor.homeii_network_monitor_new_devices
+        name: New
+      - entity: sensor.homeii_network_monitor_open_alerts
+        name: Alerts
+      - entity: sensor.homeii_network_monitor_critical_devices
+        name: Critical
+      - entity: sensor.homeii_network_monitor_pinned_devices
+        name: Pinned
+
+  - type: history-graph
+    title: HOMEii Last 24 Hours
+    hours_to_show: 24
+    entities:
+      - entity: sensor.homeii_network_monitor_connected_devices
+      - entity: sensor.homeii_network_monitor_disconnected_devices
+      - entity: sensor.homeii_network_monitor_unstable_devices
+      - entity: sensor.homeii_network_monitor_new_devices
+
+  - type: markdown
+    title: Disconnected Devices
+    content: >-
+      {% set items = state_attr('sensor.homeii_network_monitor_disconnected_devices_details', 'items') or [] %}
+      {% if items | count == 0 %}
+      No disconnected devices.
+      {% else %}
+      {% for item in items %}
+      - **{{ item.name or item.ip }}**{% if item.ip %} ({{ item.ip }}){% endif %}{% if item.category %} · {{ item.category }}{% endif %}
+      {% endfor %}
+      {% endif %}
+
+  - type: markdown
+    title: Unstable Devices
+    content: >-
+      {% set items = state_attr('sensor.homeii_network_monitor_unstable_devices_details', 'items') or [] %}
+      {% if items | count == 0 %}
+      No unstable devices.
+      {% else %}
+      {% for item in items %}
+      - **{{ item.name or item.ip }}**{% if item.ip %} ({{ item.ip }}){% endif %}{% if item.network %} · {{ item.network }}{% endif %}
+      {% endfor %}
+      {% endif %}
+
+  - type: markdown
+    title: New Devices
+    content: >-
+      {% set items = state_attr('sensor.homeii_network_monitor_new_devices_details', 'items') or [] %}
+      {% if items | count == 0 %}
+      No new devices.
+      {% else %}
+      {% for item in items %}
+      - **{{ item.name or item.ip }}**{% if item.ip %} ({{ item.ip }}){% endif %}{% if item.vendor %} · {{ item.vendor }}{% endif %}
+      {% endfor %}
+      {% endif %}
+
+  - type: markdown
+    title: Open Alerts
+    content: >-
+      {% set items = state_attr('sensor.homeii_network_monitor_open_alerts_details', 'items') or [] %}
+      {% if items | count == 0 %}
+      No open alerts.
+      {% else %}
+      {% for item in items[:10] %}
+      - **{{ item.severity or 'info' | upper }}** · {{ item.title or 'Alert' }}{% if item.ip %} ({{ item.ip }}){% endif %}
+      {% endfor %}
+      {% endif %}

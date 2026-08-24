@@ -1,0 +1,66 @@
+blueprint:
+  name: HOMEii Open Alert Notifications
+  description: >
+    Send a notification when HOMEii opens new alerts.
+    Use the detail sensor attributes to include titles, severities, and IP addresses.
+  domain: automation
+  input:
+    open_alerts_sensor:
+      name: Open alerts detail sensor
+      description: Pick the HOMEii open alerts detail sensor.
+      selector:
+        entity:
+          domain: sensor
+    notification_actions:
+      name: Notification actions
+      description: >
+        Actions to run when new alerts are opened.
+        Use {{ homeii_title }} and {{ homeii_message }} inside your action templates.
+      default: []
+      selector:
+        action: {}
+
+mode: queued
+max: 20
+
+triggers:
+  - trigger: state
+    entity_id: !input open_alerts_sensor
+
+variables:
+  current_items: "{{ trigger.to_state.attributes.items | default([], true) }}"
+  previous_items: "{{ trigger.from_state.attributes.items | default([], true) }}"
+  added_count: >-
+    {% set prev_ids = previous_items | map(attribute='id') | list %}
+    {% set ns = namespace(count=0) %}
+    {% for item in current_items %}
+      {% if item.id not in prev_ids %}
+        {% set ns.count = ns.count + 1 %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.count }}
+  added_alerts_text: >-
+    {% set prev_ids = previous_items | map(attribute='id') | list %}
+    {% set ns = namespace(items=[]) %}
+    {% for item in current_items %}
+      {% if item.id not in prev_ids %}
+        {% set label = (item.severity or 'info') | upper ~ ': ' ~ (item.title or 'Alert') %}
+        {% if item.ip %}
+          {% set label = label ~ ' (' ~ item.ip ~ ')' %}
+        {% endif %}
+        {% set ns.items = ns.items + [label] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.items | join(', ') }}
+
+conditions:
+  - condition: template
+    value_template: "{{ added_count | int > 0 }}"
+
+actions:
+  - variables:
+      homeii_title: "HOMEii: New open alerts"
+      homeii_message: "{{ added_alerts_text }}"
+      homeii_event: "alerts"
+      homeii_count: "{{ added_count | int }}"
+  - sequence: !input notification_actions

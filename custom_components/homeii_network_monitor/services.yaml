@@ -1,0 +1,70 @@
+scan_now:
+  name: Scan now
+  description: Trigger a HOMEii scan immediately.
+  fields:
+    mode:
+      name: Mode
+      description: Scan mode to request from the HOMEii addon.
+      example: manual
+      default: manual
+      selector:
+        select:
+          options:
+            - manual
+            - auto
+
+refresh_data:
+  name: Refresh data
+  description: Force the integration to refresh its data from HOMEii.
+
+accept_all_new:
+  name: Accept all new devices
+  description: Approve every currently pending device in HOMEii.
+
+accept_device:
+  name: Accept device
+  description: Approve a single device by IP address.
+  fields:
+    ip:
+      name: IP address
+      description: Device IP address.
+      example: 192.168.1.100
+      required: true
+      selector:
+        text:
+
+ignore_device:
+  name: Ignore device
+  description: Ignore a single device by IP address.
+  fields:
+    ip:
+      name: IP address
+      description: Device IP address.
+      example: 192.168.1.100
+      required: true
+      selector:
+        text:
+
+toggle_pinned:
+  name: Toggle pinned
+  description: Toggle pinned status for a device by IP address.
+  fields:
+    ip:
+      name: IP address
+      description: Device IP address.
+      example: 192.168.1.100
+      required: true
+      selector:
+        text:
+
+toggle_critical:
+  name: Toggle critical
+  description: Toggle critical status for a device by IP address.
+  fields:
+    ip:
+      name: IP address
+      description: Device IP address.
+      example: 192.168.1.100
+      required: true
+      selector:
+        text:
