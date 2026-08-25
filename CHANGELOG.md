@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.5.0
+
+- Rebuilt the command center around live fleet health, prioritized outages, unacknowledged incidents, operator acknowledgement and a dynamic event journal.
+- Added a real rolling 24-hour health timeline instead of calculating future hours in the current calendar day.
+- Made category availability scores prominent and added clear available-versus-total counts.
+- Limited audible alerts to new device disconnects and added a prominent device-detail disconnect toast.
+- Corrected device-tile health score overflow and connected the score to measured 24-hour availability.
+- Corrected mobile history layout containment so charts and navigation cannot shift or split the page.
+- Added control-room typography and responsive layouts for mobile, desktop and large wall displays.
+- Kept alert acknowledgement permission-aware for administrators and explicitly authorized operators.
+
 ## 6.4.0
 
 - Moved direct Web access to port `8383`; the external console requires a HOMEii username and password while Home Assistant Ingress continues to use the authenticated HA identity.

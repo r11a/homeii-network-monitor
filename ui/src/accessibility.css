@@ -20,7 +20,7 @@ body, button, input, select, textarea { font-size: 1rem; }
 p, li, td, dd, label { font-size: max(.875rem, 14px); }
 small, .micro-label, .category-tags, .incident-meta, .device-facts span,
 .device-card p, .device-card code, .flag, .device-table th, .tool-selector button span,
-.event-tile > span, .health-score small, .device-availability > div, .mode-switch button span {
+.event-tile > span, .device-availability > div, .mode-switch button span {
   font-size: max(.75rem, 12px) !important;
   line-height: 1.45;
 }
@@ -51,6 +51,98 @@ h3, .admin-card h3 {
 
 .brand-lockup strong { font-size: 1.25rem; font-weight: 700; }
 .brand-lockup small { font-size: .7rem !important; font-weight: 500; letter-spacing: .09em; }
+.category-card .availability-score {
+  font-size: clamp(2.25rem, 3.4vw, 3.5rem) !important;
+  line-height: 1;
+  font-weight: 750;
+}
+
+.offline-toast {
+  position: fixed !important;
+  top: auto;
+  height: auto;
+  border-inline-end: 1px solid #ff6679;
+  z-index: 250;
+  inset-inline-end: clamp(16px, 2.2vw, 36px);
+  bottom: clamp(16px, 2.2vw, 36px);
+  width: min(460px, calc(100vw - 32px));
+  min-height: 132px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #ff6679;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #35131bfa, #161116f5);
+  box-shadow: 0 24px 80px #000b, 0 0 34px #ff526a30, inset 0 1px #ffffff18;
+  animation: offline-toast-in .35s ease both, offline-toast-pulse 2.4s ease-in-out 2;
+}
+.offline-toast.critical { border-width: 2px; box-shadow: 0 24px 80px #000c, 0 0 42px #ff526a55; }
+.offline-toast-icon { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 17px; color: #fff; background: linear-gradient(145deg, #ff6679, #be263e); box-shadow: 0 10px 30px #ff526a42; }
+.offline-toast-icon svg { width: 27px; height: 27px; }
+.offline-toast span { display: block; color: #ff9caa; font-size: .82rem; font-weight: 700; }
+.offline-toast strong { display: block; margin-top: 2px; color: #fff; font-size: clamp(1.2rem, 2vw, 1.55rem); line-height: 1.2; }
+.offline-toast p, .offline-toast small { margin: 4px 0 0; color: #d5b9bf; }
+.offline-toast small { display: block; font-size: .75rem; }
+@keyframes offline-toast-in { from { opacity: 0; transform: translateY(24px) scale(.96); } }
+@keyframes offline-toast-pulse { 50% { border-color: #ffafba; box-shadow: 0 24px 80px #000b, 0 0 50px #ff526a65; } }
+
+/* Settings content must shrink with the viewport instead of widening the page. */
+.settings-page, .settings-layout, .settings-content,
+.settings-content > *, .users-panel, .operations-admin,
+.admin-grid, .admin-card, .user-create-card, .user-list,
+.network-list, .protocol-grid, .transfer-grid, .choice-grid {
+  min-width: 0;
+  max-width: 100%;
+}
+.settings-page { width: 100%; overflow-x: clip; }
+.settings-content { width: 100%; overflow: hidden; }
+.settings-content input, .settings-content select, .settings-content textarea,
+.settings-content label, .settings-content button, .settings-content a {
+  min-width: 0;
+  max-width: 100%;
+}
+.settings-nav { width: 100%; max-width: 100%; }
+.user-list article {
+  grid-template-columns: 44px minmax(0, 1fr) minmax(110px, 140px) repeat(3, minmax(96px, auto));
+}
+.user-list article > * { min-width: 0; }
+.user-list article strong, .user-list article small,
+.network-list strong, .network-list code, .audit-table code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.label-builder { grid-template-columns: minmax(105px, .7fr) minmax(150px, 1.5fr) 54px minmax(100px, .8fr) auto; }
+.audit-table > div { grid-template-columns: minmax(130px, 180px) minmax(100px, 140px) minmax(0, 1fr) 80px; }
+
+@media (max-width: 1180px) {
+  .user-list article { grid-template-columns: 44px minmax(0, 1fr) minmax(110px, 140px); }
+  .user-list article > .mini-toggle { grid-column: auto; }
+  .label-builder { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .label-builder input[type='color'] { width: 100%; }
+}
+.category-card.has-alert .availability-score { color: var(--red); }
+.category-tags .category-ratio { font-size: .78rem !important; }
+.category-tags .category-ratio strong { color: var(--green); font-size: 1rem; }
+.category-card.has-alert .category-ratio strong { color: var(--red); }
+.health-score strong {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.health-score strong sup { font-size: .55em; margin-inline-start: 1px; }
+.health-score > span {
+  max-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .56rem;
+  line-height: 1.1;
+  color: var(--muted);
+}
 .button, .icon-button, .filter-pills button, .settings-nav button { min-height: 44px; font-weight: 550; }
 input, select, textarea {
   min-height: 46px;
@@ -89,11 +181,47 @@ input, select, textarea {
 
 @media (max-width: 820px) {
   :root { font-size: 16px; }
+  html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
   body { line-height: 1.5; }
+  .app-shell { display: block !important; width: 100%; max-width: 100%; overflow-x: clip; }
+  .main-shell, main, .page-stack, .history-page, .history-grid, .history-lower,
+  .history-summary, .chart-panel, .chart-wrap, .recharts-responsive-container {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .main-shell { width: 100%; margin: 0 !important; }
   .main-shell { padding: 12px 12px calc(28px + env(safe-area-inset-bottom)); }
   .button, .icon-button, input, select { min-height: 44px; }
   .page-heading p, .hero-panel p, .modal-intro { font-size: .9rem; }
   .device-card h2 { font-size: 1.2rem; }
+  .category-card .availability-score { font-size: 2.35rem !important; }
+  .health-score { width: 58px; height: 58px; }
+  .health-score strong { font-size: 1.12rem; }
+  .health-score > span { display: none; }
+  .device-availability .availability-strip { gap: 3px; margin-top: 8px; }
+  .device-availability .availability-strip span { min-width: 0; height: 8px; }
+  .history-heading { display: grid; align-items: start; gap: 16px; width: 100%; }
+  .history-heading > div:first-child { min-width: 0; }
+  .history-heading .range-pills {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    overflow: visible;
+  }
+  .history-heading .range-pills button { min-width: 0; padding-inline: 6px; }
+  .settings-page .page-heading, .settings-title, .notification-card,
+  .network-list > div, .system-dl > div { min-width: 0; max-width: 100%; }
+  .settings-nav { overscroll-behavior-inline: contain; }
+  .settings-nav button { flex: 0 0 min(128px, 38vw) !important; }
+  .user-list article { grid-template-columns: 42px minmax(0, 1fr) !important; }
+  .user-list article > select, .user-list article > .mini-toggle { grid-column: 1 / -1 !important; width: 100%; }
+  .label-builder, .admin-grid, .form-grid, .detail-grid,
+  .choice-grid, .protocol-grid, .transfer-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .audit-table > div { grid-template-columns: minmax(0, 1fr) auto !important; }
+  .audit-table code { grid-column: 1 / -1; }
+  .history-grid, .history-lower { grid-template-columns: minmax(0, 1fr) !important; }
+  .history-page .panel { width: 100%; overflow: hidden; }
+  .history-page .chart-wrap, .history-page .chart-wrap.tall { width: 100%; height: 260px; overflow: hidden; }
   .kpi-value, .category-count { font-size: 2rem; }
   .panel { padding: 16px; }
 }

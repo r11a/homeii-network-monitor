@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import sqlite3
 import tempfile
+import time
 import unittest
 
 
@@ -67,6 +68,16 @@ class WorkerHealthTests(unittest.TestCase):
             for name in ("monitor", "critical_monitor", "rescan")
         }
         self.assertEqual(stale_worker_names(workers, timestamp=1_000), [])
+
+
+class AvailabilityTimelineTests(unittest.TestCase):
+    def test_viewer_timeline_is_a_rolling_24_hour_window(self):
+        payload = main.viewer_categories_payload()
+        series = payload["summary"]["series"]
+        self.assertEqual(len(series), 24)
+        self.assertEqual([point["ts"] for point in series], sorted(point["ts"] for point in series))
+        self.assertLessEqual(series[-1]["ts"], int(time.time()))
+        self.assertGreaterEqual(series[0]["ts"], int(time.time()) - (24 * 3600) - 60)
 
 
 class MigrationSafetyTests(unittest.TestCase):

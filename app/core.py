@@ -851,6 +851,45 @@ def acknowledge_alert(alert_id: int, username: str) -> bool:
             conn.close()
 
 
+def refresh_prolonged_outage_alerts() -> int:
+    """Return persistent outages to the operator queue at a controlled cadence."""
+    now = now_ts()
+    reminders: list[dict[str, Any]] = []
+    with _db_lock:
+        conn = db()
+        try:
+            rows = conn.execute(
+                """
+                SELECT a.id,a.ip,a.updated_at,d.name,d.critical,d.last_seen,d.maintenance,d.mute_alerts
+                FROM alerts a JOIN devices d ON d.ip=a.ip
+                WHERE a.status='open' AND a.title=? AND d.status='offline'
+                  AND d.ignored=0 AND d.quarantined=0 AND d.trashed_at=0
+                """,
+                (ALERT_TITLE_OFFLINE,),
+            ).fetchall()
+            for row in rows:
+                if row["maintenance"] or row["mute_alerts"]:
+                    continue
+                repeat_seconds = 900 if row["critical"] else 3600
+                if now - int(row["updated_at"] or 0) < repeat_seconds:
+                    continue
+                offline_since = int(row["last_seen"] or now)
+                duration_minutes = max(1, (now - offline_since) // 60)
+                message = f"{row['name'] or row['ip']} is still offline ({duration_minutes} minutes)"
+                conn.execute(
+                    "UPDATE alerts SET message=?,acknowledged_at=0,acknowledged_by='',updated_at=? WHERE id=?",
+                    (message, now, row["id"]),
+                )
+                reminders.append({"id": row["id"], "ip": row["ip"], "minutes": duration_minutes, "critical": bool(row["critical"])})
+            conn.commit()
+        finally:
+            conn.close()
+    for reminder in reminders:
+        log_event("warning", f"Persistent outage reminder: {reminder['ip']}", "outage_reminder", reminder["ip"])
+        log_audit("system", "system", "local", "outage_reminder", reminder["ip"], "success", reminder)
+    return len(reminders)
+
+
 def label_definitions_payload() -> dict[str, list[dict[str, Any]]]:
     conn = db()
     try:
@@ -2453,6 +2492,7 @@ def rescan_loop() -> None:
             record_traffic_sample()
             maintain_recycle_bin()
             maintain_automatic_backups()
+            refresh_prolonged_outage_alerts()
             if now_ts() - int(scan_state.get("last_finished") or 0) >= SCAN_RESCHEDULE_SECONDS:
                 run_full_scan("auto")
             set_worker_status("rescan", last_finished=now_ts(), last_cycle=now_ts(), cycle_count=int(worker_state["rescan"]["cycle_count"]) + 1, last_error="")
@@ -3095,8 +3135,10 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         local_tz = timezone.utc
 
     now = datetime.now(local_tz)
-    day_start_local = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    bucket_starts_local = [day_start_local + timedelta(hours=idx) for idx in range(24)]
+    current_hour_local = now.replace(minute=0, second=0, microsecond=0)
+    # A monitoring timeline must represent the last 24 real hours, not future
+    # hours in the current calendar day.
+    bucket_starts_local = [current_hour_local - timedelta(hours=23 - idx) for idx in range(24)]
     bucket_points = [int(point.timestamp()) for point in bucket_starts_local]
     bucket_seconds = 3600
     window_start = bucket_points[0]
