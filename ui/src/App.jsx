@@ -240,10 +240,27 @@ function Empty({ t }) {
   );
 }
 
-function AvailabilityStrip({ series = [], t }) {
-  const values = series.length
-    ? series.slice(-24)
-    : Array.from({ length: 24 }, () => ({ availability_pct: null }));
+function AvailabilityStrip({ series = [], status = "unknown", t }) {
+  const history = Array.isArray(series) ? series.filter(Boolean).slice(-24) : [];
+  const fallbackAvailability =
+    status === "online"
+      ? 100
+      : status === "unstable" || status === "new"
+        ? 50
+        : status === "offline"
+          ? 0
+          : null;
+  const values = history.length
+    ? [
+        ...Array.from({ length: Math.max(0, 24 - history.length) }, () => ({ availability_pct: null })),
+        ...history,
+      ]
+    : Array.from({ length: 24 }, (_, index) => ({
+        availability_pct: fallbackAvailability,
+        state: status,
+        inferred: true,
+        ts: Math.floor(Date.now() / 3600000) * 3600 - (23 - index) * 3600,
+      }));
   return (
     <div
       className="availability-strip"
@@ -262,7 +279,7 @@ function AvailabilityStrip({ series = [], t }) {
         return (
           <span
             key={item.ts || index}
-            title={`${hour} · ${pct === null ? "—" : `${Math.round(pct)}%`} · ${incidents}`}
+            title={`${hour} · ${pct === null ? "—" : `${Math.round(pct)}%`} · ${incidents}${item.inferred ? ` · ${t ? t("currentStateEstimate") : "current-state estimate"}` : ""}`}
             className={
               pct === null
                 ? "unknown"
@@ -289,6 +306,18 @@ function Dashboard({ data, t, setRoute, language }) {
   const attention = (data.devices || [])
     .filter((d) => ["offline", "unstable", "new"].includes(d.status))
     .slice(0, 5);
+  const recentlyJoined = [...(data.devices || [])]
+    .filter(
+      (device) =>
+        !device.quarantined &&
+        !device.trashed_at &&
+        Number(device.first_seen || 0) > 0,
+    )
+    .sort(
+      (left, right) =>
+        Number(right.first_seen || 0) - Number(left.first_seen || 0),
+    )
+    .slice(0, 6);
   const healthData = [
     { key: "online", value: Number(status?.online || 0), color: "#35d49a" },
     { key: "offline", value: Number(status?.offline || 0), color: "#ff5d73" },
@@ -463,6 +492,42 @@ function Dashboard({ data, t, setRoute, language }) {
                   </div>
                   <TimeAgo timestamp={device.last_seen} language={language} />
                 </div>
+              ))
+            ) : (
+              <Empty t={t} />
+            )}
+          </div>
+        </article>
+        <article className="panel recent-devices-panel">
+          <div className="panel-title">
+            <div>
+              <span className="eyebrow">{t("firstSeen")}</span>
+              <h2>{t("recentlyAdded")}</h2>
+            </div>
+            <Clock3 size={21} />
+          </div>
+          <div className="compact-list">
+            {recentlyJoined.length ? (
+              recentlyJoined.map((device) => (
+                <button
+                  type="button"
+                  className="compact-row recent-device-row"
+                  key={device.ip}
+                  onClick={() =>
+                    setRoute(`devices/${encodeURIComponent(device.ip)}`)
+                  }
+                >
+                  <StatusDot status={device.status} />
+                  <div>
+                    <strong>
+                      {device.display_name || device.name || device.ip}
+                    </strong>
+                    <small>
+                      {device.ip} · {device.category || t("uncategorized")}
+                    </small>
+                  </div>
+                  <TimeAgo timestamp={device.first_seen} language={language} />
+                </button>
               ))
             ) : (
               <Empty t={t} />
@@ -1031,13 +1096,16 @@ function Devices({
             `${device.display_name} ${device.name} ${device.ip} ${device.vendor} ${device.category} ${device.mac}`.toLowerCase();
           const matchesFilter =
             filter === "all" ||
-            (filter === "quarantined"
-              ? device.quarantined
-              : filter === "critical"
-                ? device.critical
-                : filter === "pinned"
-                  ? device.pinned
-                  : device.status === filter);
+            (filter === "recent"
+              ? Number(device.first_seen || 0) >=
+                Date.now() / 1000 - 7 * 86400
+              : filter === "quarantined"
+                ? device.quarantined
+                : filter === "critical"
+                  ? device.critical
+                  : filter === "pinned"
+                    ? device.pinned
+                    : device.status === filter);
           return (
             (!search || text.includes(search.toLowerCase())) && matchesFilter
           );
@@ -1269,6 +1337,7 @@ function Devices({
             "offline",
             "unstable",
             "new",
+            "recent",
             "critical",
             "pinned",
             "quarantined",
@@ -1385,11 +1454,12 @@ function Devices({
                     <small>
                       {device.availability_series?.length
                         ? `${t("availability")} · ${health}%`
-                        : t("noData")}
+                        : `${t("currentStateEstimate")} · ${health}%`}
                     </small>
                   </div>
                   <AvailabilityStrip
                     series={device.availability_series}
+                    status={device.status}
                     t={t}
                   />
                 </div>
@@ -4307,6 +4377,8 @@ export default function App() {
           ...device,
           availability_series: device.availability_series?.length ? device.availability_series : viewer.devices?.[String(device.ip || "").trim()]?.series || [],
           availability_24h: device.availability_24h ?? viewer.devices?.[String(device.ip || "").trim()]?.availability_24h,
+          availability_source: device.availability_source ?? viewer.devices?.[String(device.ip || "").trim()]?.availability_source,
+          availability_history_samples: device.availability_history_samples ?? viewer.devices?.[String(device.ip || "").trim()]?.history_samples ?? 0,
         })),
         alerts: alertItems,
         events: events.events || [],
@@ -4530,7 +4602,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.8.2"}</small>
+            <small>v{data.status?.version || "6.8.3"}</small>
           </div>
         </div>
       </aside>

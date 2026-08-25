@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.8.3
+
+- Added a dashboard list and inventory filter for devices that joined recently, based on their persisted first-seen timestamp.
+- Connected device cards to 24 hourly availability points and exposed whether the timeline is backed by recorded history or the current-state estimate.
+- Added a visible, status-colored fallback for devices that do not yet have historical status samples instead of rendering an unexplained empty strip.
+
 ## 6.8.2
 
 - Hardened external Cloudflare authentication by honoring the real forwarded client IP, HTTPS proxy chains and explicit browser credentials.

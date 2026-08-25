@@ -137,6 +137,8 @@ def api_devices():
         timeline = timelines.get(str(device.get("ip") or "").strip(), {})
         device["availability_series"] = timeline.get("series", [])
         device["availability_24h"] = timeline.get("availability_24h")
+        device["availability_source"] = timeline.get("availability_source", "unavailable")
+        device["availability_history_samples"] = int(timeline.get("history_samples") or 0)
     return {"devices": devices}
 
 

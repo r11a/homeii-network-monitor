@@ -3577,6 +3577,8 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             "ip": device["ip"],
             "category": device.get("category") or "",
             "availability_24h": round(total_score / max(1, len(series)), 1),
+            "history_samples": len(history_by_ip.get(device["ip"], [])),
+            "availability_source": "history" if history_by_ip.get(device["ip"]) else "current_status",
             "series": series,
         }
 
