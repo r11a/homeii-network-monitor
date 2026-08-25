@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.8.2
+
+- Hardened external Cloudflare authentication by honoring the real forwarded client IP, HTTPS proxy chains and explicit browser credentials.
+- Added administrator user deletion with protection for the primary account, current session and last active administrator.
+
 ## 6.8.1
 
 - Connected every device inventory response to its real 24-hour availability timeline so health strips update from recorded status history.

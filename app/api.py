@@ -329,7 +329,18 @@ def require_role(request: Request, *roles: str) -> Dict[str, Any]:
 
 
 def login_client_key(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    cloudflare_ip = request.headers.get("cf-connecting-ip", "").strip()
+    forwarded_ip = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+    return cloudflare_ip or forwarded_ip or (request.client.host if request.client else "unknown")
+
+
+def request_is_https(request: Request) -> bool:
+    forwarded_protocols = {
+        item.strip().lower()
+        for item in request.headers.get("x-forwarded-proto", "").split(",")
+        if item.strip()
+    }
+    return request.url.scheme == "https" or "https" in forwarded_protocols
 
 
 @app.exception_handler(PermissionError)
@@ -435,7 +446,7 @@ async def api_auth_setup(request: Request):
     finally:
         conn.close()
     response = JSONResponse({"ok": True})
-    secure_cookie = request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    secure_cookie = request_is_https(request)
     response.set_cookie("homeii_session", token, httponly=True, secure=secure_cookie, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
     return response
 
@@ -468,7 +479,7 @@ async def api_auth_login(request: Request):
     finally:
         conn.close()
     response = JSONResponse({"ok": True, "user": user})
-    secure_cookie = request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    secure_cookie = request_is_https(request)
     response.set_cookie("homeii_session", token, httponly=True, secure=secure_cookie, samesite="lax", max_age=SESSION_TTL_SECONDS, path="/")
     return response
 
@@ -493,7 +504,9 @@ def api_admin_users(request: Request):
     require_role(request, "admin")
     conn = db()
     try:
-        return {"users": [public_user(row) for row in conn.execute("SELECT * FROM users ORDER BY username").fetchall()]}
+        rows = conn.execute("SELECT * FROM users ORDER BY id").fetchall()
+        primary_id = int(rows[0]["id"]) if rows else 0
+        return {"users": [{**public_user(row), "is_primary": int(row["id"]) == primary_id} for row in rows]}
     finally:
         conn.close()
 
@@ -537,10 +550,44 @@ async def api_admin_update_user(user_id: int, request: Request):
     values.append(user_id)
     conn = db()
     try:
+        primary = conn.execute("SELECT id FROM users ORDER BY id LIMIT 1").fetchone()
+        if primary and int(primary["id"]) == user_id and (role != "admin" or not payload.get("active", True)):
+            return JSONResponse({"error": "primary_admin_protected"}, status_code=409)
+        if role != "admin" or not payload.get("active", True):
+            active_admins = int(conn.execute("SELECT COUNT(*) FROM users WHERE role='admin' AND active=1").fetchone()[0])
+            current_row = conn.execute("SELECT role,active FROM users WHERE id=?", (user_id,)).fetchone()
+            if current_row and current_row["role"] == "admin" and current_row["active"] and active_admins <= 1:
+                return JSONResponse({"error": "last_admin_protected"}, status_code=409)
         conn.execute(f"UPDATE users SET {','.join(fields)} WHERE id=?", values)
         conn.commit()
     finally:
         conn.close()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/users/{user_id}")
+def api_admin_delete_user(user_id: int, request: Request):
+    current = require_role(request, "admin")
+    if int(current.get("id") or 0) == user_id:
+        return JSONResponse({"error": "current_user_protected"}, status_code=409)
+    conn = db()
+    try:
+        primary = conn.execute("SELECT id FROM users ORDER BY id LIMIT 1").fetchone()
+        if primary and int(primary["id"]) == user_id:
+            return JSONResponse({"error": "primary_admin_protected"}, status_code=409)
+        row = conn.execute("SELECT username,role,active FROM users WHERE id=?", (user_id,)).fetchone()
+        if not row:
+            return JSONResponse({"error": "user_not_found"}, status_code=404)
+        if row["role"] == "admin" and row["active"]:
+            active_admins = int(conn.execute("SELECT COUNT(*) FROM users WHERE role='admin' AND active=1").fetchone()[0])
+            if active_admins <= 1:
+                return JSONResponse({"error": "last_admin_protected"}, status_code=409)
+        conn.execute("DELETE FROM auth_sessions WHERE user_id=?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    log_audit(current["username"], current["role"], login_client_key(request), "user_deleted", str(user_id), "success", {"username": row["username"]})
     return {"ok": True}
 
 

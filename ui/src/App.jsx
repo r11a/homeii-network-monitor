@@ -2734,6 +2734,16 @@ function UserManagement({ t, currentUser }) {
     });
     load();
   };
+  const remove = async (user) => {
+    if (user.is_primary || user.id === currentUser?.id || !window.confirm(`${t("delete")} ${user.username}?`)) return;
+    try {
+      await api(`/admin/users/${user.id}`, { method: "DELETE" });
+      setMessage(t("userDeleted"));
+      load();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
   return (
     <div className="users-panel">
       <div className="settings-title">
@@ -2873,6 +2883,7 @@ function UserManagement({ t, currentUser }) {
             >
               {user.active ? t("active") : t("disabled")}
             </button>
+            <button className="icon-button danger" disabled={user.is_primary || user.id === currentUser?.id} title={user.is_primary ? t("primaryAdminProtected") : t("delete")} onClick={() => remove(user)}><Trash2 /></button>
           </article>
         ))}
       </div>
@@ -4519,7 +4530,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.8.1"}</small>
+            <small>v{data.status?.version || "6.8.2"}</small>
           </div>
         </div>
       </aside>

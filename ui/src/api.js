@@ -3,6 +3,7 @@ const API_ROOT = './api'
 export async function api(path, options = {}) {
   const response = await fetch(`${API_ROOT}${path}`, {
     cache: 'no-store',
+    credentials: 'include',
     ...options,
     headers: options.body instanceof FormData
       ? options.headers
