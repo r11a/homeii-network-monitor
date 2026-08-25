@@ -666,6 +666,113 @@ def normalize_mac(mac: str) -> str:
 
 
 
+def device_identity_conflicts(
+    ip: str, mac: str = "", exclude_ip: str = ""
+) -> list[dict[str, Any]]:
+    """Find inventory records that already own an IP or MAC identity."""
+    try:
+        normalized_ip = str(ipaddress.ip_address((ip or "").strip()))
+    except ValueError as exc:
+        raise ValueError("invalid_ip") from exc
+    normalized_mac = normalize_mac(mac)
+    excluded = (exclude_ip or "").strip()
+    conn = db()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM devices WHERE ip<>? ORDER BY updated_at DESC",
+            (excluded,),
+        ).fetchall()
+        conflicts: list[dict[str, Any]] = []
+        for row in rows:
+            row_mac = normalize_mac(row["mac"] or "")
+            reasons: list[str] = []
+            if row["ip"] == normalized_ip:
+                reasons.append("ip")
+            if normalized_mac and row_mac and row_mac == normalized_mac:
+                reasons.append("mac")
+            if reasons:
+                device = row_to_device(row)
+                conflicts.append(
+                    {
+                        "ip": device["ip"],
+                        "mac": device["mac"],
+                        "name": device.get("display_name")
+                        or device.get("name")
+                        or device["ip"],
+                        "status": device["status"],
+                        "quarantined": device.get("quarantined", False),
+                        "ignored": device.get("ignored", False),
+                        "reasons": reasons,
+                    }
+                )
+        return conflicts
+    finally:
+        conn.close()
+
+
+def manual_device_preflight(ip: str, supplied_mac: str = "") -> dict[str, Any]:
+    try:
+        normalized_ip = str(ipaddress.ip_address((ip or "").strip()))
+    except ValueError as exc:
+        raise ValueError("invalid_ip") from exc
+    reachable = ping(normalized_ip)
+    identity = arp_identity_for_ip(normalized_ip) if reachable or not supplied_mac else {}
+    observed_mac = normalize_mac(supplied_mac or identity.get("mac", ""))
+    conflicts = device_identity_conflicts(normalized_ip, observed_mac)
+    return {
+        "ip": normalized_ip,
+        "reachable": reachable,
+        "mac": observed_mac,
+        "vendor": identity.get("vendor", ""),
+        "conflicts": conflicts,
+        "can_add": not conflicts,
+    }
+
+
+def reconcile_mac_identity(
+    conn: sqlite3.Connection, ip: str, mac: str
+) -> sqlite3.Row | None:
+    """Move a known managed identity to its current IP instead of duplicating it."""
+    normalized_mac = normalize_mac(mac)
+    if not normalized_mac:
+        return conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+    matches = conn.execute(
+        "SELECT * FROM devices WHERE lower(replace(mac,'-',':'))=? AND ip<>? "
+        "ORDER BY approved DESC,manual DESC,ignored ASC,last_seen DESC,updated_at DESC",
+        (normalized_mac, ip),
+    ).fetchall()
+    if not matches:
+        return conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+    canonical = matches[0]
+    current = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+    if managed_row(canonical) and not canonical["ignored"]:
+        if current and not managed_row(current):
+            conn.execute("DELETE FROM devices WHERE ip=?", (ip,))
+        elif current:
+            return current
+        old_ip = canonical["ip"]
+        conn.execute(
+            "UPDATE devices SET ip=?,ignored=0,quarantined=0,quarantined_at=0,trashed_at=0,updated_at=? WHERE ip=?",
+            (ip, now_ts(), old_ip),
+        )
+        for table in ("device_history", "alerts", "events"):
+            conn.execute(f"UPDATE {table} SET ip=? WHERE ip=?", (ip, old_ip))
+        log_message = f"Device identity moved from {old_ip} to {ip} by MAC {normalized_mac}"
+        conn.execute(
+            "INSERT INTO events(ts,level,event_type,ip,message) VALUES(?,?,?,?,?)",
+            (now_ts(), "info", "device_ip_changed", ip, log_message),
+        )
+        return conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+    duplicate_ips = [row["ip"] for row in matches if not managed_row(row)]
+    if duplicate_ips:
+        placeholders = ",".join("?" for _ in duplicate_ips)
+        conn.execute(
+            f"UPDATE devices SET ignored=1,updated_at=? WHERE ip IN ({placeholders})",
+            (now_ts(), *duplicate_ips),
+        )
+    return current
+
+
 def vendor_from_mac(mac: str) -> str:
     return lookup_vendor(normalize_mac(mac))
 
@@ -2048,7 +2155,7 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
     with _db_lock:
         conn = db()
         try:
-            current = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+            current = reconcile_mac_identity(conn, ip, mac)
             row = current or row
             if row and (row["ignored"] or row["quarantined"]):
                 return
@@ -2354,45 +2461,64 @@ def reconcile_network_inventory() -> dict[str, int]:
     run_full_scan("admin_reconcile")
     conn = db()
     try:
-        rows = conn.execute("SELECT ip, quarantined FROM devices WHERE ignored=0").fetchall()
+        rows = conn.execute(
+            "SELECT ip,quarantined,approved,manual FROM devices WHERE ignored=0 AND trashed_at=0"
+        ).fetchall()
     finally:
         conn.close()
 
-    results: list[tuple[str, bool, bool]] = []
+    results: list[tuple[str, bool, bool, bool]] = []
 
-    def check(row: sqlite3.Row) -> tuple[str, bool, bool]:
+    def check(row: sqlite3.Row) -> tuple[str, bool, bool, bool]:
         ok, _, _ = probe_device(row["ip"])
-        return row["ip"], bool(row["quarantined"]), ok
+        return (
+            row["ip"],
+            bool(row["quarantined"]),
+            bool(row["approved"] or row["manual"]),
+            ok,
+        )
 
     with ThreadPoolExecutor(max_workers=min(THREADS, max(1, len(rows)))) as executor:
         results = list(executor.map(check, rows))
 
     ts = now_ts()
-    online = quarantined = restored = 0
+    online = new = offline = suppressed = restored = 0
     with _db_lock:
         conn = db()
         try:
-            for ip, was_quarantined, ok in results:
+            for ip, was_quarantined, managed, ok in results:
                 if ok:
-                    online += 1
+                    online += int(managed)
+                    new += int(not managed)
                     restored += int(was_quarantined)
                     conn.execute(
-                        "UPDATE devices SET quarantined=0, quarantined_at=0, approved=1, status='online', "
+                        "UPDATE devices SET quarantined=0, quarantined_at=0, status=?, "
                         "fail_count=0, success_count=1, last_seen=?, updated_at=? WHERE ip=?",
-                        (ts, ts, ip),
+                        ("online" if managed else "new", ts, ts, ip),
+                    )
+                elif managed:
+                    offline += 1
+                    conn.execute(
+                        "UPDATE devices SET status='offline',fail_count=fail_count+1,updated_at=? WHERE ip=?",
+                        (ts, ip),
                     )
                 else:
-                    quarantined += 1
-                    conn.execute(
-                        "UPDATE devices SET quarantined=1, quarantined_at=CASE WHEN quarantined=1 THEN quarantined_at ELSE ? END, "
-                        "status='offline', success_count=0, updated_at=? WHERE ip=?",
-                        (ts, ts, ip),
-                    )
+                    suppressed += 1
+                    conn.execute("DELETE FROM alerts WHERE ip=?", (ip,))
+                    conn.execute("DELETE FROM device_history WHERE ip=?", (ip,))
+                    conn.execute("DELETE FROM devices WHERE ip=?", (ip,))
             conn.commit()
         finally:
             conn.close()
     set_setting("auto_restore_quarantined", "1")
-    summary = {"checked": len(results), "online": online, "quarantined": quarantined, "restored": restored}
+    summary = {
+        "checked": len(results),
+        "online": online,
+        "new": new,
+        "offline": offline,
+        "suppressed": suppressed,
+        "restored": restored,
+    }
     scan_state["reconciliation"] = summary
     log_system_event("warning", f"Admin inventory reconciliation completed: {summary}", "inventory_reconciled")
     return summary

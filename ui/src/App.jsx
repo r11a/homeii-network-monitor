@@ -980,6 +980,7 @@ function Devices({
   const [sortBy, setSortBy] = useState("priority");
   const [manualDevice, setManualDevice] = useState(null);
   const [cloneDevice, setCloneDevice] = useState(null);
+  const [newTagDraft, setNewTagDraft] = useState({ name: "", color: "#5da9ff" });
   useEffect(() => {
     if (initialFilter) setFilter(initialFilter);
   }, [initialFilter]);
@@ -1047,6 +1048,36 @@ function Devices({
     setEditing(null);
     setNotice(t("deviceSaved"));
     setTimeout(() => setNotice(""), 2500);
+  };
+  const selectedEditingTags = editing
+    ? editing.tags_text !== undefined
+      ? editing.tags_text.split(",").map((tag) => tag.trim()).filter(Boolean)
+      : Array.isArray(editing.tags)
+        ? editing.tags.map((tag) => (typeof tag === "string" ? tag : tag.name)).filter(Boolean)
+        : []
+    : [];
+  const toggleEditingTag = (name) => {
+    const next = selectedEditingTags.includes(name)
+      ? selectedEditingTags.filter((tag) => tag !== name)
+      : [...selectedEditingTags, name];
+    setEditing({ ...editing, tags: next, tags_text: next.join(",") });
+  };
+  const createEditingTag = async () => {
+    const name = newTagDraft.name.trim();
+    if (!name) return;
+    await api("/labels", {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "tag",
+        name,
+        color: newTagDraft.color,
+        icon: "tag",
+      }),
+    });
+    const next = [...new Set([...selectedEditingTags, name])];
+    setEditing({ ...editing, tags: next, tags_text: next.join(",") });
+    setNewTagDraft({ name: "", color: "#5da9ff" });
+    await refresh();
   };
   const pingDevice = async () => {
     setPingState("running");
@@ -1279,7 +1310,6 @@ function Devices({
                       {health}
                       <sup>%</sup>
                     </strong>
-                    <span>{t("healthScore")}</span>
                   </div>
                 </div>
                 <div className="device-facts">
@@ -1526,15 +1556,25 @@ function Devices({
           className="modal-backdrop"
           onMouseDown={(e) => e.target === e.currentTarget && setEditing(null)}
         >
-          <div className="modal-card device-editor">
+          <div className={`modal-card device-editor state-${editing.status || "unknown"}`}>
             <button className="modal-close" onClick={() => setEditing(null)}>
               <X />
             </button>
-            <span className="eyebrow">
-              {t("deviceControl")} · {editing.ip}
-            </span>
-            <h1>{editing.display_name || editing.ip}</h1>
-            <section className="device-insight-strip">
+            <section className="device-editor-hero">
+              <div className={`device-editor-icon state-${editing.status || "unknown"}`}>
+                <Server />
+              </div>
+              <div className="device-editor-title">
+                <span className="eyebrow">{t("deviceControl")} · {editing.ip}</span>
+                <h1>{editing.display_name || editing.name || editing.ip}</h1>
+                <p>{editing.vendor || t("unavailable")} · {editing.mac || "—"}</p>
+              </div>
+              <div className={`device-editor-status state-${editing.status || "unknown"}`}>
+                <StatusDot status={editing.status} />
+                <strong>{t(editing.status || "unavailable")}</strong>
+              </div>
+            </section>
+            <section className="device-insight-strip device-editor-metrics">
               <div>
                 <span>{t("healthScore")}</span>
                 <strong>{editingAvailability}%</strong>
@@ -1574,87 +1614,95 @@ function Devices({
                 </ResponsiveContainer>
               </div>
             </section>
-            <div className="detail-grid">
-              <label>
-                {t("name")}
-                <input
-                  value={editing.display_name || editing.name || ""}
-                  onChange={(e) =>
-                    setEditing({
-                      ...editing,
-                      display_name: e.target.value,
-                      name: e.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                {t("category")}
-                <input
-                  value={editing.category || ""}
-                  onChange={(e) =>
-                    setEditing({ ...editing, category: e.target.value })
-                  }
-                />
-              </label>
-              <label>
-                {t("network")}
-                <select
-                  value={editing.assigned_network || ""}
-                  onChange={(e) =>
-                    setEditing({ ...editing, assigned_network: e.target.value })
-                  }
-                >
-                  <option value="">—</option>
-                  {(
-                    data.settingsPayload?.networks ||
-                    data.status?.networks ||
-                    []
-                  ).map((network) => (
-                    <option value={network} key={network}>
-                      {network}
-                    </option>
+            <div className="device-editor-body">
+              <section className="device-editor-section">
+                <div className="device-editor-section-title">
+                  <div><Pencil /><strong>{t("deviceControl")}</strong></div>
+                  <small>{editing.ip} · {editing.assigned_network || "—"}</small>
+                </div>
+                <div className="detail-grid">
+                  <label>
+                    {t("name")}
+                    <input
+                      value={editing.display_name || editing.name || ""}
+                      onChange={(e) => setEditing({ ...editing, display_name: e.target.value, name: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {t("category")}
+                    <select value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })}>
+                      <option value="">{t("uncategorized")}</option>
+                      {(data.labels?.categories || []).map((item) => (
+                        <option key={item.name} value={item.name}>{item.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {t("network")}
+                    <select value={editing.assigned_network || ""} onChange={(e) => setEditing({ ...editing, assigned_network: e.target.value })}>
+                      <option value="">—</option>
+                      {(data.settingsPayload?.networks || data.status?.networks || []).map((network) => (
+                        <option value={network} key={network}>{network}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {t("scanProfile")}
+                    <select value={editing.scan_profile || "normal"} onChange={(e) => setEditing({ ...editing, scan_profile: e.target.value })}>
+                      <option value="slow">{t("slow")}</option>
+                      <option value="normal">{t("normal")}</option>
+                      <option value="fast">{t("fast")}</option>
+                    </select>
+                  </label>
+                  <label>
+                    {t("deviceProfile")}
+                    <select value={editing.device_profile || "generic"} onChange={(e) => setEditing({ ...editing, device_profile: e.target.value })}>
+                      <option value="generic">{t("generic")}</option>
+                      <option value="iot">IoT</option>
+                      <option value="mobile">{t("mobile")}</option>
+                      <option value="infrastructure">{t("infrastructure")}</option>
+                    </select>
+                  </label>
+                </div>
+              </section>
+              <section className="device-editor-section device-editor-labels">
+                <div className="device-editor-section-title">
+                  <div><Tag /><strong>{t("tags")}</strong></div>
+                  <small>{selectedEditingTags.length}</small>
+                </div>
+                <div className="device-tag-library">
+                  {(data.labels?.tags || []).map((item) => (
+                    <button
+                      type="button"
+                      key={item.name}
+                      className={selectedEditingTags.includes(item.name) ? "selected" : ""}
+                      style={{ "--tag-color": item.color || "#5da9ff" }}
+                      onClick={() => toggleEditingTag(item.name)}
+                    >
+                      <i /> {item.name}
+                    </button>
                   ))}
-                </select>
-              </label>
-              <label>
-                {t("scanProfile")}
-                <select
-                  value={editing.scan_profile || "normal"}
-                  onChange={(e) =>
-                    setEditing({ ...editing, scan_profile: e.target.value })
-                  }
-                >
-                  <option value="slow">{t("slow")}</option>
-                  <option value="normal">{t("normal")}</option>
-                  <option value="fast">{t("fast")}</option>
-                </select>
-              </label>
-              <label>
-                {t("deviceProfile")}
-                <select
-                  value={editing.device_profile || "generic"}
-                  onChange={(e) =>
-                    setEditing({ ...editing, device_profile: e.target.value })
-                  }
-                >
-                  <option value="generic">{t("generic")}</option>
-                  <option value="iot">IoT</option>
-                  <option value="mobile">{t("mobile")}</option>
-                  <option value="infrastructure">{t("infrastructure")}</option>
-                </select>
-              </label>
-              <label>
-                {t("tags")}
-                <input
-                  value={editing.tags_text ?? (editing.tags || []).join(", ")}
-                  onChange={(e) =>
-                    setEditing({ ...editing, tags_text: e.target.value })
-                  }
-                />
-              </label>
+                  {!data.labels?.tags?.length && <span className="device-tags-empty">{t("noData")}</span>}
+                </div>
+                <div className="device-new-tag">
+                  <input
+                    value={newTagDraft.name}
+                    onChange={(e) => setNewTagDraft({ ...newTagDraft, name: e.target.value })}
+                    placeholder={t("newLabel")}
+                  />
+                  <input
+                    type="color"
+                    value={newTagDraft.color}
+                    onChange={(e) => setNewTagDraft({ ...newTagDraft, color: e.target.value })}
+                    aria-label={t("color")}
+                  />
+                  <button type="button" className="button" disabled={!newTagDraft.name.trim()} onClick={createEditingTag}>
+                    <Plus /> {t("add")}
+                  </button>
+                </div>
+              </section>
             </div>
-            <div className="editor-toggles">
+            <div className="editor-toggles device-editor-flags">
               {[
                 ["critical", "critical"],
                 ["pinned", "pinned"],
@@ -4319,7 +4367,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.6.1"}</small>
+            <small>v{data.status?.version || "6.7.0"}</small>
           </div>
         </div>
       </aside>

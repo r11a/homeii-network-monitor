@@ -1,5 +1,14 @@
 # Changelog
 
+## 6.7.0
+
+- Rebuilt the device editor as a responsive, theme-aware workspace with live health, availability, disconnect and last-check context.
+- Connected device categories and tags to the shared system label library and enabled creating reusable colored tags directly from the editor.
+- Added manual-device identity preflight and conflict reporting for duplicate IP and MAC addresses.
+- Preserved managed-device identity and metadata when a known MAC address moves to a new IP.
+- Reworked inventory reconciliation so reachable unmanaged devices remain reviewable while unreachable unmanaged noise is removed instead of filling quarantine.
+- Added identity regression tests for duplicate detection and safe IP migration.
+
 ## 6.6.1
 
 - Fixed startup migration from 5.x databases by adding missing device columns before creating indexes that depend on them.

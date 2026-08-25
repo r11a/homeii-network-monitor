@@ -110,6 +110,62 @@ class InventoryCleanupTests(unittest.TestCase):
                 main.BASE_DIR, main.DB_PATH = original_base, original_db
 
 
+class DeviceIdentityTests(unittest.TestCase):
+    def setUp(self):
+        self.original_base, self.original_db = main.BASE_DIR, main.DB_PATH
+        self.temp_dir = tempfile.TemporaryDirectory(prefix="homeii-identity-")
+        main.BASE_DIR = Path(self.temp_dir.name)
+        main.DB_PATH = main.BASE_DIR / "homeii.db"
+        main.init_db()
+
+    def tearDown(self):
+        main.BASE_DIR, main.DB_PATH = self.original_base, self.original_db
+        self.temp_dir.cleanup()
+
+    def test_preflight_blocks_existing_ip_and_mac(self):
+        now = int(time.time())
+        conn = main.db()
+        try:
+            conn.execute(
+                "INSERT INTO devices(ip,mac,name,status,approved,last_seen,updated_at) VALUES(?,?,?,?,?,?,?)",
+                ("10.0.0.30", "aa:bb:cc:dd:ee:ff", "Core switch", "online", 1, now, now),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        conflicts = main.device_identity_conflicts("10.0.0.31", "AA-BB-CC-DD-EE-FF")
+        self.assertEqual(conflicts[0]["ip"], "10.0.0.30")
+        self.assertIn("mac", conflicts[0]["reasons"])
+
+    def test_known_mac_moves_to_new_ip_without_losing_metadata(self):
+        now = int(time.time())
+        conn = main.db()
+        try:
+            conn.execute(
+                "INSERT INTO devices(ip,mac,name,status,approved,category,tags_json,last_seen,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                ("10.0.0.40", "aa:bb:cc:dd:ee:11", "Camera A", "offline", 1, "Cameras", '["Core"]', now - 60, now),
+            )
+            conn.execute(
+                "INSERT INTO device_history(ip,ts,old_status,new_status) VALUES(?,?,?,?)",
+                ("10.0.0.40", now - 30, "online", "offline"),
+            )
+            conn.commit()
+            moved = main.reconcile_mac_identity(conn, "10.0.0.41", "AA-BB-CC-DD-EE-11")
+            conn.commit()
+            self.assertEqual(moved["ip"], "10.0.0.41")
+            row = conn.execute("SELECT * FROM devices WHERE ip='10.0.0.41'").fetchone()
+            self.assertEqual(row["name"], "Camera A")
+            self.assertEqual(row["category"], "Cameras")
+            self.assertEqual(json.loads(row["tags_json"]), ["Core"])
+            self.assertIsNone(conn.execute("SELECT ip FROM devices WHERE ip='10.0.0.40'").fetchone())
+            self.assertEqual(
+                conn.execute("SELECT ip FROM device_history LIMIT 1").fetchone()["ip"],
+                "10.0.0.41",
+            )
+        finally:
+            conn.close()
+
+
 class LabelDefinitionTests(unittest.TestCase):
     def test_deleting_definition_preserves_device_assignment(self):
         original_base, original_db = main.BASE_DIR, main.DB_PATH

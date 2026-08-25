@@ -729,6 +729,17 @@ def api_accept(ip: str):
             row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
         if row:
             d = row_to_device(row)
+            conflicts = device_identity_conflicts(ip, d.get("mac", ""), exclude_ip=ip)
+            if conflicts:
+                return JSONResponse(
+                    {
+                        "error": "device_identity_conflict",
+                        "ip": ip,
+                        "mac": d.get("mac", ""),
+                        "conflicts": conflicts,
+                    },
+                    status_code=409,
+                )
             d["approved"] = True
             d["status"] = "online" if ok else "offline"
             if ok:
@@ -749,12 +760,28 @@ def api_accept_all():
         rows = conn.execute("SELECT ip FROM devices WHERE ignored=0 AND approved=0 AND quarantined=0").fetchall()
     finally:
         conn.close()
+    accepted: list[dict[str, Any]] = []
+    conflicts: list[dict[str, Any]] = []
+    unreachable: list[dict[str, Any]] = []
     for row in rows:
         try:
-            api_accept(row[0])
-        except Exception:
-            pass
-    return {"ok": True, "count": len(rows)}
+            result = api_accept(row[0])
+            if isinstance(result, JSONResponse):
+                payload = json.loads(result.body.decode("utf-8"))
+                conflicts.append(payload)
+            elif result.get("status") == "online":
+                accepted.append({"ip": row[0], "status": "online"})
+            else:
+                unreachable.append({"ip": row[0], "status": "offline"})
+        except Exception as exc:
+            unreachable.append({"ip": row[0], "error": str(exc)})
+    return {
+        "ok": not conflicts,
+        "checked": len(rows),
+        "accepted": accepted,
+        "conflicts": conflicts,
+        "unreachable": unreachable,
+    }
 
 
 @app.get("/api/add/{ip}")
@@ -957,17 +984,19 @@ def api_ping_now(ip: str, request: Request):
         conn.close()
 
 
-@app.get("/api/add_manual")
-def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = ""):
+def create_manual_device(
+    preflight: dict[str, Any], name: str = "", category: str = "", notes: str = ""
+) -> dict[str, Any]:
+    ip = preflight["ip"]
     host = reverse_dns(ip)
-    vendor = ""
-    reachable = ping(ip)
+    vendor = preflight.get("vendor", "")
+    reachable = bool(preflight.get("reachable"))
     d = {
         "name": choose_display_name(name, host, vendor, ip),
         "hostname": host,
         "category": category or auto_category(name or host or ip, vendor),
         "vendor": vendor,
-        "mac": "",
+        "mac": preflight.get("mac", ""),
         "status": "online" if reachable else "offline",
         "last_seen": now_ts() if reachable else 0,
         "critical": False,
@@ -991,17 +1020,51 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "")
     }
     upsert_device(ip, d)
     log_event("info", f"Manual device added: {name or ip}", "device_manual", ip)
-    return {"ok": True}
+    return {"ok": True, "device": {"ip": ip, "mac": d["mac"], "status": d["status"]}}
+
+
+@app.post("/api/devices/preflight")
+async def api_device_preflight(request: Request):
+    payload = await request.json()
+    try:
+        return manual_device_preflight(
+            str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip()
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+
+@app.get("/api/add_manual")
+def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "", mac: str = ""):
+    try:
+        preflight = manual_device_preflight(ip, mac)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if preflight["conflicts"]:
+        return JSONResponse(
+            {"error": "device_identity_conflict", **preflight}, status_code=409
+        )
+    return create_manual_device(preflight, name, category, notes)
 
 
 @app.post("/api/add_manual")
 async def api_add_manual_post(request: Request):
     payload = await request.json()
-    result = api_add_manual(
-        ip=str(payload.get("ip", "")).strip(),
-        name=str(payload.get("name", "")).strip(),
-        category=str(payload.get("category", "")).strip(),
-        notes=str(payload.get("notes", "")).strip(),
+    try:
+        preflight = manual_device_preflight(
+            str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip()
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    if preflight["conflicts"]:
+        return JSONResponse(
+            {"error": "device_identity_conflict", **preflight}, status_code=409
+        )
+    result = create_manual_device(
+        preflight,
+        str(payload.get("name", "")).strip(),
+        str(payload.get("category", "")).strip(),
+        str(payload.get("notes", "")).strip(),
     )
     tags = payload.get("tags", [])
     if result.get("ok") and isinstance(tags, list):
