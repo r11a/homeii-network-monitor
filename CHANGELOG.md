@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.8.1
+
+- Connected every device inventory response to its real 24-hour availability timeline so health strips update from recorded status history.
+- Added admin-only single and bulk device deletion with identity tombstones to prevent deleted devices from being rediscovered immediately.
+- Added inline creation of shared colored categories and tags from device onboarding and device editing.
+
 ## 6.8.0
 
 - Replaced embedded user and device creation forms with focused, responsive onboarding dialogs.

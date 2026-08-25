@@ -1015,6 +1015,7 @@ function Devices({
   const [manualDevice, setManualDevice] = useState(null);
   const [cloneDevice, setCloneDevice] = useState(null);
   const [newTagDraft, setNewTagDraft] = useState({ name: "", color: "#5da9ff" });
+  const [newCategoryDraft, setNewCategoryDraft] = useState({ name: "", color: "#5da9ff" });
   useEffect(() => {
     if (!initialFilter) return;
     const selected = (data.devices || []).find((device) => device.ip === decodeURIComponent(initialFilter));
@@ -1114,6 +1115,17 @@ function Devices({
     const next = [...new Set([...selectedEditingTags, name])];
     setEditing({ ...editing, tags: next, tags_text: next.join(",") });
     setNewTagDraft({ name: "", color: "#5da9ff" });
+    await refresh();
+  };
+  const createEditingCategory = async () => {
+    const name = newCategoryDraft.name.trim();
+    if (!name) return;
+    await api("/labels", {
+      method: "POST",
+      body: JSON.stringify({ kind: "category", name, color: newCategoryDraft.color, icon: "boxes" }),
+    });
+    setEditing({ ...editing, category: name });
+    setNewCategoryDraft({ name: "", color: "#5da9ff" });
     await refresh();
   };
   const pingDevice = async () => {
@@ -1674,6 +1686,11 @@ function Devices({
                       ))}
                     </select>
                   </label>
+                  <div className="device-new-tag device-new-category">
+                    <input value={newCategoryDraft.name} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, name: e.target.value })} placeholder={t("newCategory")} />
+                    <input type="color" value={newCategoryDraft.color} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, color: e.target.value })} aria-label={t("color")} />
+                    <button type="button" className="button" disabled={!newCategoryDraft.name.trim()} onClick={createEditingCategory}><Plus />{t("add")}</button>
+                  </div>
                   <label>
                     {t("network")}
                     <select value={editing.assigned_network || ""} onChange={(e) => setEditing({ ...editing, assigned_network: e.target.value })}>
@@ -3312,6 +3329,9 @@ function SettingsDevices({ data, t, refresh }) {
   const [expanded, setExpanded] = useState({});
   const [edits, setEdits] = useState({});
   const [joinReport, setJoinReport] = useState(null);
+  const [pendingEdits, setPendingEdits] = useState({});
+  const [selected, setSelected] = useState([]);
+  const [customLabel, setCustomLabel] = useState({ kind: "category", name: "", color: "#5da9ff" });
   const grouped = useMemo(() => {
     const groups = {};
     for (const device of data.devices || []) {
@@ -3380,6 +3400,16 @@ function SettingsDevices({ data, t, refresh }) {
   const joinOne = async (device) => {
     try {
       const response = await api(`/accept/${encodeURIComponent(device.ip)}`);
+      const edit = pendingEdits[device.ip] || {};
+      if (response.ok) {
+        await query("/update", {
+          ip: device.ip,
+          name: edit.name ?? device.display_name ?? device.name ?? "",
+          category: edit.category ?? "",
+          tags: edit.tags ?? (device.tags || []).join(","),
+        });
+        await api(`/ping_now/${encodeURIComponent(device.ip)}`);
+      }
       setJoinReport({ accepted: response.ok ? [device.ip] : [], conflicts: [] });
     } catch (error) {
       setJoinReport({ accepted: [], conflicts: [{ ip: device.ip, error: error.message }] });
@@ -3388,6 +3418,22 @@ function SettingsDevices({ data, t, refresh }) {
   };
   const joinAll = async () => {
     setJoinReport(await api("/accept_all"));
+    await api("/scan?mode=accept_all");
+    await refresh();
+  };
+  const toggleSelected = (ip) => setSelected((current) => current.includes(ip) ? current.filter((item) => item !== ip) : [...current, ip]);
+  const deleteSelected = async (ips = selected) => {
+    if (!ips.length || !window.confirm(`${t("delete")} · ${ips.length}`)) return;
+    await api("/admin/devices/delete", { method: "POST", body: JSON.stringify({ ips }) });
+    setSelected((current) => current.filter((ip) => !ips.includes(ip)));
+    await refresh();
+  };
+  const createCustomLabel = async () => {
+    const name = customLabel.name.trim();
+    if (!name) return;
+    await api("/labels", { method: "POST", body: JSON.stringify({ ...customLabel, name, icon: customLabel.kind === "category" ? "boxes" : "tag" }) });
+    setDraft((current) => customLabel.kind === "category" ? { ...current, category: name } : { ...current, tags: [...new Set([...current.tags, name])] });
+    setCustomLabel({ ...customLabel, name: "" });
     await refresh();
   };
   return (
@@ -3458,6 +3504,12 @@ function SettingsDevices({ data, t, refresh }) {
         <div className="device-tag-library onboarding-tags">
           {(data.labels?.tags || []).map((item) => <button type="button" key={item.name} className={draft.tags.includes(item.name) ? "selected" : ""} style={{ "--tag-color": item.color }} onClick={() => setDraft({ ...draft, tags: draft.tags.includes(item.name) ? draft.tags.filter((tag) => tag !== item.name) : [...draft.tags, item.name] })}><i />{item.name}</button>)}
         </div>
+        <div className="device-new-tag onboarding-custom-label">
+          <select value={customLabel.kind} onChange={(e) => setCustomLabel({ ...customLabel, kind: e.target.value })}><option value="category">{t("category")}</option><option value="tag">{t("tags")}</option></select>
+          <input value={customLabel.name} onChange={(e) => setCustomLabel({ ...customLabel, name: e.target.value })} placeholder={t("newLabel")} />
+          <input type="color" value={customLabel.color} onChange={(e) => setCustomLabel({ ...customLabel, color: e.target.value })} />
+          <button type="button" className="button" disabled={!customLabel.name.trim()} onClick={createCustomLabel}><Plus />{t("add")}</button>
+        </div>
         <button
           type="button"
           className={`setting-toggle ${draft.critical ? "active" : ""}`}
@@ -3490,17 +3542,17 @@ function SettingsDevices({ data, t, refresh }) {
       )}
       {pending.length > 0 && <section className="settings-pending-devices">
         <div className="panel-title"><div><h3>{t("newDevices")}</h3><small>{pending.length}</small></div><button className="button primary" onClick={joinAll}>{t("acceptAllNew")}</button></div>
-        {pending.map((device) => <article key={device.ip}><StatusDot status="new"/><div><strong>{device.display_name || device.name || device.ip}</strong><small>{device.ip} · {device.mac || "—"}</small></div><button className="button" onClick={() => joinOne(device)}>{t("accept")}</button></article>)}
+        {pending.map((device) => { const edit = pendingEdits[device.ip] || {}; return <article className="pending-device-editor" key={device.ip}><StatusDot status="new"/><div><strong>{device.display_name || device.name || device.ip}</strong><small>{device.ip} · {device.mac || "—"}</small></div><input value={edit.name ?? device.display_name ?? device.name ?? ""} onChange={(e) => setPendingEdits({ ...pendingEdits, [device.ip]: { ...edit, name: e.target.value } })} placeholder={t("name")}/><select value={edit.category ?? ""} onChange={(e) => setPendingEdits({ ...pendingEdits, [device.ip]: { ...edit, category: e.target.value } })}><option value="">{t("uncategorized")}</option>{(data.labels?.categories || []).map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select><input value={edit.tags ?? (device.tags || []).join(", ")} onChange={(e) => setPendingEdits({ ...pendingEdits, [device.ip]: { ...edit, tags: e.target.value } })} placeholder={t("tags")}/><button className="button primary" onClick={() => joinOne(device)}><CheckCircle2 />{t("save")} · {t("accept")}</button></article>})}
         {joinReport && <div className={joinReport.conflicts?.length ? "error-banner" : "success-banner"}>{joinReport.accepted?.length || 0} {t("accepted")} · {joinReport.conflicts?.length || 0} {t("duplicates")}</div>}
       </section>}
       <section className="settings-device-groups">
         <div className="panel-title">
           <h3>{t("devices")}</h3>
-          <span>{data.devices?.length || 0}</span>
+          <div className="settings-device-bulk"><span>{data.devices?.length || 0}</span><button className="button danger" disabled={!selected.length} onClick={() => deleteSelected()}><Trash2 />{t("delete")} ({selected.length})</button></div>
         </div>
         {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([category, devices]) => <div className="settings-device-group" key={category}>
           <button className="settings-device-group-head" onClick={() => setExpanded({ ...expanded, [category]: !expanded[category] })}><span><Boxes /> <strong>{category}</strong></span><span>{devices.filter((item) => item.status === "online").length}/{devices.length} <ChevronLeft className={expanded[category] ? "expanded" : ""}/></span></button>
-          {expanded[category] && <div className="settings-device-rows">{devices.map((device) => { const edit = edits[device.ip] || {}; return <article key={device.ip}><StatusDot status={device.status}/><input value={edit.name ?? device.display_name ?? device.name ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, name: e.target.value } })}/><code>{device.ip}</code><select value={edit.category ?? device.category ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, category: e.target.value } })}><option value="">{t("uncategorized")}</option>{(data.labels?.categories || []).map((item) => <option key={item.name}>{item.name}</option>)}</select><input value={edit.tags ?? (device.tags || []).join(", ")} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, tags: e.target.value } })} placeholder={t("tags")}/><button className="button" onClick={() => saveInline(device)}>{t("save")}</button><button className="icon-button" onClick={() => location.hash = `#/devices/${encodeURIComponent(device.ip)}`}><ArrowUpRight /></button></article>})}</div>}
+          {expanded[category] && <div className="settings-device-rows">{devices.map((device) => { const edit = edits[device.ip] || {}; return <article key={device.ip}><input type="checkbox" checked={selected.includes(device.ip)} onChange={() => toggleSelected(device.ip)} aria-label={`${t("select")} ${device.ip}`}/><StatusDot status={device.status}/><input value={edit.name ?? device.display_name ?? device.name ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, name: e.target.value } })}/><code>{device.ip}</code><select value={edit.category ?? device.category ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, category: e.target.value } })}><option value="">{t("uncategorized")}</option>{(data.labels?.categories || []).map((item) => <option key={item.name}>{item.name}</option>)}</select><input value={edit.tags ?? (device.tags || []).join(", ")} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, tags: e.target.value } })} placeholder={t("tags")}/><button className="button" onClick={() => saveInline(device)}>{t("save")}</button><button className="icon-button" onClick={() => location.hash = `#/devices/${encodeURIComponent(device.ip)}`}><ArrowUpRight /></button><button className="icon-button danger" onClick={() => deleteSelected([device.ip])}><Trash2 /></button></article>})}</div>}
         </div>)}
       </section>
     </div>
@@ -4242,8 +4294,8 @@ export default function App() {
         status,
         devices: (devices.devices || []).map((device) => ({
           ...device,
-          availability_series: viewer.devices?.[device.ip]?.series || [],
-          availability_24h: viewer.devices?.[device.ip]?.availability_24h,
+          availability_series: device.availability_series?.length ? device.availability_series : viewer.devices?.[String(device.ip || "").trim()]?.series || [],
+          availability_24h: device.availability_24h ?? viewer.devices?.[String(device.ip || "").trim()]?.availability_24h,
         })),
         alerts: alertItems,
         events: events.events || [],
@@ -4467,7 +4519,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.8.0"}</small>
+            <small>v{data.status?.version || "6.8.1"}</small>
           </div>
         </div>
       </aside>

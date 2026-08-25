@@ -131,7 +131,53 @@ def api_viewer_categories(hours: int = 24, buckets: int = 24):
 @app.get("/api/devices")
 def api_devices():
     ensure_background_workers()
-    return {"devices": get_devices(include_quarantined=True)}
+    devices = get_devices(include_quarantined=True)
+    timelines = viewer_categories_payload().get("devices", {})
+    for device in devices:
+        timeline = timelines.get(str(device.get("ip") or "").strip(), {})
+        device["availability_series"] = timeline.get("series", [])
+        device["availability_24h"] = timeline.get("availability_24h")
+    return {"devices": devices}
+
+
+@app.post("/api/admin/devices/delete")
+async def api_admin_delete_devices(request: Request):
+    """Remove device data while retaining an ignored identity tombstone."""
+    user = require_role(request, "admin")
+    payload = await request.json()
+    ips = list(dict.fromkeys(
+        str(ip).strip() for ip in payload.get("ips", []) if str(ip).strip()
+    ))[:1000]
+    if not ips:
+        return JSONResponse({"error": "devices_required"}, status_code=400)
+    deleted = []
+    with _db_lock:
+        conn = db()
+        try:
+            for ip in ips:
+                row = conn.execute("SELECT mac FROM devices WHERE ip=?", (ip,)).fetchone()
+                if not row:
+                    continue
+                conn.execute("DELETE FROM device_history WHERE ip=?", (ip,))
+                conn.execute("DELETE FROM alerts WHERE ip=?", (ip,))
+                conn.execute("DELETE FROM events WHERE ip=?", (ip,))
+                conn.execute(
+                    "UPDATE devices SET name='',hostname='',category='',vendor='',status='ignored',"
+                    "last_seen=0,critical=0,pinned=0,manual=0,ignored=1,fail_count=0,"
+                    "success_count=0,state_changes_today=0,notes='',maintenance=0,"
+                    "mute_alerts=1,quarantined=0,quarantined_at=0,trashed_at=0,tags_json='[]',"
+                    "source='admin_deleted',updated_at=? WHERE ip=?",
+                    (now_ts(), ip),
+                )
+                deleted.append({"ip": ip, "mac": row["mac"] or ""})
+            conn.commit()
+        finally:
+            conn.close()
+    log_audit(
+        user["username"], user["role"], request.client.host if request.client else "",
+        "devices_deleted", "devices", "success", {"devices": deleted},
+    )
+    return {"ok": True, "deleted": deleted, "count": len(deleted)}
 
 
 @app.get("/api/device/{ip}/detail")
