@@ -231,6 +231,59 @@ class MigrationSafetyTests(unittest.TestCase):
             finally:
                 main.BASE_DIR, main.DB_PATH = original_base, original_db
 
+    def test_real_legacy_schema_is_upgraded_before_indexes_are_created(self):
+        original_base, original_db = main.BASE_DIR, main.DB_PATH
+        with tempfile.TemporaryDirectory(prefix="homeii-v5-migration-") as temp_dir:
+            base = Path(temp_dir)
+            target = base / "homeii.db"
+            legacy = sqlite3.connect(target)
+            try:
+                legacy.executescript(
+                    """
+                    CREATE TABLE devices (
+                      ip TEXT PRIMARY KEY, name TEXT DEFAULT '', hostname TEXT DEFAULT '',
+                      category TEXT DEFAULT '', vendor TEXT DEFAULT '', mac TEXT DEFAULT '',
+                      status TEXT DEFAULT 'unknown', last_seen INTEGER DEFAULT 0,
+                      critical INTEGER DEFAULT 0, pinned INTEGER DEFAULT 0,
+                      manual INTEGER DEFAULT 0, ignored INTEGER DEFAULT 0,
+                      fail_count INTEGER DEFAULT 0, success_count INTEGER DEFAULT 0,
+                      state_changes_today INTEGER DEFAULT 0, first_seen INTEGER DEFAULT 0,
+                      updated_at INTEGER DEFAULT 0, source TEXT DEFAULT 'ping',
+                      notes TEXT DEFAULT '', tags_json TEXT DEFAULT '[]'
+                    );
+                    CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                    INSERT INTO devices(ip,name,status) VALUES('192.168.1.25','Legacy device','online');
+                    """
+                )
+                legacy.commit()
+            finally:
+                legacy.close()
+            try:
+                main.BASE_DIR, main.DB_PATH = base, target
+                main.init_db()
+                upgraded = main.db()
+                try:
+                    columns = {
+                        row[1] for row in upgraded.execute("PRAGMA table_info(devices)").fetchall()
+                    }
+                    indexes = {
+                        row[1] for row in upgraded.execute("PRAGMA index_list(devices)").fetchall()
+                    }
+                    device = upgraded.execute(
+                        "SELECT name,quarantined,assigned_network FROM devices WHERE ip='192.168.1.25'"
+                    ).fetchone()
+                    self.assertIn("quarantined", columns)
+                    self.assertIn("assigned_network", columns)
+                    self.assertIn("idx_devices_operational", indexes)
+                    self.assertEqual(device["name"], "Legacy device")
+                    self.assertEqual(device["quarantined"], 0)
+                finally:
+                    upgraded.close()
+                backups = list((base / "backups").glob("homeii-pre-schema-9-*.db"))
+                self.assertEqual(len(backups), 1)
+            finally:
+                main.BASE_DIR, main.DB_PATH = original_base, original_db
+
 
 if __name__ == "__main__":
     unittest.main()

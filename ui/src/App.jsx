@@ -4319,7 +4319,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.6.0"}</small>
+            <small>v{data.status?.version || "6.6.1"}</small>
           </div>
         </div>
       </aside>

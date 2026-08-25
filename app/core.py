@@ -378,6 +378,9 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+"""
+
+INDEX_SCHEMA = """
 CREATE INDEX IF NOT EXISTS idx_devices_operational
   ON devices(ignored, quarantined, critical, status);
 CREATE INDEX IF NOT EXISTS idx_devices_network
@@ -464,9 +467,13 @@ def init_db() -> None:
             ensure_column(conn, "devices", "quarantined", "quarantined INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "quarantined_at", "quarantined_at INTEGER DEFAULT 0")
             ensure_column(conn, "devices", "trashed_at", "trashed_at INTEGER DEFAULT 0")
+            ensure_column(conn, "devices", "tags_json", "tags_json TEXT DEFAULT '[]'")
             ensure_column(conn, "alerts", "acknowledged_at", "acknowledged_at INTEGER DEFAULT 0")
             ensure_column(conn, "alerts", "acknowledged_by", "acknowledged_by TEXT DEFAULT ''")
             ensure_column(conn, "users", "can_manage_alerts", "can_manage_alerts INTEGER NOT NULL DEFAULT 0")
+            # Indexes may reference columns that do not exist in a 5.x database.
+            # Create them only after every additive migration has completed.
+            conn.executescript(INDEX_SCHEMA)
             conn.execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES(?, ?)",
                 (9, now_ts()),

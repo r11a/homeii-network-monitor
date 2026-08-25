@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.6.1
+
+- Fixed startup migration from 5.x databases by adding missing device columns before creating indexes that depend on them.
+- Added a real legacy-schema migration regression test that verifies existing device data and pre-upgrade backups are preserved.
+
 ## 6.6.0
 
 - Replaced the nested settings page with a dedicated full-screen administration workspace and one right-side navigation system.
