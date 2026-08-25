@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.5.1
+
+- Rebuilt settings into a consistent, compact administrative workspace across desktop and mobile.
+- Redesigned network tools as a visual diagnostics workbench with contextual targets, assessments, metrics and per-tool charts.
+- Fixed recycled devices being rediscovered after permanent deletion by retaining invisible discovery tombstones.
+- Added an administrator inventory cleanup that suppresses offline records and duplicate MAC identities while retaining the most reliable record.
+
 ## 6.5.0
 
 - Rebuilt the command center around live fleet health, prioritized outages, unacknowledged incidents, operator acknowledgement and a dynamic event journal.

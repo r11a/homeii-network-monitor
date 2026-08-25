@@ -2414,7 +2414,12 @@ def maintain_recycle_bin(force: bool = False) -> dict[str, int]:
                 "SELECT ip FROM devices WHERE trashed_at>0 AND trashed_at>=? ORDER BY trashed_at DESC LIMIT 256",
                 (expiry_cutoff,),
             ).fetchall()]
-            deleted = conn.execute("DELETE FROM devices WHERE trashed_at>0 AND trashed_at<?", (expiry_cutoff,)).rowcount
+            # Keep an invisible tombstone so an expired device is not rediscovered
+            # immediately by the next network scan.
+            deleted = conn.execute(
+                "UPDATE devices SET ignored=1,trashed_at=0,updated_at=? WHERE trashed_at>0 AND trashed_at<?",
+                (now, expiry_cutoff),
+            ).rowcount
             conn.commit()
         finally:
             conn.close()
@@ -2450,6 +2455,68 @@ def trash_all_offline_devices() -> int:
             return affected
         finally:
             conn.close()
+
+
+def permanently_suppress_stale_inventory() -> dict[str, int]:
+    """Hide offline records and duplicate MAC identities without allowing rediscovery."""
+    now = now_ts()
+    suppressed_offline = 0
+    suppressed_duplicates = 0
+    with _db_lock:
+        conn = db()
+        try:
+            offline_rows = conn.execute(
+                "SELECT ip FROM devices WHERE ignored=0 AND status='offline'"
+            ).fetchall()
+            offline_ips = [str(row["ip"]) for row in offline_rows]
+            if offline_ips:
+                placeholders = ",".join("?" for _ in offline_ips)
+                cursor = conn.execute(
+                    f"UPDATE devices SET ignored=1,quarantined=0,quarantined_at=0,trashed_at=0,updated_at=? WHERE ip IN ({placeholders})",
+                    (now, *offline_ips),
+                )
+                suppressed_offline = cursor.rowcount
+
+            candidates = conn.execute(
+                "SELECT ip,mac,status,approved,manual,last_seen,updated_at FROM devices "
+                "WHERE ignored=0 AND TRIM(COALESCE(mac,''))!=''"
+            ).fetchall()
+            groups: dict[str, list[sqlite3.Row]] = {}
+            for row in candidates:
+                normalized_mac = re.sub(r"[^0-9a-f]", "", str(row["mac"] or "").lower())
+                if len(normalized_mac) == 12:
+                    groups.setdefault(normalized_mac, []).append(row)
+            duplicate_ips: list[str] = []
+            status_rank = {"online": 4, "unstable": 3, "new": 2, "offline": 1}
+            for rows in groups.values():
+                if len(rows) < 2:
+                    continue
+                ranked = sorted(
+                    rows,
+                    key=lambda row: (
+                        status_rank.get(str(row["status"]), 0),
+                        int(row["approved"] or 0),
+                        int(row["manual"] or 0),
+                        int(row["last_seen"] or 0),
+                        int(row["updated_at"] or 0),
+                    ),
+                    reverse=True,
+                )
+                duplicate_ips.extend(str(row["ip"]) for row in ranked[1:])
+            if duplicate_ips:
+                placeholders = ",".join("?" for _ in duplicate_ips)
+                cursor = conn.execute(
+                    f"UPDATE devices SET ignored=1,quarantined=0,quarantined_at=0,trashed_at=0,updated_at=? WHERE ip IN ({placeholders})",
+                    (now, *duplicate_ips),
+                )
+                suppressed_duplicates = cursor.rowcount
+            conn.commit()
+        finally:
+            conn.close()
+    summary = {"offline": suppressed_offline, "duplicates": suppressed_duplicates}
+    log_event("warning", f"Inventory cleanup: {suppressed_offline} offline, {suppressed_duplicates} duplicates", "inventory_cleanup")
+    log_audit("system", "system", "local", "inventory_cleanup", "devices", "success", summary)
+    return summary
 
 
 def run_category_check(category: str) -> None:

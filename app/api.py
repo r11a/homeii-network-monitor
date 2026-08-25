@@ -1062,6 +1062,11 @@ def api_trash_all_offline():
     return {"ok": True, "trashed": trash_all_offline_devices()}
 
 
+@app.post("/api/admin/inventory/cleanup")
+def api_cleanup_inventory():
+    return {"ok": True, **permanently_suppress_stale_inventory()}
+
+
 @app.post("/api/admin/backup-now")
 def api_backup_now():
     return {"ok": True, **maintain_automatic_backups(force=True)}
@@ -1082,7 +1087,11 @@ def api_restore_recycled(ip: str):
 def api_delete_recycled(ip: str):
     conn = db()
     try:
-        cursor = conn.execute("DELETE FROM devices WHERE ip=? AND trashed_at>0", (ip,))
+        cursor = conn.execute(
+            "UPDATE devices SET ignored=1,trashed_at=0,quarantined=0,quarantined_at=0,updated_at=? "
+            "WHERE ip=? AND trashed_at>0",
+            (now_ts(), ip),
+        )
         conn.commit()
         return {"ok": cursor.rowcount > 0}
     finally:

@@ -80,6 +80,35 @@ class AvailabilityTimelineTests(unittest.TestCase):
         self.assertGreaterEqual(series[0]["ts"], int(time.time()) - (24 * 3600) - 60)
 
 
+class InventoryCleanupTests(unittest.TestCase):
+    def test_cleanup_suppresses_offline_and_duplicate_devices(self):
+        original_base, original_db = main.BASE_DIR, main.DB_PATH
+        with tempfile.TemporaryDirectory(prefix="homeii-cleanup-") as temp_dir:
+            main.BASE_DIR = Path(temp_dir)
+            main.DB_PATH = main.BASE_DIR / "homeii.db"
+            try:
+                main.init_db()
+                conn = main.db()
+                try:
+                    now = int(time.time())
+                    conn.execute("INSERT INTO devices(ip,mac,status,approved,last_seen,updated_at) VALUES(?,?,?,?,?,?)", ("10.0.0.10", "aa:bb:cc:dd:ee:ff", "online", 1, now, now))
+                    conn.execute("INSERT INTO devices(ip,mac,status,approved,last_seen,updated_at) VALUES(?,?,?,?,?,?)", ("10.0.0.11", "AA-BB-CC-DD-EE-FF", "new", 0, now - 60, now - 60))
+                    conn.execute("INSERT INTO devices(ip,status,approved,last_seen,updated_at) VALUES(?,?,?,?,?)", ("10.0.0.12", "offline", 1, now - 3600, now))
+                    conn.commit()
+                finally:
+                    conn.close()
+                result = main.permanently_suppress_stale_inventory()
+                self.assertEqual(result, {"offline": 1, "duplicates": 1})
+                conn = main.db()
+                try:
+                    visible = conn.execute("SELECT ip FROM devices WHERE ignored=0 ORDER BY ip").fetchall()
+                    self.assertEqual([row["ip"] for row in visible], ["10.0.0.10"])
+                finally:
+                    conn.close()
+            finally:
+                main.BASE_DIR, main.DB_PATH = original_base, original_db
+
+
 class MigrationSafetyTests(unittest.TestCase):
     def test_existing_database_is_backed_up_before_schema_upgrade(self):
         original_base, original_db = main.BASE_DIR, main.DB_PATH
