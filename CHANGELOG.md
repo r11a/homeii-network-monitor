@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.8.0
+
+- Replaced embedded user and device creation forms with focused, responsive onboarding dialogs.
+- Added manual-device identity preflight, immediate reachability feedback, category assignment, shared tags and scan-profile selection.
+- Added grouped device administration with inline name, category and tag editing plus review and bulk acceptance of newly discovered devices.
+- Added persistent alert rules using trigger, condition and action definitions, including offline, critical, unstable, recovery and new-device triggers.
+- Added a filterable audit console for user, device, test, alert and administrative activity.
+- Added automatic and manual database backups with configurable retention and `/data` or Home Assistant `/share` storage.
+- Expanded the reusable category and tag icon library and retained system-wide colors and labels.
+- Upgraded the database schema to version 10 with an automatic pre-migration backup while preserving all 5.x/6.x data.
+- Removed obsolete presentation and alert controls from General settings and consolidated them into their correct workspaces.
+
 ## 6.7.0
 
 - Rebuilt the device editor as a responsive, theme-aware workspace with live health, availability, disconnect and last-check context.

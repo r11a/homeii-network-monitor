@@ -317,7 +317,7 @@ async def enforce_api_permissions(request: Request, call_next):
     admin_prefixes = (
         "/api/admin/", "/api/tools/", "/api/export/",
         "/api/import/", "/api/save_settings", "/api/save_networks",
-        "/api/recycle-bin", "/api/audit",
+        "/api/recycle-bin", "/api/audit", "/api/alert-rules",
     )
     operator_get_prefixes = (
         "/api/scan", "/api/accept", "/api/add/", "/api/add_all",
@@ -1153,8 +1153,45 @@ def api_cleanup_inventory():
 
 
 @app.post("/api/admin/backup-now")
-def api_backup_now():
+def api_backup_now(request: Request):
+    require_role(request, "admin")
     return {"ok": True, **maintain_automatic_backups(force=True)}
+
+
+@app.get("/api/admin/backups")
+def api_backup_status(request: Request):
+    require_role(request, "admin")
+    result = maintain_automatic_backups(force=False)
+    result["share_available"] = Path("/share").exists() and os.access("/share", os.W_OK)
+    result["retention"] = int(get_setting("backup_retention", "3"))
+    directory = Path(result["directory"])
+    result["backups"] = [
+        {
+            "name": path.name,
+            "size": path.stat().st_size,
+            "size_human": f"{path.stat().st_size / 1024 / 1024:.1f} MB",
+            "modified": int(path.stat().st_mtime),
+        }
+        for path in sorted(directory.glob("*.db"), key=lambda item: item.stat().st_mtime, reverse=True)[:20]
+    ] if directory.exists() else []
+    return result
+
+
+@app.post("/api/admin/backups/settings")
+async def api_backup_settings(request: Request):
+    user = require_role(request, "admin")
+    payload = await request.json()
+    target = str(payload.get("target", "data")).lower()
+    if target not in ("data", "share"):
+        return JSONResponse({"error": "invalid_backup_target"}, status_code=400)
+    if target == "share" and not (Path("/share").exists() and os.access("/share", os.W_OK)):
+        return JSONResponse({"error": "share_not_available"}, status_code=400)
+    retention = max(1, min(10, int(payload.get("retention", 3))))
+    set_setting("backup_target", target)
+    set_setting("backup_retention", str(retention))
+    set_setting("backup_enabled", "1" if payload.get("enabled", True) else "0")
+    log_audit(user["username"], user["role"], request.client.host if request.client else "", "backup_settings_updated", target, "success", {"retention": retention, "enabled": bool(payload.get("enabled", True))})
+    return {"ok": True, **maintain_automatic_backups(force=False)}
 
 
 @app.post("/api/recycle-bin/{ip}/restore")
@@ -1184,13 +1221,92 @@ def api_delete_recycled(ip: str):
 
 
 @app.get("/api/audit")
-def api_audit(limit: int = 200):
+def api_audit(limit: int = 200, actor: str = "", action: str = "", outcome: str = "", date_from: int = 0, date_to: int = 0):
     conn = db()
     try:
-        rows = conn.execute("SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (max(1, min(limit, 1000)),)).fetchall()
+        clauses = []
+        values: list[Any] = []
+        if actor:
+            clauses.append("actor LIKE ?")
+            values.append(f"%{actor}%")
+        if action:
+            clauses.append("action LIKE ?")
+            values.append(f"%{action}%")
+        if outcome:
+            clauses.append("outcome=?")
+            values.append(outcome)
+        if date_from:
+            clauses.append("ts>=?")
+            values.append(date_from)
+        if date_to:
+            clauses.append("ts<=?")
+            values.append(date_to)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        values.append(max(1, min(limit, 1000)))
+        rows = conn.execute(f"SELECT * FROM audit_log{where} ORDER BY id DESC LIMIT ?", values).fetchall()
         return {"records": [dict(row) for row in rows]}
     finally:
         conn.close()
+
+
+@app.get("/api/alert-rules")
+def api_alert_rules():
+    conn = db()
+    try:
+        rows = conn.execute("SELECT * FROM alert_rules ORDER BY enabled DESC,id DESC").fetchall()
+        return {"rules": [{**dict(row), "enabled": bool(row["enabled"]), "condition": json.loads(row["condition_json"] or "{}"), "action": json.loads(row["action_json"] or "{}")} for row in rows]}
+    finally:
+        conn.close()
+
+
+@app.post("/api/alert-rules")
+async def api_create_alert_rule(request: Request):
+    user = require_role(request, "admin")
+    payload = await request.json()
+    name = str(payload.get("name", "")).strip()
+    trigger = str(payload.get("trigger_type", "device_offline")).strip()
+    if not name or trigger not in ("device_offline", "device_recovered", "device_unstable", "new_device", "critical_offline"):
+        return JSONResponse({"error": "invalid_alert_rule"}, status_code=400)
+    ts = now_ts()
+    conn = db()
+    try:
+        cursor = conn.execute("INSERT INTO alert_rules(name,enabled,trigger_type,condition_json,action_json,severity,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", (name, 1 if payload.get("enabled", True) else 0, trigger, json.dumps(payload.get("condition", {}), ensure_ascii=False), json.dumps(payload.get("action", {}), ensure_ascii=False), str(payload.get("severity", "high")), ts, ts))
+        conn.commit()
+        rule_id = cursor.lastrowid
+    finally:
+        conn.close()
+    log_audit(user["username"], user["role"], request.client.host if request.client else "", "alert_rule_created", str(rule_id), "success", {"name": name, "trigger": trigger})
+    return {"ok": True, "id": rule_id}
+
+
+@app.patch("/api/alert-rules/{rule_id}")
+async def api_update_alert_rule(rule_id: int, request: Request):
+    user = require_role(request, "admin")
+    payload = await request.json()
+    conn = db()
+    try:
+        row = conn.execute("SELECT * FROM alert_rules WHERE id=?", (rule_id,)).fetchone()
+        if not row:
+            return JSONResponse({"error": "alert_rule_not_found"}, status_code=404)
+        conn.execute("UPDATE alert_rules SET name=?,enabled=?,trigger_type=?,condition_json=?,action_json=?,severity=?,updated_at=? WHERE id=?", (str(payload.get("name", row["name"])), 1 if payload.get("enabled", bool(row["enabled"])) else 0, str(payload.get("trigger_type", row["trigger_type"])), json.dumps(payload.get("condition", json.loads(row["condition_json"] or "{}")), ensure_ascii=False), json.dumps(payload.get("action", json.loads(row["action_json"] or "{}")), ensure_ascii=False), str(payload.get("severity", row["severity"])), now_ts(), rule_id))
+        conn.commit()
+    finally:
+        conn.close()
+    log_audit(user["username"], user["role"], request.client.host if request.client else "", "alert_rule_updated", str(rule_id))
+    return {"ok": True}
+
+
+@app.delete("/api/alert-rules/{rule_id}")
+def api_delete_alert_rule(rule_id: int, request: Request):
+    user = require_role(request, "admin")
+    conn = db()
+    try:
+        cursor = conn.execute("DELETE FROM alert_rules WHERE id=?", (rule_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    log_audit(user["username"], user["role"], request.client.host if request.client else "", "alert_rule_deleted", str(rule_id))
+    return {"ok": cursor.rowcount > 0}
 
 
 @app.post("/api/devices/{source_ip}/clone")

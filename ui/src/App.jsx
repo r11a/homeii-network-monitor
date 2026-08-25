@@ -58,6 +58,23 @@ import {
   Tag,
   Trash2,
   Pencil,
+  Camera,
+  Laptop,
+  Smartphone,
+  Printer,
+  Router,
+  HardDrive,
+  Cloud,
+  Tv,
+  Radio,
+  Lightbulb,
+  Thermometer,
+  Lock,
+  Video,
+  Headphones,
+  Gamepad2,
+  Building2,
+  PlugZap,
 } from "lucide-react";
 import {
   Area,
@@ -101,7 +118,24 @@ const categoryIcons = {
   wifi: Wifi,
   shield: ShieldAlert,
   tag: Tag,
+  laptop: Laptop,
+  phone: Smartphone,
+  printer: Printer,
+  router: Router,
+  storage: HardDrive,
+  cloud: Cloud,
+  tv: Tv,
+  radio: Radio,
+  light: Lightbulb,
+  sensor: Thermometer,
+  lock: Lock,
+  video: Video,
+  audio: Headphones,
+  gaming: Gamepad2,
+  building: Building2,
+  power: PlugZap,
 };
+const categoryIconOptions = Object.keys(categoryIcons);
 const statusOrder = [
   "offline",
   "unstable",
@@ -982,8 +1016,11 @@ function Devices({
   const [cloneDevice, setCloneDevice] = useState(null);
   const [newTagDraft, setNewTagDraft] = useState({ name: "", color: "#5da9ff" });
   useEffect(() => {
-    if (initialFilter) setFilter(initialFilter);
-  }, [initialFilter]);
+    if (!initialFilter) return;
+    const selected = (data.devices || []).find((device) => device.ip === decodeURIComponent(initialFilter));
+    if (selected) setEditing(selected);
+    else setFilter(initialFilter);
+  }, [initialFilter, data.devices]);
   useEffect(() => setVisibleCount(48), [search, filter]);
   const devices = useMemo(
     () =>
@@ -2642,6 +2679,7 @@ function AuthScreen({ setupRequired, onAuthenticated }) {
 
 function UserManagement({ t, currentUser }) {
   const [users, setUsers] = useState([]);
+  const [createOpen, setCreateOpen] = useState(false);
   const [draft, setDraft] = useState({
     username: "",
     display_name: "",
@@ -2669,6 +2707,7 @@ function UserManagement({ t, currentUser }) {
       can_manage_alerts: false,
     });
     setMessage(t("userCreated"));
+    setCreateOpen(false);
     load();
   };
   const update = async (user, next) => {
@@ -2686,8 +2725,16 @@ function UserManagement({ t, currentUser }) {
           <h2>{t("userManagement")}</h2>
           <p>{t("userManagementHelp")}</p>
         </div>
+        <button className="button primary settings-title-action" onClick={() => setCreateOpen(true)}>
+          <UserPlus /> {t("addUser")}
+        </button>
       </div>
-      <div className="user-create-card">
+      {createOpen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setCreateOpen(false)}>
+      <div className="modal-card admin-form-modal">
+        <button className="modal-close" onClick={() => setCreateOpen(false)}><X /></button>
+        <span className="eyebrow">{t("userManagement")}</span>
+        <h1>{t("addUser")}</h1>
+        <div className="user-create-card">
         <div className="form-grid">
           <label>
             {t("username")}
@@ -2763,6 +2810,7 @@ function UserManagement({ t, currentUser }) {
           {t("addUser")}
         </button>
       </div>
+      </div></div>}
       {message && <div className="success-banner">{message}</div>}
       <div className="user-list">
         {users.map((user) => (
@@ -3042,6 +3090,7 @@ function LabelManager({ data, t, refresh }) {
     ...(data.labels?.categories || []),
     ...(data.labels?.tags || []),
   ].filter((item) => item.id);
+  const PreviewIcon = categoryIcons[draft.icon] || Tag;
   const save = async () => {
     if (draft.id) {
       await api(`/labels/${draft.id}`, {
@@ -3073,7 +3122,7 @@ function LabelManager({ data, t, refresh }) {
       <section className="label-editor">
         <div className="label-preview" style={{ "--label-color": draft.color }}>
           <span>
-            <Tag />
+            <PreviewIcon />
           </span>
           <div>
             <small>{t(draft.kind === "category" ? "category" : "tags")}</small>
@@ -3113,7 +3162,7 @@ function LabelManager({ data, t, refresh }) {
               value={draft.icon}
               onChange={(e) => setDraft({ ...draft, icon: e.target.value })}
             >
-              {["boxes", "server", "camera", "wifi", "shield", "tag"].map(
+              {categoryIconOptions.map(
                 (icon) => (
                   <option value={icon} key={icon}>
                     {t(icon)}
@@ -3186,20 +3235,111 @@ function LabelManager({ data, t, refresh }) {
   );
 }
 
+function NotificationManagement({ t, enableNotifications }) {
+  const [rules, setRules] = useState([]);
+  const [audit, setAudit] = useState([]);
+  const [filters, setFilters] = useState({ actor: "", action: "", outcome: "", date_from: "", date_to: "" });
+  const [ruleOpen, setRuleOpen] = useState(false);
+  const [draft, setDraft] = useState({ name: "", trigger_type: "device_offline", severity: "high", category: "", tag: "", critical_only: false, sound: true, toast: true, pwa: true });
+  const loadRules = () => api("/alert-rules").then((result) => setRules(result.rules || []));
+  const loadAudit = () => {
+    const params = new URLSearchParams({ limit: "250" });
+    Object.entries(filters).forEach(([key, value]) => {
+      if (!value) return;
+      params.set(key, key.startsWith("date_") ? String(Math.floor(new Date(value).getTime() / 1000)) : value);
+    });
+    return api(`/audit?${params}`).then((result) => setAudit(result.records || []));
+  };
+  useEffect(() => { loadRules(); loadAudit(); }, []);
+  const saveRule = async () => {
+    await api("/alert-rules", { method: "POST", body: JSON.stringify({
+      name: draft.name,
+      trigger_type: draft.trigger_type,
+      severity: draft.severity,
+      condition: { category: draft.category, tag: draft.tag, critical: draft.critical_only || undefined },
+      action: { sound: draft.sound, toast: draft.toast, pwa: draft.pwa },
+      enabled: true,
+    }) });
+    setRuleOpen(false);
+    setDraft({ name: "", trigger_type: "device_offline", severity: "high", category: "", tag: "", critical_only: false, sound: true, toast: true, pwa: true });
+    loadRules();
+  };
+  const toggleRule = async (rule) => {
+    await api(`/alert-rules/${rule.id}`, { method: "PATCH", body: JSON.stringify({ enabled: !rule.enabled }) });
+    loadRules();
+  };
+  return <div className="notification-management">
+    <div className="settings-title"><Bell /><div><h2>{t("notification")}</h2><p>{t("notificationCenterHelp")}</p></div><button className="button primary settings-title-action" onClick={() => setRuleOpen(true)}><Plus />{t("addRule")}</button></div>
+    <section className="notification-channels">
+      <article><Bell /><div><strong>PWA / Browser</strong><small>{t("notificationChannelHelp")}</small></div><button className="button" onClick={enableNotifications}>{t("enableNotifications")}</button></article>
+      <article><Volume2 /><div><strong>{t("disconnectSound")}</strong><small>{t("disconnectSoundHelp")}</small></div><span className="healthy-label">{t("ready")}</span></article>
+    </section>
+    <section className="rules-panel"><div className="panel-title"><div><h3>{t("systemRules")}</h3><p>{t("triggerConditionAction")}</p></div><strong>{rules.length}</strong></div>
+      <div className="rules-list">{rules.map((rule) => <article key={rule.id}><i className={`severity-dot ${rule.severity}`} /><div><strong>{rule.name}</strong><small>{rule.trigger_type} · {rule.severity}</small></div><button className={`mini-toggle ${rule.enabled ? "active" : ""}`} onClick={() => toggleRule(rule)}>{rule.enabled ? t("active") : t("disabled")}</button><button className="icon-button danger-text" onClick={async () => { await api(`/alert-rules/${rule.id}`, { method: "DELETE" }); loadRules(); }}><Trash2 /></button></article>)}</div>
+    </section>
+    <section className="audit-panel"><div className="panel-title"><div><h3>{t("auditLog")}</h3><p>{t("auditLogHelp")}</p></div></div>
+      <div className="audit-filters"><input placeholder={t("username")} value={filters.actor} onChange={(e) => setFilters({ ...filters, actor: e.target.value })}/><input placeholder={t("actions")} value={filters.action} onChange={(e) => setFilters({ ...filters, action: e.target.value })}/><select value={filters.outcome} onChange={(e) => setFilters({ ...filters, outcome: e.target.value })}><option value="">{t("all")}</option><option value="success">Success</option><option value="failed">Failed</option></select><input type="date" value={filters.date_from} onChange={(e) => setFilters({ ...filters, date_from: e.target.value })}/><input type="date" value={filters.date_to} onChange={(e) => setFilters({ ...filters, date_to: e.target.value })}/><button className="button" onClick={loadAudit}><Search />{t("search")}</button></div>
+      <div className="audit-table">{audit.map((record) => <article key={record.id}><time>{new Date(Number(record.ts) * 1000).toLocaleString()}</time><strong>{record.action}</strong><span>{record.actor || "system"}</span><code>{record.target || "—"}</code><em className={record.outcome === "success" ? "healthy-label" : "danger-text"}>{record.outcome}</em></article>)}</div>
+    </section>
+    {ruleOpen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setRuleOpen(false)}><section className="modal-card admin-form-modal"><button className="modal-close" onClick={() => setRuleOpen(false)}><X /></button><span className="eyebrow">{t("triggerConditionAction")}</span><h1>{t("addRule")}</h1><div className="form-grid"><label>{t("name")}<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}/></label><label>{t("trigger")}<select value={draft.trigger_type} onChange={(e) => setDraft({ ...draft, trigger_type: e.target.value })}><option value="device_offline">{t("deviceOffline")}</option><option value="critical_offline">{t("criticalOffline")}</option><option value="device_unstable">{t("deviceUnstable")}</option><option value="device_recovered">{t("recoveries")}</option><option value="new_device">{t("newDevices")}</option></select></label><label>{t("severity")}<select value={draft.severity} onChange={(e) => setDraft({ ...draft, severity: e.target.value })}><option value="info">Info</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label><label>{t("category")}<input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}/></label><label>{t("tags")}<input value={draft.tag} onChange={(e) => setDraft({ ...draft, tag: e.target.value })}/></label></div><div className="rule-actions">{[["sound", t("sound")],["toast", "Toast"],["pwa", "PWA"]].map(([key,label]) => <button key={key} className={`mini-toggle ${draft[key] ? "active" : ""}`} onClick={() => setDraft({ ...draft, [key]: !draft[key] })}>{label}</button>)}</div><div className="modal-actions"><button className="button" onClick={() => setRuleOpen(false)}>{t("cancel")}</button><button className="button primary" disabled={!draft.name.trim()} onClick={saveRule}><Plus />{t("addRule")}</button></div></section></div>}
+  </div>;
+}
+
+function BackupManagement({ t }) {
+  const [state, setState] = useState({ target: "data", retention: 3, enabled: true, backups: [] });
+  const [busy, setBusy] = useState(false);
+  const load = () => api("/admin/backups").then(setState);
+  useEffect(() => { load(); }, []);
+  const save = async () => { setBusy(true); try { setState(await api("/admin/backups/settings", { method: "POST", body: JSON.stringify(state) })); } finally { setBusy(false); } };
+  const backupNow = async () => { setBusy(true); try { await api("/admin/backup-now", { method: "POST" }); await load(); } finally { setBusy(false); } };
+  return <section className="backup-management"><div className="panel-title"><div><h3>{t("backups")}</h3><p>{t("backupsHelp")}</p></div><Database /></div><div className="backup-settings"><button className={`setting-toggle ${state.enabled ? "active" : ""}`} onClick={() => setState({ ...state, enabled: !state.enabled })}><span/><div><strong>{t("automaticBackup")}</strong><small>{t("automaticBackupHelp")}</small></div></button><label>{t("backupLocation")}<select value={state.target || "data"} onChange={(e) => setState({ ...state, target: e.target.value })}><option value="data">/data</option><option value="share">/share</option></select></label><label>{t("retention")}<input type="number" min="1" max="10" value={state.retention || 3} onChange={(e) => setState({ ...state, retention: Number(e.target.value) })}/></label><button className="button" disabled={busy} onClick={save}>{t("save")}</button><button className="button primary" disabled={busy} onClick={backupNow}><Database />{t("backupNow")}</button></div><div className="backup-list">{(state.backups || []).map((item) => <article key={item.name}><Database/><div><strong>{item.name}</strong><small>{item.size_human || item.size || ""}</small></div><time>{item.modified ? new Date(item.modified * 1000).toLocaleString() : ""}</time></article>)}</div></section>;
+}
+
 function SettingsDevices({ data, t, refresh }) {
+  const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState({
     ip: "",
+    mac: "",
     name: "",
     category: "",
+    tags: [],
     scan_profile: "normal",
     critical: false,
   });
   const [result, setResult] = useState(null);
+  const [preflight, setPreflight] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState({});
+  const [edits, setEdits] = useState({});
+  const [joinReport, setJoinReport] = useState(null);
+  const grouped = useMemo(() => {
+    const groups = {};
+    for (const device of data.devices || []) {
+      if (device.ignored || device.quarantined || device.trashed_at) continue;
+      const category = device.category || t("uncategorized");
+      (groups[category] ||= []).push(device);
+    }
+    return groups;
+  }, [data.devices, t]);
+  const pending = (data.devices || []).filter((device) => device.status === "new" && !device.approved && !device.quarantined && !device.ignored);
+  const runPreflight = async () => {
+    setBusy(true);
+    setResult(null);
+    try {
+      const checked = await api("/devices/preflight", { method: "POST", body: JSON.stringify({ ip: draft.ip, mac: draft.mac }) });
+      setPreflight(checked);
+    } catch (error) {
+      setResult({ ok: false, error: error.message, ip: draft.ip });
+    } finally {
+      setBusy(false);
+    }
+  };
   const add = async () => {
     setBusy(true);
     setResult(null);
     try {
+      const checked = preflight?.ip === draft.ip ? preflight : await api("/devices/preflight", { method: "POST", body: JSON.stringify({ ip: draft.ip, mac: draft.mac }) });
+      if (!checked.can_add) throw new Error("device_identity_conflict");
       await api("/add_manual", { method: "POST", body: JSON.stringify(draft) });
       await query("/update", {
         ip: draft.ip,
@@ -3207,6 +3347,7 @@ function SettingsDevices({ data, t, refresh }) {
         category: draft.category,
         scan_profile: draft.scan_profile,
         critical: draft.critical ? 1 : 0,
+        tags: draft.tags.join(","),
       });
       const probe = await api(`/ping_now/${encodeURIComponent(draft.ip)}`);
       setResult({
@@ -3214,7 +3355,9 @@ function SettingsDevices({ data, t, refresh }) {
         ip: draft.ip,
         name: draft.name || draft.ip,
       });
-      setDraft((current) => ({ ...current, ip: "", name: "" }));
+      setDraft({ ip: "", mac: "", name: "", category: "", tags: [], scan_profile: "normal", critical: false });
+      setPreflight(null);
+      setAddOpen(false);
       await refresh();
     } catch (error) {
       setResult({ ok: false, error: error.message, ip: draft.ip });
@@ -3222,9 +3365,31 @@ function SettingsDevices({ data, t, refresh }) {
       setBusy(false);
     }
   };
-  const recent = [...(data.devices || [])]
-    .sort((a, b) => Number(b.updated_at || 0) - Number(a.updated_at || 0))
-    .slice(0, 8);
+  const saveInline = async (device) => {
+    const edit = edits[device.ip] || {};
+    await query("/update", {
+      ip: device.ip,
+      name: edit.name ?? device.display_name ?? device.name ?? "",
+      category: edit.category ?? device.category ?? "",
+      tags: edit.tags ?? (device.tags || []).join(","),
+      critical: edit.critical === undefined ? (device.critical ? 1 : 0) : (edit.critical ? 1 : 0),
+      pinned: edit.pinned === undefined ? (device.pinned ? 1 : 0) : (edit.pinned ? 1 : 0),
+    });
+    await refresh();
+  };
+  const joinOne = async (device) => {
+    try {
+      const response = await api(`/accept/${encodeURIComponent(device.ip)}`);
+      setJoinReport({ accepted: response.ok ? [device.ip] : [], conflicts: [] });
+    } catch (error) {
+      setJoinReport({ accepted: [], conflicts: [{ ip: device.ip, error: error.message }] });
+    }
+    await refresh();
+  };
+  const joinAll = async () => {
+    setJoinReport(await api("/accept_all"));
+    await refresh();
+  };
   return (
     <div className="settings-devices">
       <div className="settings-title">
@@ -3233,8 +3398,14 @@ function SettingsDevices({ data, t, refresh }) {
           <h2>{t("deviceSetup")}</h2>
           <p>{t("deviceSetupHelp")}</p>
         </div>
+        <button className="button primary settings-title-action" onClick={() => { setAddOpen(true); setResult(null); setPreflight(null); }}><Plus />{t("addDevice")}</button>
       </div>
-      <section className="device-entry-card">
+      {addOpen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setAddOpen(false)}>
+      <section className="modal-card admin-form-modal device-onboarding-modal">
+        <button className="modal-close" onClick={() => setAddOpen(false)}><X /></button>
+        <span className="eyebrow">{t("manualDevice")}</span><h1>{t("addDevice")}</h1>
+        <p className="modal-intro">{t("manualDeviceHelp")}</p>
+        <div className="device-entry-card">
         <div className="form-grid">
           <label>
             {t("ip")}
@@ -3244,6 +3415,9 @@ function SettingsDevices({ data, t, refresh }) {
               onChange={(e) => setDraft({ ...draft, ip: e.target.value })}
               placeholder="192.168.1.50"
             />
+          </label>
+          <label>MAC
+            <input value={draft.mac} onChange={(e) => { setDraft({ ...draft, mac: e.target.value }); setPreflight(null); }} placeholder="AA:BB:CC:DD:EE:FF" />
           </label>
           <label>
             {t("name")}
@@ -3281,6 +3455,9 @@ function SettingsDevices({ data, t, refresh }) {
             </select>
           </label>
         </div>
+        <div className="device-tag-library onboarding-tags">
+          {(data.labels?.tags || []).map((item) => <button type="button" key={item.name} className={draft.tags.includes(item.name) ? "selected" : ""} style={{ "--tag-color": item.color }} onClick={() => setDraft({ ...draft, tags: draft.tags.includes(item.name) ? draft.tags.filter((tag) => tag !== item.name) : [...draft.tags, item.name] })}><i />{item.name}</button>)}
+        </div>
         <button
           type="button"
           className={`setting-toggle ${draft.critical ? "active" : ""}`}
@@ -3292,15 +3469,10 @@ function SettingsDevices({ data, t, refresh }) {
             <small>{t("criticalDeviceHelp")}</small>
           </div>
         </button>
-        <button
-          className="button primary add-next-device"
-          disabled={busy || !draft.ip.trim()}
-          onClick={add}
-        >
-          {busy ? <RefreshCw className="spin" /> : <Plus />}
-          {t("addCheckAndContinue")}
-        </button>
-      </section>
+        {preflight && <div className={`device-add-result ${preflight.reachable ? "healthy" : "failed"}`}><Radar /><div><strong>{preflight.reachable ? t("deviceReachable") : t("deviceNotReachable")}</strong><span>{preflight.mac || "MAC —"} · {preflight.vendor || "—"}</span>{preflight.conflicts?.map((item) => <small key={item.ip}>{item.ip} · {item.reasons.join(", ")}</small>)}</div></div>}
+        <div className="modal-actions"><button className="button" onClick={() => setAddOpen(false)}>{t("cancel")}</button><button className="button" disabled={busy || !draft.ip.trim()} onClick={runPreflight}><Radar />{t("ping")}</button><button className="button primary" disabled={busy || !draft.ip.trim() || !preflight?.can_add} onClick={add}>{busy ? <RefreshCw className="spin" /> : <Plus />}{t("addAndMonitor")}</button></div>
+        </div>
+      </section></div>}
       {result && (
         <div
           className={`device-add-result ${result.ok ? "healthy" : "failed"}`}
@@ -3316,23 +3488,20 @@ function SettingsDevices({ data, t, refresh }) {
           </div>
         </div>
       )}
-      <section className="recent-device-list">
+      {pending.length > 0 && <section className="settings-pending-devices">
+        <div className="panel-title"><div><h3>{t("newDevices")}</h3><small>{pending.length}</small></div><button className="button primary" onClick={joinAll}>{t("acceptAllNew")}</button></div>
+        {pending.map((device) => <article key={device.ip}><StatusDot status="new"/><div><strong>{device.display_name || device.name || device.ip}</strong><small>{device.ip} · {device.mac || "—"}</small></div><button className="button" onClick={() => joinOne(device)}>{t("accept")}</button></article>)}
+        {joinReport && <div className={joinReport.conflicts?.length ? "error-banner" : "success-banner"}>{joinReport.accepted?.length || 0} {t("accepted")} · {joinReport.conflicts?.length || 0} {t("duplicates")}</div>}
+      </section>}
+      <section className="settings-device-groups">
         <div className="panel-title">
-          <h3>{t("recentlyAdded")}</h3>
-          <span>{recent.length}</span>
+          <h3>{t("devices")}</h3>
+          <span>{data.devices?.length || 0}</span>
         </div>
-        {recent.map((device) => (
-          <article key={device.ip}>
-            <StatusDot status={device.status} />
-            <div>
-              <strong>{device.display_name || device.name || device.ip}</strong>
-              <small>
-                {device.ip} · {device.category || t("uncategorized")}
-              </small>
-            </div>
-            <span>{t(device.status)}</span>
-          </article>
-        ))}
+        {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([category, devices]) => <div className="settings-device-group" key={category}>
+          <button className="settings-device-group-head" onClick={() => setExpanded({ ...expanded, [category]: !expanded[category] })}><span><Boxes /> <strong>{category}</strong></span><span>{devices.filter((item) => item.status === "online").length}/{devices.length} <ChevronLeft className={expanded[category] ? "expanded" : ""}/></span></button>
+          {expanded[category] && <div className="settings-device-rows">{devices.map((device) => { const edit = edits[device.ip] || {}; return <article key={device.ip}><StatusDot status={device.status}/><input value={edit.name ?? device.display_name ?? device.name ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, name: e.target.value } })}/><code>{device.ip}</code><select value={edit.category ?? device.category ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, category: e.target.value } })}><option value="">{t("uncategorized")}</option>{(data.labels?.categories || []).map((item) => <option key={item.name}>{item.name}</option>)}</select><input value={edit.tags ?? (device.tags || []).join(", ")} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, tags: e.target.value } })} placeholder={t("tags")}/><button className="button" onClick={() => saveInline(device)}>{t("save")}</button><button className="icon-button" onClick={() => location.hash = `#/devices/${encodeURIComponent(device.ip)}`}><ArrowUpRight /></button></article>})}</div>}
+        </div>)}
       </section>
     </div>
   );
@@ -3582,56 +3751,6 @@ function SettingsPage({
                     }
                   />
                   <small>1–365 {t("days")}</small>
-                </label>
-                <label>
-                  {t("alertProfile")}
-                  <select
-                    value={form.alert_profile}
-                    onChange={(e) =>
-                      setForm({ ...form, alert_profile: e.target.value })
-                    }
-                  >
-                    <option value="quiet">{t("quiet")}</option>
-                    <option value="normal">{t("normal")}</option>
-                    <option value="strict">{t("strict")}</option>
-                  </select>
-                  <small>{t("alertProfileHelp")}</small>
-                </label>
-                <label>
-                  {t("defaultView")}
-                  <select
-                    value={form.default_view}
-                    onChange={(e) =>
-                      setForm({ ...form, default_view: e.target.value })
-                    }
-                  >
-                    <option value="table">{t("table")}</option>
-                    <option value="grid">{t("grid")}</option>
-                  </select>
-                </label>
-                <label>
-                  {t("dashboardStyle")}
-                  <select
-                    value={form.dashboard_style}
-                    onChange={(e) =>
-                      setForm({ ...form, dashboard_style: e.target.value })
-                    }
-                  >
-                    <option value="advanced">{t("advanced")}</option>
-                    <option value="compact">{t("compact")}</option>
-                  </select>
-                </label>
-                <label>
-                  {t("statusAnimation")}
-                  <select
-                    value={form.status_animation}
-                    onChange={(e) =>
-                      setForm({ ...form, status_animation: e.target.value })
-                    }
-                  >
-                    <option value="blink">{t("blink")}</option>
-                    <option value="static">{t("static")}</option>
-                  </select>
                 </label>
               </div>
             </>
@@ -3892,27 +4011,7 @@ function SettingsPage({
             </>
           )}
           {section === "notification" && (
-            <>
-              <div className="settings-title">
-                <Bell />
-                <div>
-                  <h2>{t("notification")}</h2>
-                  <p>PWA · browser alerts</p>
-                </div>
-              </div>
-              <div className="notification-card">
-                <Bell />
-                <div>
-                  <strong>{t("enableNotifications")}</strong>
-                  <p>
-                    {t("openAlerts")} · {t("offline")} · {t("recoveries")}
-                  </p>
-                </div>
-                <button className="button" onClick={enableNotifications}>
-                  {t("enableNotifications")}
-                </button>
-              </div>
-            </>
+            <NotificationManagement t={t} enableNotifications={enableNotifications} />
           )}
           {section === "operationsManagement" && (
             <OperationsManagement t={t} refresh={refresh} />
@@ -4012,6 +4111,7 @@ function SettingsPage({
                   onChange={importFile}
                 />
               </div>
+              <BackupManagement t={t} />
             </>
           )}
           {deferredSaveSections.has(section) && (
@@ -4367,7 +4467,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.7.0"}</small>
+            <small>v{data.status?.version || "6.8.0"}</small>
           </div>
         </div>
       </aside>

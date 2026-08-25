@@ -81,6 +81,44 @@ class AvailabilityTimelineTests(unittest.TestCase):
         self.assertGreaterEqual(series[0]["ts"], int(time.time()) - (24 * 3600) - 60)
 
 
+class AlertRuleTests(unittest.TestCase):
+    def setUp(self):
+        self.original_base, self.original_db = main.BASE_DIR, main.DB_PATH
+        self.temp_dir = tempfile.TemporaryDirectory(prefix="homeii-alert-rules-")
+        main.BASE_DIR = Path(self.temp_dir.name)
+        main.DB_PATH = main.BASE_DIR / "homeii.db"
+        main.init_db()
+
+    def tearDown(self):
+        main.BASE_DIR, main.DB_PATH = self.original_base, self.original_db
+        self.temp_dir.cleanup()
+
+    def test_critical_offline_rule_is_attached_to_matching_alert(self):
+        conn = main.db()
+        try:
+            now = int(time.time())
+            conn.execute(
+                "INSERT INTO devices(ip,name,status,critical,approved,updated_at) VALUES(?,?,?,?,?,?)",
+                ("10.0.0.20", "Core switch", "offline", 1, 1, now),
+            )
+            conn.execute(
+                "INSERT INTO alert_rules(name,enabled,trigger_type,condition_json,action_json,severity,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                ("Critical offline", 1, "critical_offline", "{}", '{"sound": true, "toast": true}', "critical", now, now),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        main.create_alert("10.0.0.20", "high", main.ALERT_TITLE_OFFLINE, "Core switch is offline")
+        conn = main.db()
+        try:
+            alert = conn.execute("SELECT severity,rule_id,action_json FROM alerts").fetchone()
+            self.assertEqual(alert["severity"], "critical")
+            self.assertGreater(alert["rule_id"], 0)
+            self.assertTrue(json.loads(alert["action_json"])["sound"])
+        finally:
+            conn.close()
+
+
 class InventoryCleanupTests(unittest.TestCase):
     def test_cleanup_suppresses_offline_and_duplicate_devices(self):
         original_base, original_db = main.BASE_DIR, main.DB_PATH
@@ -282,7 +320,7 @@ class MigrationSafetyTests(unittest.TestCase):
             try:
                 main.BASE_DIR, main.DB_PATH = base, target
                 main.init_db()
-                backups = list((base / "backups").glob("homeii-pre-schema-9-*.db"))
+                backups = list((base / "backups").glob("homeii-pre-schema-10-*.db"))
                 self.assertEqual(len(backups), 1)
             finally:
                 main.BASE_DIR, main.DB_PATH = original_base, original_db
@@ -335,7 +373,7 @@ class MigrationSafetyTests(unittest.TestCase):
                     self.assertEqual(device["quarantined"], 0)
                 finally:
                     upgraded.close()
-                backups = list((base / "backups").glob("homeii-pre-schema-9-*.db"))
+                backups = list((base / "backups").glob("homeii-pre-schema-10-*.db"))
                 self.assertEqual(len(backups), 1)
             finally:
                 main.BASE_DIR, main.DB_PATH = original_base, original_db

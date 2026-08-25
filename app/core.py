@@ -223,8 +223,17 @@ def ensure_dirs() -> None:
     BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def create_database_backup(prefix: str = "homeii-backup") -> Path:
-    backup_dir = BASE_DIR / "backups"
+def backup_directory(target: str | None = None) -> Path:
+    selected = (target or get_setting("backup_target", "data")).strip().lower()
+    if selected == "share":
+        share_root = Path("/share")
+        if share_root.exists() and os.access(share_root, os.W_OK):
+            return share_root / "homeii-network-monitor" / "backups"
+    return BASE_DIR / "backups"
+
+
+def create_database_backup(prefix: str = "homeii-backup", target: str | None = None) -> Path:
+    backup_dir = backup_directory(target)
     backup_dir.mkdir(parents=True, exist_ok=True)
     backup_path = backup_dir / f"{prefix}-{now_ts()}.db"
     with _db_lock:
@@ -239,17 +248,23 @@ def create_database_backup(prefix: str = "homeii-backup") -> Path:
 
 
 def maintain_automatic_backups(force: bool = False) -> dict[str, Any]:
-    backup_dir = BASE_DIR / "backups"
+    backup_dir = backup_directory()
+    if not force and get_setting("backup_enabled", "1") != "1":
+        return {"created": "", "retained": 0, "last_backup": 0, "target": get_setting("backup_target", "data"), "directory": str(backup_dir), "enabled": False}
     backups = sorted(backup_dir.glob("homeii-auto-*.db"), key=lambda path: path.stat().st_mtime, reverse=True) if backup_dir.exists() else []
     last_backup = int(backups[0].stat().st_mtime) if backups else 0
     created = None
     if force or now_ts() - last_backup >= 86400:
         created = create_database_backup("homeii-auto")
         backups = sorted(backup_dir.glob("homeii-auto-*.db"), key=lambda path: path.stat().st_mtime, reverse=True)
-    for stale in backups[3:]:
+    try:
+        retention = max(1, min(10, int(get_setting("backup_retention", "3"))))
+    except Exception:
+        retention = 3
+    for stale in backups[retention:]:
         stale.unlink(missing_ok=True)
-    retained = backups[:3]
-    return {"created": str(created) if created else "", "retained": len(retained), "last_backup": int(retained[0].stat().st_mtime) if retained else 0}
+    retained = backups[:retention]
+    return {"created": str(created) if created else "", "retained": len(retained), "last_backup": int(retained[0].stat().st_mtime) if retained else 0, "target": "share" if str(backup_dir).startswith("/share") else "data", "directory": str(backup_dir), "enabled": True}
 
 
 SCHEMA = """
@@ -301,7 +316,9 @@ CREATE TABLE IF NOT EXISTS alerts (
   message TEXT DEFAULT '',
   status TEXT DEFAULT 'open',
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  rule_id INTEGER DEFAULT 0,
+  action_json TEXT DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS label_definitions (
@@ -335,6 +352,18 @@ CREATE TABLE IF NOT EXISTS audit_log (
   target TEXT NOT NULL DEFAULT '',
   outcome TEXT NOT NULL DEFAULT 'success',
   details_json TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS alert_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  trigger_type TEXT NOT NULL DEFAULT 'device_offline',
+  condition_json TEXT NOT NULL DEFAULT '{}',
+  action_json TEXT NOT NULL DEFAULT '{}',
+  severity TEXT NOT NULL DEFAULT 'high',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS traffic_samples (
@@ -403,6 +432,8 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_ts
   ON audit_log(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_log_actor_ts
   ON audit_log(actor, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_alert_rules_enabled_trigger
+  ON alert_rules(enabled, trigger_type);
 CREATE INDEX IF NOT EXISTS idx_traffic_samples_ts
   ON traffic_samples(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry
@@ -424,6 +455,11 @@ DEFAULT_SETTINGS = {
     "history_retention_days": "30",
     "alert_profile": "normal",
     "auto_restore_quarantined": "1",
+    "backup_target": "data",
+    "backup_retention": "3",
+    "backup_enabled": "1",
+    "alert_sound_enabled": "1",
+    "alert_sound_name": "alarm",
 }
 
 
@@ -449,8 +485,8 @@ def init_db() -> None:
             if migration_table:
                 row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
                 current_schema = int((row and row[0]) or 0)
-            if database_existed and current_schema < 9:
-                backup_path = BASE_DIR / "backups" / f"homeii-pre-schema-9-{now_ts()}.db"
+            if database_existed and current_schema < 10:
+                backup_path = BASE_DIR / "backups" / f"homeii-pre-schema-10-{now_ts()}.db"
                 backup_path.parent.mkdir(parents=True, exist_ok=True)
                 backup_conn = sqlite3.connect(backup_path)
                 try:
@@ -470,13 +506,15 @@ def init_db() -> None:
             ensure_column(conn, "devices", "tags_json", "tags_json TEXT DEFAULT '[]'")
             ensure_column(conn, "alerts", "acknowledged_at", "acknowledged_at INTEGER DEFAULT 0")
             ensure_column(conn, "alerts", "acknowledged_by", "acknowledged_by TEXT DEFAULT ''")
+            ensure_column(conn, "alerts", "rule_id", "rule_id INTEGER DEFAULT 0")
+            ensure_column(conn, "alerts", "action_json", "action_json TEXT DEFAULT '{}'")
             ensure_column(conn, "users", "can_manage_alerts", "can_manage_alerts INTEGER NOT NULL DEFAULT 0")
             # Indexes may reference columns that do not exist in a 5.x database.
             # Create them only after every additive migration has completed.
             conn.executescript(INDEX_SCHEMA)
             conn.execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES(?, ?)",
-                (9, now_ts()),
+                (10, now_ts()),
             )
             for k, v in DEFAULT_SETTINGS.items():
                 conn.execute(
@@ -910,6 +948,34 @@ def create_alert(ip: str, severity: str, title: str, message: str) -> None:
     with _db_lock:
         conn = db()
         try:
+            trigger_by_title = {
+                ALERT_TITLE_OFFLINE: "device_offline",
+                ALERT_TITLE_BACK_ONLINE: "device_recovered",
+                ALERT_TITLE_UNSTABLE: "device_unstable",
+                ALERT_TITLE_NEW: "new_device",
+            }
+            trigger = trigger_by_title.get(title, "")
+            rule_id = 0
+            action: dict[str, Any] = {}
+            if trigger:
+                device = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+                rules = conn.execute("SELECT * FROM alert_rules WHERE enabled=1 AND trigger_type IN (?,?) ORDER BY id", ("critical_offline" if trigger == "device_offline" else trigger, trigger)).fetchall()
+                for rule in rules:
+                    condition = json.loads(rule["condition_json"] or "{}")
+                    if rule["trigger_type"] == "critical_offline" and not (device and device["critical"]):
+                        continue
+                    if condition.get("category") and (not device or device["category"] != condition["category"]):
+                        continue
+                    if condition.get("critical") is True and (not device or not device["critical"]):
+                        continue
+                    required_tag = str(condition.get("tag", "")).strip()
+                    tags = json.loads((device["tags_json"] if device else "[]") or "[]")
+                    if required_tag and required_tag not in tags:
+                        continue
+                    rule_id = int(rule["id"])
+                    action = json.loads(rule["action_json"] or "{}")
+                    severity = str(action.get("severity") or rule["severity"] or severity)
+                    break
             current = conn.execute(
                 "SELECT id, status FROM alerts WHERE ip=? AND title=? AND status='open' ORDER BY id DESC LIMIT 1",
                 (ip, title),
@@ -917,13 +983,13 @@ def create_alert(ip: str, severity: str, title: str, message: str) -> None:
             ts = now_ts()
             if current:
                 conn.execute(
-                    "UPDATE alerts SET message=?, severity=?, updated_at=? WHERE id=?",
-                    (message, severity, ts, current["id"]),
+                    "UPDATE alerts SET message=?, severity=?, rule_id=?, action_json=?, updated_at=? WHERE id=?",
+                    (message, severity, rule_id, json.dumps(action, ensure_ascii=False), ts, current["id"]),
                 )
             else:
                 conn.execute(
-                    "INSERT INTO alerts(ip,severity,title,message,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
-                    (ip, severity, title, message, "open", ts, ts),
+                    "INSERT INTO alerts(ip,severity,title,message,status,created_at,updated_at,rule_id,action_json) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (ip, severity, title, message, "open", ts, ts, rule_id, json.dumps(action, ensure_ascii=False)),
                 )
             conn.commit()
         finally:

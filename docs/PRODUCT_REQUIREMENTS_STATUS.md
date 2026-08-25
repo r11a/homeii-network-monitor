@@ -11,16 +11,16 @@ This file is the release truth source. A capability may be marked complete only 
 - Device inventory search, status filters, sorting, card/table views, manual add, clone, and per-device scan profiles.
 - Real rolling 24-hour availability strips and historical daily summaries.
 - Recycle lifecycle: offline after 48 hours, 14-day retention, automatic recovery, and permanent tombstones.
-- Automatic rotating SQLite backups with three retained copies (restore verification is still a release gap).
+- Automatic and manual rotating SQLite backups with configurable retention and `/data` or Home Assistant `/share` targets (restore verification is still a release gap).
 - New-disconnect toast and sound only, plus persistent-outage reminders.
 - Category on-demand check, availability score, online/total ratio, device list, and disconnect ranking.
 
 ## Partial - must be deepened before commercial readiness
 
 - Control room: live health and priority queue exist; operator journal, escalation workflow, wall-display density presets, incident ownership, and SLA timers remain incomplete.
-- Alerts: acknowledge, resolve, severity and clear-resolved exist; incident deduplication, reopen state, quiet hours, escalation policy, delivery tracking, and notification testing remain incomplete.
+- Alerts: acknowledge, resolve, severity, clear-resolved and persisted trigger-condition-action rules exist; incident reopen state, quiet hours, escalation policy, delivery tracking, recipient targeting and notification testing remain incomplete.
 - Categories and tags: definitions, rename propagation, colors and icon rendering are implemented; reorder, a centralized assignment picker, and bulk assignment remain incomplete.
-- Audit: mutations and state changes are recorded; filters, pagination, detail drawer, export, retention, correlation IDs, and before/after values remain incomplete.
+- Audit: mutations and state changes are recorded and filterable by actor, action, outcome and date; pagination, detail drawer, export, retention, correlation IDs, and before/after values remain incomplete.
 - History: day through year summaries exist; traffic rollups, category comparisons, incident overlays, export, and drill-down remain incomplete.
 - Network tools: ping, trace, ports, DNS, speed, free-IP and traffic summaries exist; streamed continuous tests, saved test profiles, baselines, anomaly comparison, and human-readable remediation remain incomplete.
 - User management: roles and two permissions exist; granular permission policies, password reset, forced logout, session list, and account audit remain incomplete.

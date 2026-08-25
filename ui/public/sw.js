@@ -1,4 +1,4 @@
-const CACHE = 'homeii-shell-v6.7.0-identity-editor'
+const CACHE = 'homeii-shell-v6.8.0-control-plane'
 const SHELL = ['./', './manifest.webmanifest', './icons/homeii-192.png']
 
 self.addEventListener('install', (event) => {
