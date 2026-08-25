@@ -1,5 +1,14 @@
 # Changelog
 
+## 6.6.0
+
+- Replaced the nested settings page with a dedicated full-screen administration workspace and one right-side navigation system.
+- Added a continuous device-onboarding workspace with immediate reachability feedback, category, scan profile and critical-device controls.
+- Added Uptime Kuma-inspired category and tag management with editable names, colors and icons.
+- Propagated category visual identity into command-center cards and preserved device assignments during category changes.
+- Restructured the device editor footer and category detail surfaces into consistent product panels.
+- Added a release-truth requirements matrix so partial capabilities are no longer described as complete.
+
 ## 6.5.1
 
 - Rebuilt settings into a consistent, compact administrative workspace across desktop and mobile.

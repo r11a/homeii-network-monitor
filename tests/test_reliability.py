@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -103,6 +104,101 @@ class InventoryCleanupTests(unittest.TestCase):
                 try:
                     visible = conn.execute("SELECT ip FROM devices WHERE ignored=0 ORDER BY ip").fetchall()
                     self.assertEqual([row["ip"] for row in visible], ["10.0.0.10"])
+                finally:
+                    conn.close()
+            finally:
+                main.BASE_DIR, main.DB_PATH = original_base, original_db
+
+
+class LabelDefinitionTests(unittest.TestCase):
+    def test_deleting_definition_preserves_device_assignment(self):
+        original_base, original_db = main.BASE_DIR, main.DB_PATH
+        with tempfile.TemporaryDirectory(prefix="homeii-labels-") as temp_dir:
+            main.BASE_DIR = Path(temp_dir)
+            main.DB_PATH = main.BASE_DIR / "homeii.db"
+            try:
+                main.init_db()
+                main.save_label_definition("category", "Cameras", "#35d49a", "camera")
+                label = main.label_definitions_payload()["categories"][0]
+                conn = main.db()
+                try:
+                    now = int(time.time())
+                    conn.execute(
+                        "INSERT INTO devices(ip,status,category,last_seen,updated_at) VALUES(?,?,?,?,?)",
+                        ("10.0.0.20", "online", "Cameras", now, now),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+                self.assertTrue(main.delete_label_definition(label["id"]))
+                conn = main.db()
+                try:
+                    device = conn.execute("SELECT category FROM devices WHERE ip='10.0.0.20'").fetchone()
+                    self.assertEqual(device["category"], "Cameras")
+                finally:
+                    conn.close()
+            finally:
+                main.BASE_DIR, main.DB_PATH = original_base, original_db
+
+    def test_renaming_category_updates_assigned_devices(self):
+        original_base, original_db = main.BASE_DIR, main.DB_PATH
+        with tempfile.TemporaryDirectory(prefix="homeii-label-rename-") as temp_dir:
+            main.BASE_DIR = Path(temp_dir)
+            main.DB_PATH = main.BASE_DIR / "homeii.db"
+            try:
+                main.init_db()
+                main.save_label_definition("category", "Cameras", "#35d49a", "camera")
+                label = main.label_definitions_payload()["categories"][0]
+                conn = main.db()
+                try:
+                    now = int(time.time())
+                    conn.execute("INSERT INTO devices(ip,status,category,last_seen,updated_at) VALUES(?,?,?,?,?)", ("10.0.0.21", "online", "Cameras", now, now))
+                    conn.commit()
+                finally:
+                    conn.close()
+                main.update_label_definition(label["id"], "Security Cameras", "#ffb52e", "camera")
+                conn = main.db()
+                try:
+                    device = conn.execute("SELECT category FROM devices WHERE ip='10.0.0.21'").fetchone()
+                    self.assertEqual(device["category"], "Security Cameras")
+                finally:
+                    conn.close()
+                category = next(
+                    item
+                    for item in main.viewer_categories_payload()["categories"]
+                    if item["category"] == "Security Cameras"
+                )
+                self.assertEqual(category["color"], "#ffb52e")
+                self.assertEqual(category["icon"], "camera")
+            finally:
+                main.BASE_DIR, main.DB_PATH = original_base, original_db
+
+    def test_renaming_tag_updates_device_assignments(self):
+        original_base, original_db = main.BASE_DIR, main.DB_PATH
+        with tempfile.TemporaryDirectory(prefix="homeii-tag-rename-") as temp_dir:
+            main.BASE_DIR = Path(temp_dir)
+            main.DB_PATH = main.BASE_DIR / "homeii.db"
+            try:
+                main.init_db()
+                main.save_label_definition("tag", "Production", "#35d49a", "server")
+                label = main.label_definitions_payload()["tags"][0]
+                conn = main.db()
+                try:
+                    now = int(time.time())
+                    conn.execute(
+                        "INSERT INTO devices(ip,status,tags_json,last_seen,updated_at) VALUES(?,?,?,?,?)",
+                        ("10.0.0.22", "online", '["Production", "Critical"]', now, now),
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+                main.update_label_definition(label["id"], "Core", "#ffb52e", "server")
+                conn = main.db()
+                try:
+                    device = conn.execute(
+                        "SELECT tags_json FROM devices WHERE ip='10.0.0.22'"
+                    ).fetchone()
+                    self.assertEqual(json.loads(device["tags_json"]), ["Core", "Critical"])
                 finally:
                     conn.close()
             finally:

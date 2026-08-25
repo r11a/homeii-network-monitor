@@ -961,21 +961,22 @@ def api_ping_now(ip: str, request: Request):
 def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = ""):
     host = reverse_dns(ip)
     vendor = ""
+    reachable = ping(ip)
     d = {
         "name": choose_display_name(name, host, vendor, ip),
         "hostname": host,
         "category": category or auto_category(name or host or ip, vendor),
         "vendor": vendor,
         "mac": "",
-        "status": "online" if ping(ip) else "offline",
-        "last_seen": now_ts() if ping(ip) else 0,
+        "status": "online" if reachable else "offline",
+        "last_seen": now_ts() if reachable else 0,
         "critical": False,
         "pinned": False,
         "manual": True,
         "ignored": False,
         "approved": True,
         "fail_count": 0,
-        "success_count": 1 if ping(ip) else 0,
+        "success_count": 1 if reachable else 0,
         "state_changes_today": 0,
         "first_seen": now_ts(),
         "updated_at": now_ts(),
@@ -1023,6 +1024,7 @@ def api_labels():
 
 @app.post("/api/labels")
 async def api_save_label(request: Request):
+    require_role(request, "admin")
     payload = await request.json()
     try:
         saved = save_label_definition(
@@ -1032,6 +1034,26 @@ async def api_save_label(request: Request):
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     return {"ok": True, "label": saved, **label_definitions_payload()}
+
+
+@app.delete("/api/labels/{label_id}")
+def api_delete_label(label_id: int, request: Request):
+    require_role(request, "admin")
+    deleted = delete_label_definition(label_id)
+    if not deleted:
+        return JSONResponse({"error": "label_not_found"}, status_code=404)
+    return {"ok": True, **label_definitions_payload()}
+
+
+@app.patch("/api/labels/{label_id}")
+async def api_update_label(label_id: int, request: Request):
+    require_role(request, "admin")
+    payload = await request.json()
+    try:
+        label = update_label_definition(label_id, str(payload.get("name", "")), str(payload.get("color", "")), str(payload.get("icon", "")))
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=404 if str(exc) == "label_not_found" else 400)
+    return {"ok": True, "label": label, **label_definitions_payload()}
 
 
 @app.post("/api/categories/{category}/check")

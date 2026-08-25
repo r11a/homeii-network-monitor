@@ -931,6 +931,62 @@ def save_label_definition(kind: str, name: str, color: str, icon: str) -> dict[s
     return {"kind": kind, "name": name, "color": color, "icon": icon}
 
 
+def delete_label_definition(label_id: int) -> bool:
+    """Delete only the visual definition; device assignments remain intact."""
+    with _db_lock:
+        conn = db()
+        try:
+            cursor = conn.execute("DELETE FROM label_definitions WHERE id=?", (int(label_id),))
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+
+def update_label_definition(label_id: int, name: str, color: str, icon: str) -> dict[str, Any]:
+    name = name.strip()[:80]
+    color = color.strip() if re.fullmatch(r"#[0-9a-fA-F]{6}", color.strip()) else "#5da9ff"
+    icon = re.sub(r"[^a-z0-9_-]", "", icon.strip().lower())[:40] or "tag"
+    if not name:
+        raise ValueError("invalid_label_definition")
+    with _db_lock:
+        conn = db()
+        try:
+            current = conn.execute("SELECT * FROM label_definitions WHERE id=?", (int(label_id),)).fetchone()
+            if not current:
+                raise ValueError("label_not_found")
+            if current["kind"] == "category" and current["name"].casefold() != name.casefold():
+                conn.execute("UPDATE devices SET category=?,updated_at=? WHERE category=? COLLATE NOCASE", (name, now_ts(), current["name"]))
+            if current["kind"] == "tag" and current["name"].casefold() != name.casefold():
+                rows = conn.execute(
+                    "SELECT ip,tags_json FROM devices WHERE tags_json IS NOT NULL AND tags_json != ''"
+                ).fetchall()
+                for row in rows:
+                    try:
+                        tags = json.loads(row["tags_json"] or "[]")
+                    except (TypeError, json.JSONDecodeError):
+                        continue
+                    if not isinstance(tags, list):
+                        continue
+                    renamed = [
+                        name if str(tag).casefold() == current["name"].casefold() else tag
+                        for tag in tags
+                    ]
+                    if renamed != tags:
+                        conn.execute(
+                            "UPDATE devices SET tags_json=?,updated_at=? WHERE ip=?",
+                            (json.dumps(renamed, ensure_ascii=False), now_ts(), row["ip"]),
+                        )
+            conn.execute("UPDATE label_definitions SET name=?,color=?,icon=?,updated_at=? WHERE id=?", (name, color, icon, now_ts(), int(label_id)))
+            conn.commit()
+            return {"id": int(label_id), "kind": current["kind"], "name": name, "color": color, "icon": icon}
+        except sqlite3.IntegrityError as exc:
+            conn.rollback()
+            raise ValueError("label_already_exists") from exc
+        finally:
+            conn.close()
+
+
 def clone_device(source_ip: str, target_ip: str, name: str) -> dict[str, Any]:
     try:
         source_ip = str(ipaddress.ip_address(source_ip.strip()))
@@ -3214,6 +3270,9 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
     buckets = 24
 
     devices = get_devices()
+    category_definitions = {
+        item["name"].casefold(): item for item in label_definitions_payload()["categories"]
+    }
     grouped: Dict[str, List[Dict[str, Any]]] = {}
     for device in devices:
         key = (device.get("category") or "").strip()
@@ -3347,6 +3406,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
 
     payload = []
     for category, category_devices in grouped.items():
+        category_definition = category_definitions.get(category.casefold(), {})
         current_counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
         for device in category_devices:
             current_counts[device.get("status") or "unknown"] = current_counts.get(device.get("status") or "unknown", 0) + 1
@@ -3380,6 +3440,8 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         payload.append(
             {
                 "category": category,
+                "color": category_definition.get("color", "#5da9ff"),
+                "icon": category_definition.get("icon", "boxes"),
                 "total": len(category_devices),
                 "online": current_counts.get("online", 0),
                 "offline": current_counts.get("offline", 0),
