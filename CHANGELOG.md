@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.0.2
+
+- Moved Control-room branding and account switching into the persistent application shell.
+- Ensured the edge-to-edge header remains visible independently of live-data rendering.
+
 ## 7.0.1
 
 - Fixed Control room data loading for the restricted `control` role.

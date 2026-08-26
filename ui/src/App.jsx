@@ -527,28 +527,6 @@ function Viewer({
   };
   return (
     <div className="page-stack noc-page">
-      {currentUser?.role === "control" && (
-        <div className="control-topbar">
-          <Logo />
-          <details className="control-account-menu">
-            <summary>
-              <span>{(currentUser.display_name || currentUser.username).slice(0, 1).toUpperCase()}</span>
-              <strong>{currentUser.display_name || currentUser.username}</strong>
-              <ChevronLeft />
-            </summary>
-            <div>
-              <button
-                onClick={async () => {
-                  await api("/auth/logout", { method: "POST" });
-                  window.location.reload();
-                }}
-              >
-                <LogOut /> {t("switchUser")}
-              </button>
-            </div>
-          </details>
-        </div>
-      )}
       <div className="page-heading noc-heading">
         <div>
           <span className="eyebrow">{t("liveOperations")}</span>
@@ -4454,6 +4432,23 @@ export default function App() {
     <div
       className={`app-shell role-${role} ${edgeViewer ? "edge-viewer" : ""}`}
     >
+      {role === "control" && (
+        <div className="control-topbar">
+          <Logo />
+          <details className="control-account-menu">
+            <summary>
+              <span>{(auth.user.display_name || auth.user.username).slice(0, 1).toUpperCase()}</span>
+              <strong>{auth.user.display_name || auth.user.username}</strong>
+              <ChevronLeft />
+            </summary>
+            <div>
+              <button onClick={logout}>
+                <LogOut /> {t("switchUser")}
+              </button>
+            </div>
+          </details>
+        </div>
+      )}
       <aside className={menuOpen ? "open" : ""}>
         <Logo />
         <details className="account-menu">
@@ -4496,7 +4491,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.0.1"}</small>
+            <small>v{data.status?.version || "7.0.2"}</small>
           </div>
         </div>
       </aside>
