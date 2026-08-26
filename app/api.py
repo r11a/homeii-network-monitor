@@ -385,7 +385,7 @@ async def enforce_api_permissions(request: Request, call_next):
         "/api/remove/", "/api/restore/", "/api/delete_device", "/api/ignore/",
         "/api/update", "/api/toggle_", "/api/bulk_", "/api/ping_now/",
         "/api/add_manual", "/api/resolve_alert/", "/api/acknowledge_alert/",
-        "/api/devices/", "/api/labels",
+        "/api/devices/", "/api/labels/",
     )
 
     if any(path.startswith(prefix) for prefix in admin_prefixes):

@@ -527,6 +527,28 @@ function Viewer({
   };
   return (
     <div className="page-stack noc-page">
+      {currentUser?.role === "control" && (
+        <div className="control-topbar">
+          <Logo />
+          <details className="control-account-menu">
+            <summary>
+              <span>{(currentUser.display_name || currentUser.username).slice(0, 1).toUpperCase()}</span>
+              <strong>{currentUser.display_name || currentUser.username}</strong>
+              <ChevronLeft />
+            </summary>
+            <div>
+              <button
+                onClick={async () => {
+                  await api("/auth/logout", { method: "POST" });
+                  window.location.reload();
+                }}
+              >
+                <LogOut /> {t("switchUser")}
+              </button>
+            </div>
+          </details>
+        </div>
+      )}
       <div className="page-heading noc-heading">
         <div>
           <span className="eyebrow">{t("liveOperations")}</span>
@@ -4215,6 +4237,7 @@ export default function App() {
     refreshInFlight.current = true;
     try {
       setError("");
+      const optionalApi = (path, fallback) => api(path).catch(() => fallback);
       const [
         status,
         devices,
@@ -4228,11 +4251,11 @@ export default function App() {
         api("/status"),
         api("/devices"),
         api("/alerts?limit=100"),
-        api("/events?limit=100"),
-        api("/settings"),
+        optionalApi("/events?limit=100", { events: data.events || [] }),
+        optionalApi("/settings", data.settingsPayload || { settings: data.settings || {} }),
         api("/viewer/categories"),
-        api("/history/summary"),
-        api("/labels"),
+        optionalApi("/history/summary", data.history || {}),
+        optionalApi("/labels", data.labels || { categories: [], tags: [] }),
       ]);
       const alertItems = alerts.alerts || [];
       setData({
@@ -4473,7 +4496,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.0.0"}</small>
+            <small>v{data.status?.version || "7.0.1"}</small>
           </div>
         </div>
       </aside>

@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.0.1
+
+- Fixed Control room data loading for the restricted `control` role.
+- Made secondary dashboard data resilient so one optional API failure no longer clears the live view.
+- Added HOMEii branding and a secure user-switch action to the edge-to-edge Control room.
+
 ## 7.0.0
 
 - Rebuilt the product hierarchy around three immediate questions: what is offline now, what requires attention, and how health changes over time.
