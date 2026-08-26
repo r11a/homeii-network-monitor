@@ -75,6 +75,7 @@ import {
   Gamepad2,
   Building2,
   PlugZap,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   Area,
@@ -86,9 +87,6 @@ import {
   YAxis,
   Bar,
   BarChart,
-  Pie,
-  PieChart,
-  Cell,
 } from "recharts";
 import { api, query } from "./api";
 import { translator } from "./i18n";
@@ -311,280 +309,112 @@ function outageUrgency(lastSeen) {
 }
 
 function Dashboard({ data, t, setRoute, language }) {
-  const { status, alerts, events, viewer } = data;
-  const chartData =
-    viewer?.summary?.series?.map((point, index) => ({
-      name: `${index}:00`,
-      availability: Number(point.availability_pct || 0),
-    })) || [];
-  const attention = (data.devices || [])
-    .filter((d) => ["offline", "unstable", "new"].includes(d.status))
-    .slice(0, 5);
-  const recentlyJoined = [...(data.devices || [])]
-    .filter(
-      (device) =>
-        !device.quarantined &&
-        !device.trashed_at &&
-        Number(device.first_seen || 0) > 0,
-    )
-    .sort(
-      (left, right) =>
-        Number(right.first_seen || 0) - Number(left.first_seen || 0),
+  const { status, viewer } = data;
+  const devices = (data.devices || []).filter(
+    (device) => !device.quarantined && !device.trashed_at,
+  );
+  const attention = devices
+    .filter((device) => ["offline", "unstable"].includes(device.status))
+    .sort((left, right) =>
+      Number(left.status !== "offline") - Number(right.status !== "offline") ||
+      Number(right.critical) - Number(left.critical) ||
+      Number(left.last_seen || 0) - Number(right.last_seen || 0),
     )
     .slice(0, 6);
-  const healthData = [
-    { key: "online", value: Number(status?.online || 0), color: "#35d49a" },
-    { key: "offline", value: Number(status?.offline || 0), color: "#ff5d73" },
-    { key: "unstable", value: Number(status?.unstable || 0), color: "#ffb547" },
-    { key: "anomalies", value: Number(status?.new || 0), color: "#5da9ff" },
+  const recentlyJoined = devices
+    .filter((device) => Number(device.first_seen || 0) > 0)
+    .sort((left, right) => Number(right.first_seen || 0) - Number(left.first_seen || 0))
+    .slice(0, 5);
+  const chartData = (viewer?.summary?.series || []).map((point) => ({
+    time: new Date(Number(point.ts || 0) * 1000).toLocaleTimeString(
+      language === "he" ? "he-IL" : "en-US",
+      { hour: "2-digit", minute: "2-digit" },
+    ),
+    availability: Number(point.availability_pct || 0),
+  }));
+  const healthy = Number(status?.offline || 0) === 0 && Number(status?.unstable || 0) === 0;
+  const metrics = [
+    ["online", status?.online || 0, Wifi],
+    ["offline", status?.offline || 0, WifiOff],
+    ["unstable", status?.unstable || 0, Activity],
+    ["new", status?.new || 0, Sparkles],
   ];
   return (
-    <div className="page-stack">
-      <section className="hero-panel">
+    <div className="page-stack overview-page">
+      <section className={`overview-status ${healthy ? "healthy" : "attention"}`}>
+        <div className="overview-status-icon">
+          {healthy ? <CheckCircle2 /> : <AlertTriangle />}
+        </div>
         <div>
-          <span className="eyebrow">
-            <Zap size={14} /> {t("monitorLive")}
-          </span>
-          <h1>{t("networkPulse")}</h1>
-          <p>
-            {t("last24h")} · {status?.networks?.length || 0} {t("network")}
-          </p>
+          <span className="eyebrow">{t("overview")}</span>
+          <h1>{healthy ? t("systemHealthy") : t("attention")}</h1>
+          <p>{status?.total || 0} {t("monitored")} · {status?.networks?.length || 0} {t("network")}</p>
         </div>
-        <div className={`health-orb ${status?.offline ? "danger" : "healthy"}`}>
-          <Activity size={32} />
-          <strong>{status?.offline ? status.offline : "OK"}</strong>
-          <small>{status?.offline ? t("offline") : t("systemHealthy")}</small>
-        </div>
+        <strong>{viewer?.summary?.availability_24h ?? 0}%</strong>
       </section>
-      <section className="kpi-grid">
-        {statusOrder.map((type) => (
-          <KpiCard
-            key={type}
-            type={type}
-            value={status?.[type]}
-            label={t(type)}
-            onClick={() =>
-              setRoute(`devices/${type === "total" ? "all" : type}`)
-            }
-          />
+
+      <section className="overview-metrics" aria-label={t("overview")}>
+        {metrics.map(([key, value, Icon]) => (
+          <button key={key} className={`overview-metric tone-${key}`} onClick={() => setRoute(`devices/${key}`)}>
+            <Icon />
+            <span>{t(key)}</span>
+            <strong>{value}</strong>
+            <ChevronLeft />
+          </button>
         ))}
       </section>
-      <section className="panel fleet-overview">
-        <div className="fleet-chart">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={healthData}
-                dataKey="value"
-                nameKey="key"
-                innerRadius="64%"
-                outerRadius="88%"
-                paddingAngle={3}
-                stroke="none"
-                onClick={(entry) =>
-                  setRoute(
-                    `devices/${entry.key === "anomalies" ? "new" : entry.key}`,
-                  )
-                }
-              >
-                {healthData.map((item) => (
-                  <Cell key={item.key} fill={item.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  background: "var(--chart-tooltip)",
-                  border: "1px solid var(--line-strong)",
-                  borderRadius: 14,
-                }}
-                formatter={(value, key) => [value, t(key)]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="fleet-total">
-            <strong>{status?.total || 0}</strong>
-            <span>{t("monitored")}</span>
-          </div>
-        </div>
-        <div className="fleet-summary">
-          <span className="eyebrow">{t("fleetHealth")}</span>
-          <h2>{t("operationalSnapshot")}</h2>
-          <p>{t("fleetHealthHelp")}</p>
-          <div className="fleet-legend">
-            {healthData.map((item) => (
-              <button
-                key={item.key}
-                onClick={() =>
-                  setRoute(
-                    `devices/${item.key === "anomalies" ? "new" : item.key}`,
-                  )
-                }
-                style={{ "--legend-color": item.color }}
-              >
-                <i />
-                <span>{t(item.key)}</span>
-                <strong>{item.value}</strong>
-                <ChevronLeft />
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-      <section className="dashboard-grid">
-        <article className="panel chart-panel wide">
-          <div className="panel-title">
-            <div>
-              <span className="eyebrow">{t("sla24h")}</span>
-              <h2>{t("uptimeTrend")}</h2>
-            </div>
-            <span className="score">
-              {viewer?.summary?.availability_24h ?? 0}%
-            </span>
+
+      <section className="overview-workspace">
+        <article className="panel overview-trend">
+          <div className="section-heading">
+            <div><h2>{t("uptimeTrend")}</h2><p>{t("last24h")}</p></div>
+            <span className="simple-score">{viewer?.summary?.availability_24h ?? 0}%</span>
           </div>
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="availability" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor="#27e6a4" stopOpacity=".52" />
-                    <stop offset=".58" stopColor="#27e6a4" stopOpacity=".13" />
-                    <stop offset="1" stopColor="#27e6a4" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  stroke="var(--chart-axis)"
-                  tickLine={false}
-                />
-                <YAxis domain={[0, 100]} hide />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--chart-tooltip)",
-                    border: "1px solid var(--line-strong)",
-                    borderRadius: 14,
-                    boxShadow: "0 18px 45px #000a",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="availability"
-                  stroke="#27e6a4"
-                  strokeWidth={3}
-                  fill="url(#availability)"
-                  activeDot={{
-                    r: 5,
-                    fill: "#27e6a4",
-                    stroke: "#07130f",
-                    strokeWidth: 3,
-                  }}
-                />
+                <defs><linearGradient id="overviewAvailability" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#27e6a4" stopOpacity=".32"/><stop offset="1" stopColor="#27e6a4" stopOpacity="0"/></linearGradient></defs>
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false}/>
+                <XAxis dataKey="time" stroke="var(--chart-axis)" tickLine={false} axisLine={false} minTickGap={28}/>
+                <YAxis domain={[0, 100]} hide/>
+                <Tooltip contentStyle={{ background: "var(--chart-tooltip)", border: "1px solid var(--line)", borderRadius: 12 }}/>
+                <Area type="monotone" dataKey="availability" stroke="#27e6a4" strokeWidth={3} fill="url(#overviewAvailability)"/>
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </article>
-        <article className="panel attention-panel">
-          <div className="panel-title">
-            <div>
-              <span className="eyebrow">{t("liveQueue")}</span>
-              <h2>{t("attention")}</h2>
-            </div>
-            <AlertTriangle size={21} />
+
+        <article className="panel overview-attention">
+          <div className="section-heading">
+            <div><h2>{t("disconnectedDevices")}</h2><p>{attention.length} {t("requiresAttention")}</p></div>
+            <button className="text-action" onClick={() => setRoute("devices/offline")}>{t("viewAll")} <ChevronLeft /></button>
           </div>
-          <div className="compact-list">
-            {attention.length ? (
-              attention.map((device) => (
-                <div className="compact-row" key={device.ip}>
-                  <StatusDot status={device.status} />
-                  <div>
-                    <strong>
-                      {device.display_name || device.name || device.ip}
-                    </strong>
-                    <small>
-                      {device.ip} · {device.vendor || "Unknown"}
-                    </small>
-                  </div>
-                  <TimeAgo timestamp={device.last_seen} language={language} />
-                </div>
-              ))
-            ) : (
-              <Empty t={t} />
-            )}
-          </div>
-        </article>
-        <article className="panel recent-devices-panel">
-          <div className="panel-title">
-            <div>
-              <span className="eyebrow">{t("firstSeen")}</span>
-              <h2>{t("recentlyAdded")}</h2>
-            </div>
-            <Clock3 size={21} />
-          </div>
-          <div className="compact-list">
-            {recentlyJoined.length ? (
-              recentlyJoined.map((device) => (
-                <button
-                  type="button"
-                  className="compact-row recent-device-row"
-                  key={device.ip}
-                  onClick={() =>
-                    setRoute(`devices/${encodeURIComponent(device.ip)}`)
-                  }
-                >
-                  <StatusDot status={device.status} />
-                  <div>
-                    <strong>
-                      {device.display_name || device.name || device.ip}
-                    </strong>
-                    <small>
-                      {device.ip} · {device.category || t("uncategorized")}
-                    </small>
-                  </div>
-                  <TimeAgo timestamp={device.first_seen} language={language} />
-                </button>
-              ))
-            ) : (
-              <Empty t={t} />
-            )}
-          </div>
-        </article>
-        <article className="panel events-panel">
-          <div className="panel-title">
-            <div>
-              <span className="eyebrow">{t("systemLog")}</span>
-              <h2>{t("recentEvents")}</h2>
-            </div>
-            <Command size={21} />
-          </div>
-          <div className="event-grid">
-            {(events || []).slice(0, 6).map((event, index) => (
-              <div
-                className={`event-tile ${event.level}`}
-                key={event.id || index}
-              >
-                <span>{event.event_type || event.type}</span>
-                <strong>{event.message}</strong>
-                <TimeAgo timestamp={event.ts} language={language} />
-              </div>
+          <div className="decision-list">
+            {attention.map((device) => (
+              <button key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}>
+                <StatusDot status={device.status}/>
+                <span><strong>{device.display_name || device.name || device.ip}</strong><small>{t(device.status)} · {device.category || t("uncategorized")}</small></span>
+                <TimeAgo timestamp={device.last_seen} language={language}/>
+                <ChevronLeft />
+              </button>
             ))}
+            {!attention.length && <Empty t={t}/>}
           </div>
         </article>
-        <article className="panel alerts-mini">
-          <div className="panel-title">
-            <div>
-              <span className="eyebrow">{t("alertCenter")}</span>
-              <h2>{t("openAlerts")}</h2>
-            </div>
-            <span className="score danger-text">
-              {(alerts || []).filter((a) => a.status === "open").length}
-            </span>
-          </div>
-          <AvailabilityStrip
-            series={chartData.map((x) => ({
-              availability_pct: x.availability,
-            }))}
-          />
-        </article>
+      </section>
+
+      <section className="panel overview-recent">
+        <div className="section-heading"><div><h2>{t("recentlyAdded")}</h2><p>{t("firstSeen")}</p></div></div>
+        <div className="recent-inline-list">
+          {recentlyJoined.map((device) => (
+            <button key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}>
+              <CategoryIcon name={device.category_icon || "boxes"}/>
+              <span><strong>{device.display_name || device.name || device.ip}</strong><small>{device.category || t("uncategorized")}</small></span>
+              <TimeAgo timestamp={device.first_seen} language={language}/>
+            </button>
+          ))}
+          {!recentlyJoined.length && <Empty t={t}/>}
+        </div>
       </section>
     </div>
   );
@@ -1913,46 +1743,27 @@ function Devices({
               </div>
             )}
             <div className="modal-actions">
-              <button
-                className="button"
-                onClick={() =>
-                  setCloneDevice({
-                    source_ip: editing.ip,
-                    source_name:
-                      editing.display_name || editing.name || editing.ip,
-                    ip: "",
-                    name: `${editing.display_name || editing.name || editing.ip} copy`,
-                  })
-                }
-              >
-                <Copy />
-                {t("cloneDevice")}
-              </button>
-              <button
-                className="button danger"
-                onClick={() =>
-                  action(
-                    `/${editing.quarantined ? "restore" : "remove"}/${encodeURIComponent(editing.ip)}`,
-                  ).then(() => setEditing(null))
-                }
-              >
-                {t(editing.quarantined ? "restore" : "quarantine")}
-              </button>
-              <button
-                className="button"
-                onClick={() => {
-                  setEditing(null);
-                  setRoute(`tools/${editing.ip}`);
-                }}
-              >
-                <Wrench />
-                {t("advancedChecks")}
-              </button>
+              <details className="action-menu">
+                <summary className="button icon-only" title={t("moreActions")}>
+                  <MoreHorizontal />
+                </summary>
+                <div className="action-menu-popover">
+                  <button onClick={() => setCloneDevice({ source_ip: editing.ip, source_name: editing.display_name || editing.name || editing.ip, ip: "", name: `${editing.display_name || editing.name || editing.ip} copy` })}>
+                    <Copy /> {t("cloneDevice")}
+                  </button>
+                  <button onClick={() => { setEditing(null); setRoute(`tools/${editing.ip}`); }}>
+                    <Wrench /> {t("advancedChecks")}
+                  </button>
+                  <button className="danger" onClick={() => action(`/${editing.quarantined ? "restore" : "remove"}/${encodeURIComponent(editing.ip)}`).then(() => setEditing(null))}>
+                    <Trash2 /> {t(editing.quarantined ? "restore" : "quarantine")}
+                  </button>
+                </div>
+              </details>
               <button
                 className={`button ping-button ${pingState}`}
                 onClick={pingDevice}
               >
-                {t("ping")}
+                <Radar /> {t("run")}
               </button>
               <button className="button" onClick={() => setEditing(null)}>
                 {t("close")}
@@ -4662,7 +4473,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.9.0"}</small>
+            <small>v{data.status?.version || "7.0.0"}</small>
           </div>
         </div>
       </aside>

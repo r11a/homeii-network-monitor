@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.0.0
+
+- Rebuilt the product hierarchy around three immediate questions: what is offline now, what requires attention, and how health changes over time.
+- Replaced the duplicated dashboard hero, KPI, fleet, event and alert surfaces with a focused operational overview.
+- Introduced the V7 clarity design system for consistent spacing, typography, controls, panels, forms, modals and responsive behavior.
+- Simplified everyday screens for non-technical users while preserving advanced network and administration capabilities in contextual details and Settings.
+- Standardized actions: one primary action, one contextual secondary action and an overflow menu for advanced or destructive operations.
+- Reworked light-theme contrast and mobile layouts, including horizontal overflow protection and visually hidden scrollbars.
+
 ## 6.9.0
 
 - Added the read-only `Control` role, locked to an edge-to-edge command-center experience while preserving command-center navigation for existing roles.
