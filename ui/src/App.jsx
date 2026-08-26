@@ -296,6 +296,20 @@ function AvailabilityStrip({ series = [], status = "unknown", t }) {
   );
 }
 
+function outageUrgency(lastSeen) {
+  const seconds = Math.max(
+    0,
+    Math.floor(Date.now() / 1000 - Number(lastSeen || Date.now() / 1000)),
+  );
+  if (seconds >= 7 * 86400) return 6;
+  if (seconds >= 86400) return 5;
+  if (seconds >= 12 * 3600) return 4;
+  if (seconds >= 6 * 3600) return 3;
+  if (seconds >= 3 * 3600) return 2;
+  if (seconds >= 3600) return 1;
+  return 0;
+}
+
 function Dashboard({ data, t, setRoute, language }) {
   const { status, alerts, events, viewer } = data;
   const chartData =
@@ -602,7 +616,17 @@ function Viewer({
         Number(right.critical) - Number(left.critical) ||
         Number(left.last_seen || 0) - Number(right.last_seen || 0),
     );
-  const priorityDevices = problemDevices.slice(0, 8);
+  const offlineDevices = devices
+    .filter((device) => device.status === "offline")
+    .map((device) => ({
+      ...device,
+      urgency: outageUrgency(device.offline_since || device.last_seen),
+    }))
+    .sort(
+      (left, right) =>
+        right.urgency - left.urgency ||
+        Number(left.last_seen || 0) - Number(right.last_seen || 0),
+    );
   const canManageAlerts =
     currentUser?.role === "admin" ||
     (currentUser?.role === "user" && Boolean(currentUser?.can_manage_alerts));
@@ -777,45 +801,58 @@ function Viewer({
             </ResponsiveContainer>
           </div>
         </article>
-        <article className="panel noc-priority">
+        <article className="panel noc-priority control-outages">
           <div className="panel-title">
             <div>
               <span className="eyebrow">{t("priorityQueue")}</span>
-              <h2>{t("offlineAndUnstable")}</h2>
+              <h2>{t("disconnectedDevices")}</h2>
             </div>
-            <strong className="danger-text">{priorityDevices.length}</strong>
+            <strong className="danger-text">{offlineDevices.length}</strong>
           </div>
-          <div className="noc-priority-list">
-            {priorityDevices.map((device) => {
+          <div className="control-outage-grid">
+            {offlineDevices.map((device) => {
               const offlineSeconds = Math.max(
                 0,
                 Math.floor(
                   Date.now() / 1000 -
-                    Number(device.last_seen || Date.now() / 1000),
+                    Number(
+                      device.offline_since ||
+                        device.last_seen ||
+                        Date.now() / 1000,
+                    ),
                 ),
               );
               return (
-                <div
-                  className={`noc-priority-row ${device.status} ${device.critical ? "critical" : ""}`}
+                <article
+                  className={`control-outage-card urgency-${device.urgency} ${device.critical ? "critical" : ""}`}
                   key={device.ip}
                 >
-                  <StatusDot status={device.status} />
-                  <div>
+                  <div className="urgency-rail" aria-label={`${t("urgencyLevel")} ${device.urgency}`}>
+                    <strong>{device.urgency}</strong>
+                    <span>{t("urgency")}</span>
+                  </div>
+                  <WifiOff className="outage-icon" />
+                  <div className="outage-copy">
                     <strong>
                       {device.display_name || device.name || device.ip}
                     </strong>
                     <small>
                       {device.ip} · {device.category || t("uncategorized")}
                     </small>
+                    <p>{device.vendor || device.hostname || t("unavailable")}</p>
                   </div>
-                  <span>
-                    <TimeAgo timestamp={device.last_seen} language={language} />
+                  <span className="outage-duration">
+                    <small>{t("disconnectedFor")}</small>
+                    <TimeAgo
+                      timestamp={device.offline_since || device.last_seen}
+                      language={language}
+                    />
                     {offlineSeconds >= 3600 && <em>{t("prolongedOutage")}</em>}
                   </span>
-                </div>
+                </article>
               );
             })}
-            {!priorityDevices.length && <Empty t={t} />}
+            {!offlineDevices.length && <Empty t={t} />}
           </div>
         </article>
       </section>
@@ -2861,17 +2898,29 @@ function UserManagement({ t, currentUser }) {
             {t("role")}
             <select
               value={draft.role}
-              onChange={(e) => setDraft({ ...draft, role: e.target.value })}
+              onChange={(e) => {
+                const role = e.target.value;
+                setDraft({
+                  ...draft,
+                  role,
+                  viewer_edge_to_edge:
+                    role === "control" ? true : draft.viewer_edge_to_edge,
+                  can_manage_alerts:
+                    role === "control" ? false : draft.can_manage_alerts,
+                });
+              }}
             >
               <option value="admin">Admin</option>
               <option value="user">User</option>
               <option value="viewer">Viewer</option>
+              <option value="control">Control</option>
             </select>
           </label>
         </div>
         <button
           type="button"
           className={`setting-toggle ${draft.viewer_edge_to_edge ? "active" : ""}`}
+          disabled={draft.role === "control"}
           onClick={() =>
             setDraft({
               ...draft,
@@ -2888,6 +2937,7 @@ function UserManagement({ t, currentUser }) {
         <button
           type="button"
           className={`setting-toggle ${draft.can_manage_alerts ? "active" : ""}`}
+          disabled={draft.role === "control"}
           onClick={() =>
             setDraft({ ...draft, can_manage_alerts: !draft.can_manage_alerts })
           }
@@ -2929,9 +2979,11 @@ function UserManagement({ t, currentUser }) {
               <option value="admin">Admin</option>
               <option value="user">User</option>
               <option value="viewer">Viewer</option>
+              <option value="control">Control</option>
             </select>
             <button
               className={`mini-toggle ${user.viewer_edge_to_edge ? "active" : ""}`}
+              disabled={user.role === "control"}
               onClick={() =>
                 update(user, { viewer_edge_to_edge: !user.viewer_edge_to_edge })
               }
@@ -2940,6 +2992,7 @@ function UserManagement({ t, currentUser }) {
             </button>
             <button
               className={`mini-toggle ${user.can_manage_alerts ? "active" : ""}`}
+              disabled={user.role === "control"}
               onClick={() =>
                 update(user, { can_manage_alerts: !user.can_manage_alerts })
               }
@@ -4334,7 +4387,7 @@ export default function App() {
       const result = await api("/auth/session");
       setAuth({ ...result, loading: false });
       if (result.authenticated) {
-        if (result.user?.role === "viewer") setRoute("viewer");
+        if (["viewer", "control"].includes(result.user?.role)) setRoute("viewer");
         await refresh();
       }
     } catch {
@@ -4379,6 +4432,7 @@ export default function App() {
           availability_24h: device.availability_24h ?? viewer.devices?.[String(device.ip || "").trim()]?.availability_24h,
           availability_source: device.availability_source ?? viewer.devices?.[String(device.ip || "").trim()]?.availability_source,
           availability_history_samples: device.availability_history_samples ?? viewer.devices?.[String(device.ip || "").trim()]?.history_samples ?? 0,
+          offline_since: viewer.devices?.[String(device.ip || "").trim()]?.offline_since || 0,
         })),
         alerts: alertItems,
         events: events.events || [],
@@ -4488,7 +4542,9 @@ export default function App() {
       />
     );
   const role = auth.user?.role || "viewer";
-  const edgeViewer = role === "viewer" && auth.user?.viewer_edge_to_edge;
+  const edgeViewer =
+    role === "control" ||
+    (role === "viewer" && auth.user?.viewer_edge_to_edge);
   const pages = {
     dashboard: (
       <Dashboard data={data} t={t} setRoute={setRoute} language={language} />
@@ -4533,7 +4589,11 @@ export default function App() {
       admin: navItems,
       user: navItems.filter(([key]) => !["tools", "settings"].includes(key)),
       viewer: navItems.filter(([key]) => key === "viewer"),
+      control: navItems.filter(([key]) => key === "viewer"),
     }[role] || [];
+  const effectiveRoute = allowed.some(([key]) => key === route)
+    ? route
+    : allowed[0]?.[0];
   const logout = async () => {
     await api("/auth/logout", { method: "POST" });
     setData({});
@@ -4602,7 +4662,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "6.8.3"}</small>
+            <small>v{data.status?.version || "6.9.0"}</small>
           </div>
         </div>
       </aside>
@@ -4658,7 +4718,7 @@ export default function App() {
               <div className="loader" />
             </div>
           ) : (
-            pages[route] || pages[allowed[0]?.[0]]
+            pages[effectiveRoute] || pages[allowed[0]?.[0]]
           )}
         </main>
       </div>

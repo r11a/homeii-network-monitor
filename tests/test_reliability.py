@@ -11,6 +11,7 @@ TEST_DATA = tempfile.mkdtemp(prefix="homeii-tests-")
 os.environ["HOMEII_DATA_DIR"] = TEST_DATA
 
 from app.main import (  # noqa: E402
+    VALID_USER_ROLES,
     login_attempt_allowed,
     next_probe_status,
     password_hash,
@@ -36,6 +37,9 @@ class ProbeStateTests(unittest.TestCase):
 
 
 class PasswordTests(unittest.TestCase):
+    def test_control_role_is_supported(self):
+        self.assertIn("control", VALID_USER_ROLES)
+
     def test_password_hash_is_salted_and_verifiable(self):
         first = password_hash("correct horse battery staple")
         second = password_hash("correct horse battery staple")

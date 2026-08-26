@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.9.0
+
+- Added the read-only `Control` role, locked to an edge-to-edge command-center experience while preserving command-center navigation for existing roles.
+- Rebuilt the disconnected-device queue as clear operational tiles sorted by outage duration and a continuous urgency scale from 0 to 6.
+- Expanded the control-room category section with live available-versus-total counts, 24-hour health and drill-down access.
+- Enforced route-level UI isolation so Control accounts cannot open other application screens through direct URLs.
+
 ## 6.8.3
 
 - Added a dashboard list and inventory filter for devices that joined recently, based on their persisted first-seen timestamp.

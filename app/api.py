@@ -8,6 +8,8 @@ from fastapi.responses import StreamingResponse
 from app.core import *
 from app.security import login_attempt_allowed, password_hash, password_matches, record_login_attempt
 
+VALID_USER_ROLES = frozenset({"admin", "user", "viewer", "control"})
+
 
 @asynccontextmanager
 async def app_lifespan(_: FastAPI):
@@ -370,7 +372,7 @@ async def enforce_api_permissions(request: Request, call_next):
         return None
 
     if path == "/api/settings" and request.method == "GET":
-        denied = authorize("admin", "user", "viewer")
+        denied = authorize("admin", "user", "viewer", "control")
         return denied or await call_next(request)
 
     admin_prefixes = (
@@ -520,12 +522,12 @@ async def api_admin_create_user(request: Request):
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", ""))
     role = str(payload.get("role", "viewer"))
-    if len(username) < 3 or len(password) < 8 or role not in {"admin", "user", "viewer"}:
+    if len(username) < 3 or len(password) < 8 or role not in VALID_USER_ROLES:
         return JSONResponse({"error": "invalid_user"}, status_code=400)
     conn = db()
     try:
         now = now_ts()
-        conn.execute("INSERT INTO users(username,display_name,password_hash,role,active,viewer_edge_to_edge,can_manage_alerts,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)", (username, str(payload.get("display_name", "")).strip(), password_hash(password), role, 1, 1 if payload.get("viewer_edge_to_edge") else 0, 1 if payload.get("can_manage_alerts") else 0, now, now))
+        conn.execute("INSERT INTO users(username,display_name,password_hash,role,active,viewer_edge_to_edge,can_manage_alerts,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)", (username, str(payload.get("display_name", "")).strip(), password_hash(password), role, 1, 1 if role == "control" or payload.get("viewer_edge_to_edge") else 0, 0 if role == "control" else (1 if payload.get("can_manage_alerts") else 0), now, now))
         conn.commit()
     except sqlite3.IntegrityError:
         return JSONResponse({"error": "username_exists"}, status_code=409)
@@ -539,10 +541,10 @@ async def api_admin_update_user(user_id: int, request: Request):
     current = require_role(request, "admin")
     payload = await request.json()
     role = str(payload.get("role", "viewer"))
-    if role not in {"admin", "user", "viewer"} or (current.get("id") == user_id and not payload.get("active", True)):
+    if role not in VALID_USER_ROLES or (current.get("id") == user_id and not payload.get("active", True)):
         return JSONResponse({"error": "invalid_user"}, status_code=400)
     fields = ["display_name=?", "role=?", "active=?", "viewer_edge_to_edge=?", "can_manage_alerts=?", "updated_at=?"]
-    values: List[Any] = [str(payload.get("display_name", "")).strip(), role, 1 if payload.get("active", True) else 0, 1 if payload.get("viewer_edge_to_edge") else 0, 1 if payload.get("can_manage_alerts") else 0, now_ts()]
+    values: List[Any] = [str(payload.get("display_name", "")).strip(), role, 1 if payload.get("active", True) else 0, 1 if role == "control" or payload.get("viewer_edge_to_edge") else 0, 0 if role == "control" else (1 if payload.get("can_manage_alerts") else 0), now_ts()]
     password = str(payload.get("password", ""))
     if password:
         if len(password) < 8:

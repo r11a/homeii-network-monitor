@@ -3478,6 +3478,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         grouped.setdefault(key, []).append(device)
 
     history_by_ip: Dict[str, List[Dict[str, Any]]] = {}
+    offline_since_by_ip: Dict[str, int] = {}
     ips = [device["ip"] for device in devices if device.get("ip")]
     if ips:
         placeholders = ",".join("?" for _ in ips)
@@ -3492,8 +3493,20 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                 """,
                 (*ips, window_start, window_end),
             ).fetchall()
+            offline_rows = conn.execute(
+                f"""
+                SELECT ip, MAX(ts) AS offline_since
+                FROM device_history
+                WHERE kind='status' AND new_status='offline' AND ip IN ({placeholders})
+                GROUP BY ip
+                """,
+                ips,
+            ).fetchall()
         finally:
             conn.close()
+        offline_since_by_ip = {
+            row["ip"]: int(row["offline_since"] or 0) for row in offline_rows
+        }
         for row in rows:
             history_by_ip.setdefault(row["ip"], []).append(
                 {
@@ -3576,6 +3589,11 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         device_timelines[device["ip"]] = {
             "ip": device["ip"],
             "category": device.get("category") or "",
+            "offline_since": (
+                offline_since_by_ip.get(device["ip"], 0)
+                if device.get("status") == "offline"
+                else 0
+            ) or (int(device.get("last_seen") or 0) if device.get("status") == "offline" else 0),
             "availability_24h": round(total_score / max(1, len(series)), 1),
             "history_samples": len(history_by_ip.get(device["ip"], [])),
             "availability_source": "history" if history_by_ip.get(device["ip"]) else "current_status",
