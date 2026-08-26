@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.0.3
+
+- Added an always-visible logout and user-switch button to the Control room header.
+- Kept the logout icon visible in the mobile edge-to-edge layout.
+
 ## 7.0.2
 
 - Moved Control-room branding and account switching into the persistent application shell.

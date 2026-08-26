@@ -4435,18 +4435,21 @@ export default function App() {
       {role === "control" && (
         <div className="control-topbar">
           <Logo />
-          <details className="control-account-menu">
-            <summary>
+          <div className="control-account-actions">
+            <div className="control-account-identity">
               <span>{(auth.user.display_name || auth.user.username).slice(0, 1).toUpperCase()}</span>
               <strong>{auth.user.display_name || auth.user.username}</strong>
-              <ChevronLeft />
-            </summary>
-            <div>
-              <button onClick={logout}>
-                <LogOut /> {t("switchUser")}
-              </button>
             </div>
-          </details>
+            <button
+              className="control-logout-button"
+              onClick={logout}
+              title={t("switchUser")}
+              aria-label={t("switchUser")}
+            >
+              <LogOut />
+              <span>{t("switchUser")}</span>
+            </button>
+          </div>
         </div>
       )}
       <aside className={menuOpen ? "open" : ""}>
@@ -4491,7 +4494,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.0.2"}</small>
+            <small>v{data.status?.version || "7.0.3"}</small>
           </div>
         </div>
       </aside>
