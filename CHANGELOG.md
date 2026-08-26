@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.0.4
+
+- Fixed logout visibility for viewer accounts configured for the edge-to-edge Control room.
+- Control-room identity actions now follow the active display mode instead of relying on the role name.
+
 ## 7.0.3
 
 - Added an always-visible logout and user-switch button to the Control room header.

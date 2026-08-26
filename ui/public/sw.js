@@ -1,4 +1,4 @@
-const CACHE = 'homeii-shell-v7.0.3-control-logout'
+const CACHE = 'homeii-shell-v7.0.4-edge-logout'
 const SHELL = ['./', './manifest.webmanifest', './icons/homeii-192.png']
 
 self.addEventListener('install', (event) => {

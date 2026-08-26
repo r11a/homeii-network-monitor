@@ -4432,7 +4432,7 @@ export default function App() {
     <div
       className={`app-shell role-${role} ${edgeViewer ? "edge-viewer" : ""}`}
     >
-      {role === "control" && (
+      {edgeViewer && (
         <div className="control-topbar">
           <Logo />
           <div className="control-account-actions">
@@ -4494,7 +4494,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.0.3"}</small>
+            <small>v{data.status?.version || "7.0.4"}</small>
           </div>
         </div>
       </aside>
