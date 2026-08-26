@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.0.6
+
+- Expanded the Control-room health timeline to the full content width and reduced its height.
+- Added a persistent theme switcher to the Control-room top bar for Granite, Navy, and Light modes.
+
 ## 7.0.5
 
 - Rebuilt Control-room offline-device tiles around a large, untruncated device name.

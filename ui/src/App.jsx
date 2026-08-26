@@ -76,6 +76,7 @@ import {
   Building2,
   PlugZap,
   MoreHorizontal,
+  Palette,
 } from "lucide-react";
 import {
   Area,
@@ -4135,6 +4136,9 @@ export default function App() {
     () => localStorage.getItem("homeii-alert-sound") !== "off",
   );
   const [offlineToast, setOfflineToast] = useState(null);
+  const [displayTheme, setDisplayTheme] = useState(
+    () => localStorage.getItem("homeii-display-theme") || "",
+  );
   const language = data.settings?.language || "he";
   const t = useMemo(() => translator(language), [language]);
   const showAlertNotifications = async (alerts = []) => {
@@ -4318,8 +4322,9 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "he" ? "rtl" : "ltr";
-    document.documentElement.dataset.theme = data.settings?.theme || "dark";
-  }, [language, data.settings?.theme]);
+    document.documentElement.dataset.theme =
+      displayTheme || data.settings?.theme || "granite";
+  }, [language, data.settings?.theme, displayTheme]);
   if (auth.loading)
     return (
       <div className="loading-screen">
@@ -4422,6 +4427,21 @@ export default function App() {
               <strong>{auth.user.display_name || auth.user.username}</strong>
             </div>
             <button
+              className="control-theme-button"
+              onClick={() => {
+                const themes = ["granite", "navy", "light"];
+                const current = displayTheme || data.settings?.theme || "granite";
+                const next = themes[(themes.indexOf(current) + 1) % themes.length];
+                localStorage.setItem("homeii-display-theme", next);
+                setDisplayTheme(next);
+              }}
+              title={t("theme")}
+              aria-label={t("theme")}
+            >
+              <Palette />
+              <span>{t("theme")}</span>
+            </button>
+            <button
               className="control-logout-button"
               onClick={logout}
               title={t("switchUser")}
@@ -4475,7 +4495,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.0.5"}</small>
+            <small>v{data.status?.version || "7.0.6"}</small>
           </div>
         </div>
       </aside>
