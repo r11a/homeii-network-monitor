@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.0.5
+
+- Rebuilt Control-room offline-device tiles around a large, untruncated device name.
+- Reduced each tile to device name, category, and the exact disconnection date and time.
+- Replaced diagnostic copy with a clean visual urgency rail.
+
 ## 7.0.4
 
 - Fixed logout visibility for viewer accounts configured for the edge-to-edge Control room.

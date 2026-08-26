@@ -641,44 +641,25 @@ function Viewer({
           </div>
           <div className="control-outage-grid">
             {offlineDevices.map((device) => {
-              const offlineSeconds = Math.max(
-                0,
-                Math.floor(
-                  Date.now() / 1000 -
-                    Number(
-                      device.offline_since ||
-                        device.last_seen ||
-                        Date.now() / 1000,
-                    ),
-                ),
+              const disconnectedAt = new Date(
+                Number(device.offline_since || device.last_seen || 0) * 1000,
               );
               return (
                 <article
                   className={`control-outage-card urgency-${device.urgency} ${device.critical ? "critical" : ""}`}
                   key={device.ip}
                 >
-                  <div className="urgency-rail" aria-label={`${t("urgencyLevel")} ${device.urgency}`}>
-                    <strong>{device.urgency}</strong>
-                    <span>{t("urgency")}</span>
-                  </div>
-                  <WifiOff className="outage-icon" />
+                  <div className="urgency-rail" aria-label={`${t("urgencyLevel")} ${device.urgency}`} />
                   <div className="outage-copy">
                     <strong>
                       {device.display_name || device.name || device.ip}
                     </strong>
-                    <small>
-                      {device.ip} · {device.category || t("uncategorized")}
-                    </small>
-                    <p>{device.vendor || device.hostname || t("unavailable")}</p>
+                    <small>{device.category || t("uncategorized")}</small>
                   </div>
-                  <span className="outage-duration">
-                    <small>{t("disconnectedFor")}</small>
-                    <TimeAgo
-                      timestamp={device.offline_since || device.last_seen}
-                      language={language}
-                    />
-                    {offlineSeconds >= 3600 && <em>{t("prolongedOutage")}</em>}
-                  </span>
+                  <time className="outage-disconnected-at" dateTime={disconnectedAt.toISOString()}>
+                    <span>{disconnectedAt.toLocaleDateString(language === "he" ? "he-IL" : "en-US")}</span>
+                    <strong>{disconnectedAt.toLocaleTimeString(language === "he" ? "he-IL" : "en-US", { hour: "2-digit", minute: "2-digit" })}</strong>
+                  </time>
                 </article>
               );
             })}
@@ -4494,7 +4475,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.0.4"}</small>
+            <small>v{data.status?.version || "7.0.5"}</small>
           </div>
         </div>
       </aside>
