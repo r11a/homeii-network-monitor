@@ -433,6 +433,7 @@ function Viewer({
   const categories = data.viewer?.categories || [];
   const [selected, setSelected] = useState(null);
   const [categoryCheck, setCategoryCheck] = useState(null);
+  const [showAllOutages, setShowAllOutages] = useState(false);
   const devices = (data.devices || []).filter(
     (device) => !device.quarantined && !device.trashed_at,
   );
@@ -458,6 +459,9 @@ function Viewer({
         right.urgency - left.urgency ||
         Number(left.last_seen || 0) - Number(right.last_seen || 0),
     );
+  const visibleOfflineDevices = showAllOutages
+    ? offlineDevices
+    : offlineDevices.slice(0, 4);
   const canManageAlerts =
     currentUser?.role === "admin" ||
     (currentUser?.role === "user" && Boolean(currentUser?.can_manage_alerts));
@@ -641,7 +645,7 @@ function Viewer({
             <strong className="danger-text">{offlineDevices.length}</strong>
           </div>
           <div className="control-outage-grid">
-            {offlineDevices.map((device) => {
+            {visibleOfflineDevices.map((device) => {
               const disconnectedAt = new Date(
                 Number(device.offline_since || device.last_seen || 0) * 1000,
               );
@@ -666,6 +670,16 @@ function Viewer({
             })}
             {!offlineDevices.length && <Empty t={t} />}
           </div>
+          {offlineDevices.length > 4 && (
+            <button
+              className="button subtle control-outage-toggle"
+              onClick={() => setShowAllOutages((value) => !value)}
+            >
+              {t(showAllOutages ? "showLess" : "showMore")}
+              {!showAllOutages && ` · ${offlineDevices.length - 4}`}
+              <ChevronDown className={showAllOutages ? "expanded" : ""} />
+            </button>
+          )}
         </article>
       </section>
       <section className="panel noc-journal">
