@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.1.3
+
+- Fixed the empty black screen that could appear after signing in with a Control account or an edge-to-edge Viewer account.
+- Added explicit read authorization for the complete Control-room data set and reduced limited-role bootstrap requests to the data required by that screen.
+- Resolved conflicting edge-to-edge layout rules and made the branded account, theme, logout and user-switch bar persist above the Control room.
+- Added a deterministic Viewer route fallback so restricted accounts cannot resolve to an unavailable page.
+
 ## 7.1.2
 
 - Reorganized the Control room around a clear operational hierarchy: fleet status and categories first, priority outages next, followed by the live health timeline.

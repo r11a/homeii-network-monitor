@@ -4306,7 +4306,7 @@ export default function App() {
       setAuth({ ...result, loading: false });
       if (result.authenticated) {
         if (["viewer", "control"].includes(result.user?.role)) setRoute("viewer");
-        await refresh();
+        await refresh(result.user);
       }
     } catch {
       setAuth({
@@ -4317,12 +4317,14 @@ export default function App() {
       });
     }
   };
-  const refresh = async () => {
+  const refresh = async (sessionUser = auth.user) => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
     try {
       setError("");
       const optionalApi = (path, fallback) => api(path).catch(() => fallback);
+      const activeUser = sessionUser?.role ? sessionUser : auth.user;
+      const limitedViewer = ["viewer", "control"].includes(activeUser?.role);
       const [
         status,
         devices,
@@ -4339,8 +4341,12 @@ export default function App() {
         optionalApi("/events?limit=100", { events: data.events || [] }),
         optionalApi("/settings", data.settingsPayload || { settings: data.settings || {} }),
         api("/viewer/categories"),
-        optionalApi("/history/summary", data.history || {}),
-        optionalApi("/labels", data.labels || { categories: [], tags: [] }),
+        limitedViewer
+          ? Promise.resolve(data.history || {})
+          : optionalApi("/history/summary", data.history || {}),
+        limitedViewer
+          ? Promise.resolve(data.labels || { categories: [], tags: [] })
+          : optionalApi("/labels", data.labels || { categories: [], tags: [] }),
       ]);
       const alertItems = alerts.alerts || [];
       setData({
@@ -4513,7 +4519,9 @@ export default function App() {
     }[role] || [];
   const effectiveRoute = allowed.some(([key]) => key === route)
     ? route
-    : allowed[0]?.[0];
+    : role === "viewer" || role === "control"
+      ? "viewer"
+      : allowed[0]?.[0];
   const logout = async () => {
     await api("/auth/logout", { method: "POST" });
     setData({});

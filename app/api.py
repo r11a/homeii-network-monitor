@@ -376,6 +376,20 @@ async def enforce_api_permissions(request: Request, call_next):
         denied = authorize("admin", "user", "viewer", "control")
         return denied or await call_next(request)
 
+    viewer_read_paths = {
+        "/api/status",
+        "/api/devices",
+        "/api/alerts",
+        "/api/events",
+        "/api/history/summary",
+        "/api/labels",
+        "/api/stream",
+        "/api/viewer/categories",
+    }
+    if request.method == "GET" and path in viewer_read_paths:
+        denied = authorize("admin", "user", "viewer", "control")
+        return denied or await call_next(request)
+
     admin_prefixes = (
         "/api/admin/", "/api/tools/", "/api/export/",
         "/api/import/", "/api/save_settings", "/api/save_networks",
