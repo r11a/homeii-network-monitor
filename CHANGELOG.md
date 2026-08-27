@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.1.4
+
+- Fixed a Control Room render crash when more than four disconnected devices are present.
+- Added a protected recovery screen with retry and sign-out controls so restricted users can never be trapped on a blank screen.
+
 ## 7.1.3
 
 - Fixed the empty black screen that could appear after signing in with a Control account or an edge-to-edge Viewer account.

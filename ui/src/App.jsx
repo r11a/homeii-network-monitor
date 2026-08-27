@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
   Bell,
   Boxes,
   ChevronLeft,
+  ChevronDown,
   CircleGauge,
   Clock3,
   Command,
@@ -176,6 +177,57 @@ function Logo() {
       </div>
     </div>
   );
+}
+
+class PageErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error, details) {
+    console.error("HOMEii page render failed", error, details);
+  }
+
+  async switchUser() {
+    try {
+      await api("/auth/logout", { method: "POST" });
+    } finally {
+      location.hash = "#/viewer";
+      location.reload();
+    }
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    const hebrew = document.documentElement.lang !== "en";
+    return (
+      <div className="page-recovery" role="alert">
+        <Logo />
+        <AlertTriangle />
+        <h1>{hebrew ? "לא ניתן להציג את המסך" : "This screen could not be displayed"}</h1>
+        <p>
+          {hebrew
+            ? "אירעה שגיאת תצוגה. ניתן לנסות שוב או להתנתק ולהחליף משתמש."
+            : "A display error occurred. Try again or sign out and switch user."}
+        </p>
+        <div>
+          <button className="button primary" onClick={() => location.reload()}>
+            <RefreshCw />
+            {hebrew ? "נסה שוב" : "Try again"}
+          </button>
+          <button className="button danger" onClick={() => this.switchUser()}>
+            <LogOut />
+            {hebrew ? "התנתק והחלף משתמש" : "Sign out and switch user"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
 
 function StatusDot({ status }) {
@@ -4675,14 +4727,16 @@ export default function App() {
           </div>
         )}
         <main>
-          {loading && !data.status ? (
-            <div className="loading-screen">
-              <Logo />
-              <div className="loader" />
-            </div>
-          ) : (
-            pages[effectiveRoute] || pages[allowed[0]?.[0]]
-          )}
+          <PageErrorBoundary key={`${role}-${effectiveRoute}`}>
+            {loading && !data.status ? (
+              <div className="loading-screen">
+                <Logo />
+                <div className="loader" />
+              </div>
+            ) : (
+              pages[effectiveRoute] || pages[allowed[0]?.[0]]
+            )}
+          </PageErrorBoundary>
         </main>
       </div>
       {offlineToast && (
