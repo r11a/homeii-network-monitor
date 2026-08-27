@@ -3520,6 +3520,8 @@ function SettingsPage({
   const [reconcile, setReconcile] = useState(null);
   const [networksText, setNetworksText] = useState("");
   const importRef = useRef(null);
+  const kumaImportRef = useRef(null);
+  const [kumaImport, setKumaImport] = useState({ file: null, plan: null, busy: false });
   useEffect(
     () =>
       setForm((f) => ({
@@ -3618,6 +3620,36 @@ function SettingsPage({
       setTransfer({ type: "error", message: error.message });
     } finally {
       event.target.value = "";
+    }
+  };
+  const previewKumaImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const body = new FormData();
+    body.append("file", file);
+    setKumaImport({ file, plan: null, busy: true });
+    try {
+      const plan = await api("/import/uptime-kuma", { method: "POST", body });
+      setKumaImport({ file, plan, busy: false });
+    } catch (error) {
+      setKumaImport({ file: null, plan: null, busy: false });
+      setTransfer({ type: "error", message: error.message });
+    }
+  };
+  const commitKumaImport = async () => {
+    if (!kumaImport.file) return;
+    const body = new FormData();
+    body.append("file", kumaImport.file);
+    setKumaImport((current) => ({ ...current, busy: true }));
+    try {
+      const result = await api("/import/uptime-kuma?commit=true", { method: "POST", body });
+      await refresh();
+      setTransfer({ type: "success", message: `${t("kumaImportComplete")} ${result.imported || 0}` });
+      setKumaImport({ file: null, plan: null, busy: false });
+    } catch (error) {
+      setKumaImport((current) => ({ ...current, busy: false }));
+      setTransfer({ type: "error", message: error.message });
     }
   };
   const sections = [
@@ -4089,7 +4121,47 @@ function SettingsPage({
                   accept=".csv,.json,text/csv,application/json"
                   onChange={importFile}
                 />
+                <button
+                  className="transfer-card"
+                  onClick={() => kumaImportRef.current?.click()}
+                  disabled={kumaImport.busy}
+                >
+                  <Activity />
+                  <div>
+                    <strong>{t("importUptimeKuma")}</strong>
+                    <span>{t("importUptimeKumaHelp")}</span>
+                  </div>
+                  <Upload />
+                </button>
+                <input
+                  ref={kumaImportRef}
+                  className="visually-hidden"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={previewKumaImport}
+                />
               </div>
+              {kumaImport.plan && (
+                <div className="kuma-import-preview">
+                  <div>
+                    <span className="eyebrow">{t("importPreview")}</span>
+                    <h3>{kumaImport.file?.name}</h3>
+                    <p>{t("kumaImportSafety")}</p>
+                  </div>
+                  <div className="kuma-import-stats">
+                    <span><strong>{kumaImport.plan.summary.new_devices}</strong>{t("newDevices")}</span>
+                    <span><strong>{kumaImport.plan.summary.existing_devices}</strong>{t("existingSkipped")}</span>
+                    <span><strong>{kumaImport.plan.summary.duplicates}</strong>{t("duplicatesMerged")}</span>
+                    <span><strong>{kumaImport.plan.summary.skipped_monitors}</strong>{t("unsupportedSkipped")}</span>
+                  </div>
+                  <div className="settings-actions inline">
+                    <button className="button primary" onClick={commitKumaImport} disabled={kumaImport.busy || !kumaImport.plan.summary.new_devices}>
+                      {kumaImport.busy ? t("loading") : t("confirmImport")}
+                    </button>
+                    <button className="button" onClick={() => setKumaImport({ file: null, plan: null, busy: false })}>{t("cancel")}</button>
+                  </div>
+                </div>
+              )}
               <BackupManagement t={t} />
             </>
           )}
@@ -4495,7 +4567,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.0.6"}</small>
+            <small>v{data.status?.version || "7.1.0"}</small>
           </div>
         </div>
       </aside>

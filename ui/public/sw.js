@@ -1,4 +1,4 @@
-const CACHE = 'homeii-shell-v7.0.6-control-theme'
+const CACHE = 'homeii-shell-v7.1.0-kuma-import'
 const SHELL = ['./', './manifest.webmanifest', './icons/homeii-192.png']
 
 self.addEventListener('install', (event) => {

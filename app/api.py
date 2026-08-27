@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from ipaddress import ip_address
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -675,6 +676,144 @@ def csv_int(value: Any, default: int = 0) -> int:
         return int(float(str(value or "").strip()))
     except Exception:
         return default
+
+
+def uptime_kuma_import_plan(payload: Any) -> dict[str, Any]:
+    """Build a safe, deduplicated device import plan from a Kuma backup."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("monitorList"), list):
+        raise ValueError("invalid_uptime_kuma_backup")
+
+    existing_ips = {
+        str(device.get("ip") or "").strip()
+        for device in get_devices(True, True, True)
+    }
+    devices: dict[str, dict[str, Any]] = {}
+    labels: dict[str, dict[str, str]] = {}
+    skipped_types: dict[str, int] = {}
+    invalid_hosts = 0
+    duplicates = 0
+
+    for monitor in payload["monitorList"]:
+        if not isinstance(monitor, dict):
+            invalid_hosts += 1
+            continue
+        monitor_type = str(monitor.get("type") or "unknown").strip().lower()
+        if monitor_type not in {"ping", "port"}:
+            skipped_types[monitor_type] = skipped_types.get(monitor_type, 0) + 1
+            continue
+        host = str(monitor.get("hostname") or "").strip()
+        try:
+            normalized_ip = str(ip_address(host))
+        except ValueError:
+            invalid_hosts += 1
+            continue
+
+        kuma_tags: list[dict[str, str]] = []
+        for raw_tag in monitor.get("tags") or []:
+            if not isinstance(raw_tag, dict):
+                continue
+            name = str(raw_tag.get("name") or "").strip()[:80]
+            if not name:
+                continue
+            color = str(raw_tag.get("color") or "").strip()
+            if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+                color = "#5da9ff"
+            kuma_tags.append({"name": name, "color": color})
+
+        primary = kuma_tags[0] if kuma_tags else None
+        for tag in kuma_tags:
+            key = tag["name"].casefold()
+            labels.setdefault(key, tag)
+
+        if normalized_ip in devices:
+            duplicates += 1
+            current = devices[normalized_ip]
+            merged_tags = current["tags"] + [
+                tag["name"] for tag in kuma_tags if tag["name"] != current["category"]
+            ]
+            current["tags"] = list(dict.fromkeys(merged_tags))
+            if current["monitor_type"] != "ping" and monitor_type == "ping":
+                current["name"] = str(monitor.get("name") or current["name"]).strip()[:120]
+                current["monitor_type"] = monitor_type
+            continue
+
+        interval = csv_int(monitor.get("interval"), 60)
+        devices[normalized_ip] = {
+            "ip": normalized_ip,
+            "name": str(monitor.get("name") or normalized_ip).strip()[:120],
+            "category": primary["name"] if primary else "",
+            "tags": [tag["name"] for tag in kuma_tags[1:]],
+            "scan_profile": "fast" if interval <= 30 else "slow" if interval >= 180 else "normal",
+            "monitor_type": monitor_type,
+            "existing": normalized_ip in existing_ips,
+        }
+
+    planned = list(devices.values())
+    return {
+        "source_version": str(payload.get("version") or ""),
+        "summary": {
+            "monitors": len(payload["monitorList"]),
+            "unique_devices": len(planned),
+            "new_devices": sum(1 for device in planned if not device["existing"]),
+            "existing_devices": sum(1 for device in planned if device["existing"]),
+            "duplicates": duplicates,
+            "invalid_hosts": invalid_hosts,
+            "skipped_monitors": sum(skipped_types.values()),
+        },
+        "skipped_types": skipped_types,
+        "labels": list(labels.values()),
+        "devices": planned,
+    }
+
+
+@app.post("/api/import/uptime-kuma")
+async def api_import_uptime_kuma(file: UploadFile = File(...), commit: bool = False):
+    raw = await file.read()
+    if len(raw) > 25 * 1024 * 1024:
+        return JSONResponse({"ok": False, "error": "uptime_kuma_file_too_large"}, status_code=413)
+    try:
+        payload = json.loads(raw.decode("utf-8-sig"))
+        plan = uptime_kuma_import_plan(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        return JSONResponse({"ok": False, "error": "invalid_uptime_kuma_backup"}, status_code=400)
+
+    if not commit:
+        return {"ok": True, "preview": True, **plan}
+
+    imported = 0
+    category_labels = {device["category"] for device in plan["devices"] if device["category"]}
+    tag_labels = {tag for device in plan["devices"] for tag in device["tags"]}
+    label_colors = {label["name"]: label["color"] for label in plan["labels"]}
+    for name in sorted(category_labels):
+        save_label_definition("category", name, label_colors.get(name, "#5da9ff"), "boxes")
+    for name in sorted(tag_labels):
+        save_label_definition("tag", name, label_colors.get(name, "#5da9ff"), "tag")
+
+    for device in plan["devices"]:
+        if device["existing"]:
+            continue
+        upsert_device(device["ip"], {
+            "name": device["name"],
+            "category": device["category"],
+            "tags": device["tags"],
+            "status": "unknown",
+            "assigned_network": infer_assigned_network(device["ip"]),
+            "approved": True,
+            "manual": True,
+            "scan_profile": device["scan_profile"],
+            "updated_at": now_ts(),
+            "source": "uptime_kuma_import",
+        })
+        imported += 1
+    if imported:
+        refresh_assigned_networks()
+    log_system_event("info", f"Imported {imported} device(s) from Uptime Kuma", "uptime_kuma_imported")
+    log_audit("system", "admin", "local", "uptime_kuma_import", "devices", "success", {
+        "imported": imported,
+        "existing": plan["summary"]["existing_devices"],
+        "duplicates": plan["summary"]["duplicates"],
+    })
+    return {"ok": True, "preview": False, "imported": imported, **plan}
 
 
 @app.post("/api/import/devices")

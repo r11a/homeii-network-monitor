@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.1.0
+
+- Added a dedicated, admin-only Uptime Kuma JSON backup importer with a safe preview and explicit confirmation step.
+- Import now maps unique ping and port monitor IPs to HOMEii devices, maps Kuma tags to categories and tags, and preserves scan cadence as a HOMEii scan profile.
+- Existing HOMEii devices are never overwritten; duplicate Kuma monitors are merged and groups, unsupported monitors, notification settings and secrets are ignored.
+- Added localized import summaries for new, existing, duplicate and unsupported records, plus audit and system-log entries for committed imports.
+
 ## 7.0.6
 
 - Expanded the Control-room health timeline to the full content width and reduced its height.
