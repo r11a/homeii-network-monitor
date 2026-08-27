@@ -666,6 +666,41 @@ def api_export_database(request: Request):
     )
 
 
+@app.post("/api/admin/system-reset")
+async def api_admin_system_reset(request: Request):
+    actor = require_role(request, "admin")
+    payload = await request.json()
+    username = str(payload.get("username") or actor.get("username") or "").strip()
+    password = str(payload.get("password") or "")
+    confirmation = str(payload.get("confirmation") or "").strip().upper()
+    if confirmation != "RESET HOMEII":
+        return JSONResponse({"ok": False, "error": "reset_confirmation_required"}, status_code=400)
+
+    conn = db()
+    try:
+        admin = conn.execute(
+            "SELECT username,password_hash FROM users WHERE username=? COLLATE NOCASE AND role='admin' AND active=1",
+            (username,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not admin or not password_matches(password, admin["password_hash"]):
+        log_audit(
+            actor.get("username", ""), actor.get("role", "admin"), login_client_key(request),
+            "system_reset", "operational_data", "denied", {"verified_admin": username},
+        )
+        return JSONResponse({"ok": False, "error": "invalid_admin_credentials"}, status_code=403)
+
+    backup_path = create_database_backup("homeii-pre-reset")
+    deleted = reset_operational_data()
+    log_system_event("warning", "System operational data was reset by an administrator", "system_reset")
+    log_audit(
+        actor.get("username", username), actor.get("role", "admin"), login_client_key(request),
+        "system_reset", "operational_data", "success", {"deleted": deleted, "backup": str(backup_path)},
+    )
+    return {"ok": True, "deleted": deleted, "backup": str(backup_path)}
+
+
 def csv_bool(value: Any) -> bool:
     text = str(value or "").strip().lower()
     return text in {"1", "true", "yes", "on", "y"}
@@ -683,11 +718,15 @@ def uptime_kuma_import_plan(payload: Any) -> dict[str, Any]:
     if not isinstance(payload, dict) or not isinstance(payload.get("monitorList"), list):
         raise ValueError("invalid_uptime_kuma_backup")
 
-    existing_ips = {
-        str(device.get("ip") or "").strip()
-        for device in get_devices(True, True, True)
+    existing_inventory = get_devices(True, True, True)
+    existing_ips = {str(device.get("ip") or "").strip() for device in existing_inventory}
+    existing_names = {
+        normalized_device_name(device.get("name") or device.get("hostname") or "")
+        for device in existing_inventory
+        if meaningful_device_name(device.get("name") or device.get("hostname") or "")
     }
     devices: dict[str, dict[str, Any]] = {}
+    planned_names: set[str] = set()
     labels: dict[str, dict[str, str]] = {}
     skipped_types: dict[str, int] = {}
     invalid_hosts = 0
@@ -725,6 +764,7 @@ def uptime_kuma_import_plan(payload: Any) -> dict[str, Any]:
             key = tag["name"].casefold()
             labels.setdefault(key, tag)
 
+        monitor_name = str(monitor.get("name") or normalized_ip).strip()[:120]
         if normalized_ip in devices:
             duplicates += 1
             current = devices[normalized_ip]
@@ -737,16 +777,26 @@ def uptime_kuma_import_plan(payload: Any) -> dict[str, Any]:
                 current["monitor_type"] = monitor_type
             continue
 
+        normalized_name = normalized_device_name(monitor_name) if meaningful_device_name(monitor_name) else ""
+        if normalized_name and normalized_name in planned_names:
+            duplicates += 1
+            continue
+
         interval = csv_int(monitor.get("interval"), 60)
         devices[normalized_ip] = {
             "ip": normalized_ip,
-            "name": str(monitor.get("name") or normalized_ip).strip()[:120],
+            "name": monitor_name,
             "category": primary["name"] if primary else "",
             "tags": [tag["name"] for tag in kuma_tags[1:]],
             "scan_profile": "fast" if interval <= 30 else "slow" if interval >= 180 else "normal",
             "monitor_type": monitor_type,
-            "existing": normalized_ip in existing_ips,
+            "existing": normalized_ip in existing_ips or (
+                meaningful_device_name(monitor_name)
+                and normalized_device_name(monitor_name) in existing_names
+            ),
         }
+        if normalized_name:
+            planned_names.add(normalized_name)
 
     planned = list(devices.values())
     return {
@@ -832,6 +882,13 @@ async def api_import_devices(file: UploadFile = File(...)):
         hostname = str(row.get("hostname", "")).strip()
         vendor = str(row.get("vendor", "")).strip()
         category = str(row.get("category", "")).strip()
+        try:
+            if device_identity_conflicts(ip, str(row.get("mac", "")).strip(), display_name or hostname):
+                skipped += 1
+                continue
+        except ValueError:
+            skipped += 1
+            continue
         assigned_network = str(row.get("assigned_network", "")).strip() or infer_assigned_network(ip)
         if assigned_network and assigned_network not in get_networks():
             inferred = infer_assigned_network(ip)
@@ -965,7 +1022,7 @@ def api_accept(ip: str):
             row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
         if row:
             d = row_to_device(row)
-            conflicts = device_identity_conflicts(ip, d.get("mac", ""), exclude_ip=ip)
+            conflicts = device_identity_conflicts(ip, d.get("mac", ""), d.get("name", ""), exclude_ip=ip)
             if conflicts:
                 return JSONResponse(
                     {
@@ -1091,7 +1148,14 @@ def api_update(ip: str, name: str = "", category: str = "", tags: str = "", note
         row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
         if row:
             d = row_to_device(row)
-            d["name"] = unquote(name)
+            requested_name = unquote(name)
+            conflicts = device_identity_conflicts(ip, d.get("mac", ""), requested_name, exclude_ip=ip)
+            if conflicts:
+                return JSONResponse(
+                    {"ok": False, "error": "device_identity_conflict", "conflicts": conflicts},
+                    status_code=409,
+                )
+            d["name"] = requested_name
             d["category"] = unquote(category)
             d["notes"] = unquote(notes)
             d["assigned_network"] = unquote(assigned_network)
@@ -1264,7 +1328,8 @@ async def api_device_preflight(request: Request):
     payload = await request.json()
     try:
         return manual_device_preflight(
-            str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip()
+            str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip(),
+            str(payload.get("name", "")).strip(),
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -1273,7 +1338,7 @@ async def api_device_preflight(request: Request):
 @app.get("/api/add_manual")
 def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "", mac: str = ""):
     try:
-        preflight = manual_device_preflight(ip, mac)
+        preflight = manual_device_preflight(ip, mac, name)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     if preflight["conflicts"]:
@@ -1288,7 +1353,8 @@ async def api_add_manual_post(request: Request):
     payload = await request.json()
     try:
         preflight = manual_device_preflight(
-            str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip()
+            str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip(),
+            str(payload.get("name", "")).strip(),
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)

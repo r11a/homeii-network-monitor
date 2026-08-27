@@ -179,6 +179,49 @@ class DeviceIdentityTests(unittest.TestCase):
         self.assertEqual(conflicts[0]["ip"], "10.0.0.30")
         self.assertIn("mac", conflicts[0]["reasons"])
 
+    def test_preflight_blocks_explicit_duplicate_name_but_not_generic_name(self):
+        now = int(time.time())
+        conn = main.db()
+        try:
+            conn.execute(
+                "INSERT INTO devices(ip,name,status,approved,updated_at) VALUES(?,?,?,?,?)",
+                ("10.0.0.50", "Control Room Server", "online", 1, now),
+            )
+            conn.execute(
+                "INSERT INTO devices(ip,name,status,approved,updated_at) VALUES(?,?,?,?,?)",
+                ("10.0.0.51", "Device 51", "online", 1, now),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        named = main.device_identity_conflicts("10.0.0.52", "", " control   room server ")
+        generic = main.device_identity_conflicts("10.0.0.53", "", "Device 51")
+        self.assertIn("name", named[0]["reasons"])
+        self.assertEqual(generic, [])
+
+    def test_operational_reset_preserves_configuration_and_users(self):
+        now = int(time.time())
+        conn = main.db()
+        try:
+            conn.execute("INSERT INTO devices(ip,name,updated_at) VALUES(?,?,?)", ("10.0.0.60", "Reset me", now))
+            conn.execute("INSERT INTO device_history(ip,ts) VALUES(?,?)", ("10.0.0.60", now))
+            conn.execute("INSERT INTO events(ts,message) VALUES(?,?)", (now, "event"))
+            conn.execute("INSERT INTO settings(key,value) VALUES('test_preserved','yes')")
+            conn.execute("INSERT INTO users(username,password_hash,role,created_at,updated_at) VALUES(?,?,?,?,?)", ("admin2", "hash", "admin", now, now))
+            conn.commit()
+        finally:
+            conn.close()
+        deleted = main.reset_operational_data()
+        self.assertEqual(deleted["devices"], 1)
+        conn = main.db()
+        try:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM devices").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM device_history").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT value FROM settings WHERE key='test_preserved'").fetchone()[0], "yes")
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM users WHERE username='admin2'").fetchone()[0], 1)
+        finally:
+            conn.close()
+
     def test_known_mac_moves_to_new_ip_without_losing_metadata(self):
         now = int(time.time())
         conn = main.db()

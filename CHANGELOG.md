@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.1.1
+
+- Added an administrator-only operational reset with a pre-reset database backup, acknowledgement, exact confirmation phrase, administrator credential verification and final confirmation.
+- Reset removes devices, availability history, alerts, events and traffic samples while preserving users, permissions, networks, labels and system settings.
+- Extended duplicate prevention to explicit device names in addition to IP and MAC identities across manual onboarding, CSV import, Kuma import and device approval.
+- Generic discovery names such as `Device 123` are intentionally excluded from name collision checks so legitimate automatic discovery remains reliable.
+
 ## 7.1.0
 
 - Added a dedicated, admin-only Uptime Kuma JSON backup importer with a safe preview and explicit confirmation step.

@@ -3239,6 +3239,41 @@ function BackupManagement({ t }) {
   return <section className="backup-management"><div className="panel-title"><div><h3>{t("backups")}</h3><p>{t("backupsHelp")}</p></div><Database /></div><div className="backup-settings"><button className={`setting-toggle ${state.enabled ? "active" : ""}`} onClick={() => setState({ ...state, enabled: !state.enabled })}><span/><div><strong>{t("automaticBackup")}</strong><small>{t("automaticBackupHelp")}</small></div></button><label>{t("backupLocation")}<select value={state.target || "data"} onChange={(e) => setState({ ...state, target: e.target.value })}><option value="data">/data</option><option value="share">/share</option></select></label><label>{t("retention")}<input type="number" min="1" max="10" value={state.retention || 3} onChange={(e) => setState({ ...state, retention: Number(e.target.value) })}/></label><button className="button" disabled={busy} onClick={save}>{t("save")}</button><button className="button primary" disabled={busy} onClick={backupNow}><Database />{t("backupNow")}</button></div><div className="backup-list">{(state.backups || []).map((item) => <article key={item.name}><Database/><div><strong>{item.name}</strong><small>{item.size_human || item.size || ""}</small></div><time>{item.modified ? new Date(item.modified * 1000).toLocaleString() : ""}</time></article>)}</div></section>;
 }
 
+function SystemReset({ t, currentUser, refresh }) {
+  const [armed, setArmed] = useState(false);
+  const [form, setForm] = useState({ username: currentUser?.username || "", password: "", confirmation: "" });
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const ready = armed && form.password && form.confirmation.trim().toUpperCase() === "RESET HOMEII";
+  const reset = async () => {
+    if (!ready || !window.confirm(t("systemResetFinalConfirm"))) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await api("/admin/system-reset", { method: "POST", body: JSON.stringify(form) });
+      setMessage(`${t("systemResetComplete")} ${result.backup || ""}`);
+      setForm({ username: currentUser?.username || "", password: "", confirmation: "" });
+      setArmed(false);
+      await refresh();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <section className="system-reset-panel">
+    <div className="panel-title"><div><span className="eyebrow">{t("adminOnly")}</span><h3>{t("systemReset")}</h3><p>{t("systemResetHelp")}</p></div><ShieldAlert /></div>
+    <label className="reset-arm"><input type="checkbox" checked={armed} onChange={(event) => setArmed(event.target.checked)} /><span><strong>{t("systemResetAcknowledge")}</strong><small>{t("systemResetPreserves")}</small></span></label>
+    {armed && <div className="reset-verification">
+      <label>{t("adminUsername")}<input autoComplete="username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label>
+      <label>{t("adminPassword")}<input type="password" autoComplete="current-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
+      <label>{t("resetPhraseLabel")}<input value={form.confirmation} onChange={(event) => setForm({ ...form, confirmation: event.target.value })} placeholder="RESET HOMEII" /></label>
+      <button className="button danger" disabled={!ready || busy} onClick={reset}><Trash2 />{busy ? t("loading") : t("resetSystemNow")}</button>
+    </div>}
+    {message && <div className="reset-result">{message}</div>}
+  </section>;
+}
+
 function SettingsDevices({ data, t, refresh }) {
   const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState({
@@ -3273,7 +3308,7 @@ function SettingsDevices({ data, t, refresh }) {
     setBusy(true);
     setResult(null);
     try {
-      const checked = await api("/devices/preflight", { method: "POST", body: JSON.stringify({ ip: draft.ip, mac: draft.mac }) });
+      const checked = await api("/devices/preflight", { method: "POST", body: JSON.stringify({ ip: draft.ip, mac: draft.mac, name: draft.name }) });
       setPreflight(checked);
     } catch (error) {
       setResult({ ok: false, error: error.message, ip: draft.ip });
@@ -3285,7 +3320,7 @@ function SettingsDevices({ data, t, refresh }) {
     setBusy(true);
     setResult(null);
     try {
-      const checked = preflight?.ip === draft.ip ? preflight : await api("/devices/preflight", { method: "POST", body: JSON.stringify({ ip: draft.ip, mac: draft.mac }) });
+      const checked = preflight?.ip === draft.ip ? preflight : await api("/devices/preflight", { method: "POST", body: JSON.stringify({ ip: draft.ip, mac: draft.mac, name: draft.name }) });
       if (!checked.can_add) throw new Error("device_identity_conflict");
       await api("/add_manual", { method: "POST", body: JSON.stringify(draft) });
       await query("/update", {
@@ -3385,7 +3420,7 @@ function SettingsDevices({ data, t, refresh }) {
             <input
               autoFocus
               value={draft.ip}
-              onChange={(e) => setDraft({ ...draft, ip: e.target.value })}
+              onChange={(e) => { setDraft({ ...draft, ip: e.target.value }); setPreflight(null); }}
               placeholder="192.168.1.50"
             />
           </label>
@@ -3396,7 +3431,7 @@ function SettingsDevices({ data, t, refresh }) {
             {t("name")}
             <input
               value={draft.name}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              onChange={(e) => { setDraft({ ...draft, name: e.target.value }); setPreflight(null); }}
               placeholder={t("optionalName")}
             />
           </label>
@@ -4163,6 +4198,7 @@ function SettingsPage({
                 </div>
               )}
               <BackupManagement t={t} />
+              <SystemReset t={t} currentUser={currentUser} refresh={refresh} />
             </>
           )}
           {deferredSaveSections.has(section) && (
@@ -4567,7 +4603,7 @@ export default function App() {
           <span className="live-dot" />
           <div>
             <strong>{t("monitorLive")}</strong>
-            <small>v{data.status?.version || "7.1.0"}</small>
+            <small>v{data.status?.version || "7.1.1"}</small>
           </div>
         </div>
       </aside>

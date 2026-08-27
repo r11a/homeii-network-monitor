@@ -703,16 +703,28 @@ def normalize_mac(mac: str) -> str:
     return ":".join(parts[:6]) if parts else ""
 
 
+def normalized_device_name(name: str) -> str:
+    return re.sub(r"\s+", " ", str(name or "").strip()).casefold()
+
+
+def meaningful_device_name(name: str) -> bool:
+    normalized = normalized_device_name(name)
+    if not normalized:
+        return False
+    return not bool(re.fullmatch(r"(?:device|host|unknown|unnamed)(?:[\s_-]+\d+)?", normalized))
+
+
 
 def device_identity_conflicts(
-    ip: str, mac: str = "", exclude_ip: str = ""
+    ip: str, mac: str = "", name: str = "", exclude_ip: str = ""
 ) -> list[dict[str, Any]]:
-    """Find inventory records that already own an IP or MAC identity."""
+    """Find inventory records that already own a meaningful device identity."""
     try:
         normalized_ip = str(ipaddress.ip_address((ip or "").strip()))
     except ValueError as exc:
         raise ValueError("invalid_ip") from exc
     normalized_mac = normalize_mac(mac)
+    normalized_name = normalized_device_name(name) if meaningful_device_name(name) else ""
     excluded = (exclude_ip or "").strip()
     conn = db()
     try:
@@ -728,6 +740,9 @@ def device_identity_conflicts(
                 reasons.append("ip")
             if normalized_mac and row_mac and row_mac == normalized_mac:
                 reasons.append("mac")
+            row_name = row["name"] or row["hostname"] or ""
+            if normalized_name and meaningful_device_name(row_name) and normalized_device_name(row_name) == normalized_name:
+                reasons.append("name")
             if reasons:
                 device = row_to_device(row)
                 conflicts.append(
@@ -748,7 +763,7 @@ def device_identity_conflicts(
         conn.close()
 
 
-def manual_device_preflight(ip: str, supplied_mac: str = "") -> dict[str, Any]:
+def manual_device_preflight(ip: str, supplied_mac: str = "", name: str = "") -> dict[str, Any]:
     try:
         normalized_ip = str(ipaddress.ip_address((ip or "").strip()))
     except ValueError as exc:
@@ -756,7 +771,7 @@ def manual_device_preflight(ip: str, supplied_mac: str = "") -> dict[str, Any]:
     reachable = ping(normalized_ip)
     identity = arp_identity_for_ip(normalized_ip) if reachable or not supplied_mac else {}
     observed_mac = normalize_mac(supplied_mac or identity.get("mac", ""))
-    conflicts = device_identity_conflicts(normalized_ip, observed_mac)
+    conflicts = device_identity_conflicts(normalized_ip, observed_mac, name)
     return {
         "ip": normalized_ip,
         "reachable": reachable,
@@ -765,6 +780,31 @@ def manual_device_preflight(ip: str, supplied_mac: str = "") -> dict[str, Any]:
         "conflicts": conflicts,
         "can_add": not conflicts,
     }
+
+
+def reset_operational_data() -> dict[str, Any]:
+    """Clear monitored inventory and telemetry while preserving configuration and users."""
+    tables = ("device_history", "alerts", "events", "traffic_samples", "devices")
+    deleted: dict[str, int] = {}
+    with _db_lock:
+        conn = db()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            for table in tables:
+                count = int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+                conn.execute(f"DELETE FROM {table}")
+                deleted[table] = count
+            conn.execute(
+                "DELETE FROM sqlite_sequence WHERE name IN ('device_history','alerts','events','traffic_samples')"
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+    scan_state.update({"running": False, "mode": "idle", "last_started": 0, "last_finished": 0})
+    return deleted
 
 
 def reconcile_mac_identity(
