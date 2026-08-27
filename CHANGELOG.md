@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.1.2
+
+- Reorganized the Control room around a clear operational hierarchy: fleet status and categories first, priority outages next, followed by the live health timeline.
+- Offline devices are ordered by urgency and outage duration, shown in a four-column grid, and initially limited to the four highest-priority incidents.
+- Added an inline show-more/show-less control for larger outage queues and reduced chart and journal density to keep the primary view within one screen where possible.
+
 ## 7.1.1
 
 - Added an administrator-only operational reset with a pre-reset database backup, acknowledgement, exact confirmation phrase, administrator credential verification and final confirmation.

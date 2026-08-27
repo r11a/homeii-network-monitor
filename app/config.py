@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-APP_VERSION = "7.1.1"
+APP_VERSION = "7.1.2"
 BASE_DIR = Path(os.environ.get("HOMEII_DATA_DIR", "/data/homeii"))
 DB_PATH = BASE_DIR / "homeii.db"
 LEGACY_DEVICES = Path("/data/devices.json")
