@@ -16,7 +16,7 @@
 <p align="center"><strong>Network intelligence built natively for Home Assistant.</strong><br>Discover, classify and monitor every device with real-time alerts, historical availability and a premium NOC interface.</p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-7.2.1-c47a3b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-7.2.2-c47a3b?style=for-the-badge">
   <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Add--on%20%2B%20Integration-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/UI-React%2019-27e6a4?style=for-the-badge&logo=react&logoColor=07110d">
   <img alt="License" src="https://img.shields.io/github/license/r11a/homeii-network-monitor?style=for-the-badge&color=ffb52e">

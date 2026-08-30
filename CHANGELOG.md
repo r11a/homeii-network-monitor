@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.2
+
+- Fixed the Categories and Tags settings page runtime error that caused a blank screen.
+
 ## 7.2.1
 
 - Fixed editing automatically discovered categories so Save changes renames the existing category and updates all assigned devices instead of creating a duplicate.

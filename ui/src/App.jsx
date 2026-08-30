@@ -2682,7 +2682,6 @@ function UserManagement({ t, currentUser }) {
     can_manage_alerts: false,
   });
   const [message, setMessage] = useState("");
-  const editing = Boolean(draft.id || draft.original_name);
   const load = () =>
     api("/admin/users")
       .then((result) => setUsers(result.users || []))
@@ -3109,6 +3108,7 @@ function LabelManager({ data, t, refresh }) {
   };
   const [draft, setDraft] = useState(empty);
   const [message, setMessage] = useState("");
+  const editing = Boolean(draft.id || draft.original_name);
   const items = [
     ...(data.labels?.categories || []),
     ...(data.labels?.tags || []),
