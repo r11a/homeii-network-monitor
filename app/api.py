@@ -1258,6 +1258,46 @@ def api_bulk_delete(ips: str):
     finally:
         conn.close()
 
+
+@app.post("/api/bulk_update")
+async def api_bulk_update_post(request: Request):
+    require_role(request, "admin")
+    payload = await request.json()
+    ip_list = [str(ip).strip() for ip in payload.get("ips", []) if str(ip).strip()]
+    if not ip_list:
+        return JSONResponse({"error": "devices_required"}, status_code=400)
+    tags = payload.get("tags")
+    tags_mode = str(payload.get("tags_mode", "add"))
+    updated = 0
+    conn = db()
+    try:
+        for ip in ip_list:
+            row = conn.execute("SELECT * FROM devices WHERE ip=?", (ip,)).fetchone()
+            if not row:
+                continue
+            device = row_to_device(row)
+            for field in ("category", "assigned_network"):
+                if field in payload:
+                    device[field] = str(payload.get(field) or "").strip()
+            for field in ("pinned", "critical"):
+                if field in payload and payload[field] is not None:
+                    device[field] = bool(payload[field])
+            if isinstance(tags, list):
+                clean_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+                device["tags"] = list(dict.fromkeys(
+                    [*(device.get("tags") or []), *clean_tags]
+                    if tags_mode == "add" else clean_tags
+                ))
+            device["updated_at"] = now_ts()
+            upsert_device(ip, device)
+            updated += 1
+        actor = session_user(request) or {"username": "system", "role": "system"}
+        log_event("info", f"Bulk update on {updated} devices", "bulk_update")
+        log_audit(actor.get("username", "system"), actor.get("role", "system"), request.client.host if request.client else "", "bulk_update", ",".join(ip_list), "success", {"updated": updated})
+        return {"ok": True, "updated": updated}
+    finally:
+        conn.close()
+
 @app.get("/api/toggle_pinned/{ip}")
 def api_toggle_pinned(ip: str):
     conn = db()
@@ -1409,6 +1449,7 @@ async def api_save_label(request: Request):
         saved = save_label_definition(
             str(payload.get("kind", "")), str(payload.get("name", "")),
             str(payload.get("color", "")), str(payload.get("icon", "")),
+            int(payload.get("sort_order", 0) or 0), bool(payload.get("control_visible", True)),
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -1429,7 +1470,11 @@ async def api_update_label(label_id: int, request: Request):
     require_role(request, "admin")
     payload = await request.json()
     try:
-        label = update_label_definition(label_id, str(payload.get("name", "")), str(payload.get("color", "")), str(payload.get("icon", "")))
+        label = update_label_definition(
+            label_id, str(payload.get("name", "")), str(payload.get("color", "")), str(payload.get("icon", "")),
+            int(payload["sort_order"]) if payload.get("sort_order") is not None else None,
+            bool(payload["control_visible"]) if payload.get("control_visible") is not None else None,
+        )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=404 if str(exc) == "label_not_found" else 400)
     return {"ok": True, "label": label, **label_definitions_payload()}

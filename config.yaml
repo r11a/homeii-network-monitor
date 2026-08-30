@@ -1,7 +1,7 @@
 name: "HOMEii Network Monitor"
 slug: "homeii-network-monitor"
 description: "SQLite-based network monitor with configurable discovery, stable network assignment and vendor detection"
-version: "7.1.4"
+version: "7.2.0"
 build: .
 startup: services
 boot: auto
@@ -12,16 +12,24 @@ arch:
   - aarch64
 ports:
   8383/tcp: 8383
+  8443/tcp: 8443
 webui: "http://[HOST]:[PORT:8383]"
 ingress: true
 ingress_port: 8383
 map:
   - share:rw
+  - ssl:ro
 watchdog: "http://[HOST]:[PORT:8383]/api/health/live"
 panel_icon: mdi:shield-check-outline
 options:
   networks:
     - 192.168.1.0/24
+  ssl: false
+  certfile: fullchain.pem
+  keyfile: privkey.pem
 schema:
   networks:
     - str
+  ssl: bool
+  certfile: str
+  keyfile: str

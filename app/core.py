@@ -328,6 +328,7 @@ CREATE TABLE IF NOT EXISTS label_definitions (
   color TEXT NOT NULL DEFAULT '#5da9ff',
   icon TEXT NOT NULL DEFAULT 'tag',
   sort_order INTEGER NOT NULL DEFAULT 0,
+  control_visible INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   UNIQUE(kind, name)
@@ -509,6 +510,7 @@ def init_db() -> None:
             ensure_column(conn, "alerts", "rule_id", "rule_id INTEGER DEFAULT 0")
             ensure_column(conn, "alerts", "action_json", "action_json TEXT DEFAULT '{}'")
             ensure_column(conn, "users", "can_manage_alerts", "can_manage_alerts INTEGER NOT NULL DEFAULT 0")
+            ensure_column(conn, "label_definitions", "control_visible", "control_visible INTEGER NOT NULL DEFAULT 1")
             # Indexes may reference columns that do not exist in a 5.x database.
             # Create them only after every additive migration has completed.
             conn.executescript(INDEX_SCHEMA)
@@ -1114,13 +1116,13 @@ def label_definitions_payload() -> dict[str, list[dict[str, Any]]]:
     conn = db()
     try:
         rows = [dict(row) for row in conn.execute(
-            "SELECT id,kind,name,color,icon,sort_order FROM label_definitions "
+            "SELECT id,kind,name,color,icon,sort_order,control_visible FROM label_definitions "
             "ORDER BY kind,sort_order,name COLLATE NOCASE"
         ).fetchall()]
         known_categories = {row["name"].casefold() for row in rows if row["kind"] == "category"}
         for row in conn.execute("SELECT DISTINCT category FROM devices WHERE category<>'' ORDER BY category COLLATE NOCASE"):
             if row[0].casefold() not in known_categories:
-                rows.append({"id": 0, "kind": "category", "name": row[0], "color": "#5da9ff", "icon": "boxes", "sort_order": 999})
+                rows.append({"id": 0, "kind": "category", "name": row[0], "color": "#5da9ff", "icon": "boxes", "sort_order": 999, "control_visible": 1})
         return {
             "categories": [row for row in rows if row["kind"] == "category"],
             "tags": [row for row in rows if row["kind"] == "tag"],
@@ -1129,26 +1131,31 @@ def label_definitions_payload() -> dict[str, list[dict[str, Any]]]:
         conn.close()
 
 
-def save_label_definition(kind: str, name: str, color: str, icon: str) -> dict[str, Any]:
+def save_label_definition(
+    kind: str, name: str, color: str, icon: str,
+    sort_order: int = 0, control_visible: bool = True,
+) -> dict[str, Any]:
     kind = kind.strip().lower()
     name = name.strip()[:80]
     color = color.strip() if re.fullmatch(r"#[0-9a-fA-F]{6}", color.strip()) else "#5da9ff"
     icon = re.sub(r"[^a-z0-9_-]", "", icon.strip().lower())[:40] or "tag"
     if kind not in {"category", "tag"} or not name:
         raise ValueError("invalid_label_definition")
+    sort_order = max(0, min(9999, int(sort_order or 0)))
+    control_visible = 1 if control_visible else 0
     ts = now_ts()
     with _db_lock:
         conn = db()
         try:
             conn.execute(
-                "INSERT INTO label_definitions(kind,name,color,icon,created_at,updated_at) VALUES(?,?,?,?,?,?) "
-                "ON CONFLICT(kind,name) DO UPDATE SET color=excluded.color,icon=excluded.icon,updated_at=excluded.updated_at",
-                (kind, name, color, icon, ts, ts),
+                "INSERT INTO label_definitions(kind,name,color,icon,sort_order,control_visible,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(kind,name) DO UPDATE SET color=excluded.color,icon=excluded.icon,sort_order=excluded.sort_order,control_visible=excluded.control_visible,updated_at=excluded.updated_at",
+                (kind, name, color, icon, sort_order, control_visible, ts, ts),
             )
             conn.commit()
         finally:
             conn.close()
-    return {"kind": kind, "name": name, "color": color, "icon": icon}
+    return {"kind": kind, "name": name, "color": color, "icon": icon, "sort_order": sort_order, "control_visible": control_visible}
 
 
 def delete_label_definition(label_id: int) -> bool:
@@ -1163,7 +1170,10 @@ def delete_label_definition(label_id: int) -> bool:
             conn.close()
 
 
-def update_label_definition(label_id: int, name: str, color: str, icon: str) -> dict[str, Any]:
+def update_label_definition(
+    label_id: int, name: str, color: str, icon: str,
+    sort_order: int | None = None, control_visible: bool | None = None,
+) -> dict[str, Any]:
     name = name.strip()[:80]
     color = color.strip() if re.fullmatch(r"#[0-9a-fA-F]{6}", color.strip()) else "#5da9ff"
     icon = re.sub(r"[^a-z0-9_-]", "", icon.strip().lower())[:40] or "tag"
@@ -1175,6 +1185,8 @@ def update_label_definition(label_id: int, name: str, color: str, icon: str) -> 
             current = conn.execute("SELECT * FROM label_definitions WHERE id=?", (int(label_id),)).fetchone()
             if not current:
                 raise ValueError("label_not_found")
+            effective_sort_order = int(current["sort_order"] if sort_order is None else max(0, min(9999, int(sort_order))))
+            effective_control_visible = int(current["control_visible"] if control_visible is None else bool(control_visible))
             if current["kind"] == "category" and current["name"].casefold() != name.casefold():
                 conn.execute("UPDATE devices SET category=?,updated_at=? WHERE category=? COLLATE NOCASE", (name, now_ts(), current["name"]))
             if current["kind"] == "tag" and current["name"].casefold() != name.casefold():
@@ -1197,9 +1209,12 @@ def update_label_definition(label_id: int, name: str, color: str, icon: str) -> 
                             "UPDATE devices SET tags_json=?,updated_at=? WHERE ip=?",
                             (json.dumps(renamed, ensure_ascii=False), now_ts(), row["ip"]),
                         )
-            conn.execute("UPDATE label_definitions SET name=?,color=?,icon=?,updated_at=? WHERE id=?", (name, color, icon, now_ts(), int(label_id)))
+            conn.execute(
+                "UPDATE label_definitions SET name=?,color=?,icon=?,sort_order=?,control_visible=?,updated_at=? WHERE id=?",
+                (name, color, icon, effective_sort_order, effective_control_visible, now_ts(), int(label_id)),
+            )
             conn.commit()
-            return {"id": int(label_id), "kind": current["kind"], "name": name, "color": color, "icon": icon}
+            return {"id": int(label_id), "kind": current["kind"], "name": name, "color": color, "icon": icon, "sort_order": effective_sort_order, "control_visible": effective_control_visible}
         except sqlite3.IntegrityError as exc:
             conn.rollback()
             raise ValueError("label_already_exists") from exc
@@ -3701,6 +3716,8 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                 "category": category,
                 "color": category_definition.get("color", "#5da9ff"),
                 "icon": category_definition.get("icon", "boxes"),
+                "sort_order": int(category_definition.get("sort_order", 999)),
+                "control_visible": bool(category_definition.get("control_visible", 1)),
                 "total": len(category_devices),
                 "online": current_counts.get("online", 0),
                 "offline": current_counts.get("offline", 0),
@@ -3715,9 +3732,10 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             }
         )
 
+    payload = [item for item in payload if item["control_visible"]]
+
     def sort_key(item: Dict[str, Any]):
-        severity = {"offline": 0, "unstable": 1, "new": 2, "online": 3, "unknown": 4}
-        return (severity.get(item["state"], 9), -int(item["total"]), str(item["category"]).lower())
+        return (int(item["sort_order"]), str(item["category"]).lower())
 
     payload.sort(key=sort_key)
     return {

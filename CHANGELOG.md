@@ -1,5 +1,12 @@
 # Changelog
 
+## 7.2.0
+
+- Added per-category control-room visibility and explicit tile ordering.
+- Grouped disconnected-device tiles by category while preserving urgency priority.
+- Added category-wide and selected-device bulk editing for category, tags, critical and pinned state.
+- Added optional direct HTTPS on port 8443 using Home Assistant certificates from `/ssl`, while keeping HTTP 8383 for Ingress.
+
 ## 7.1.4
 
 - Fixed a Control Room render crash when more than four disconnected devices are present.

@@ -511,9 +511,14 @@ function Viewer({
         right.urgency - left.urgency ||
         Number(left.last_seen || 0) - Number(right.last_seen || 0),
     );
-  const visibleOfflineDevices = showAllOutages
-    ? offlineDevices
-    : offlineDevices.slice(0, 4);
+  const visibleOfflineDevices = showAllOutages ? offlineDevices : offlineDevices.slice(0, 4);
+  const offlineGroups = Object.entries(
+    visibleOfflineDevices.reduce((groups, device) => {
+      const category = device.category || t("uncategorized");
+      (groups[category] ||= []).push(device);
+      return groups;
+    }, {}),
+  ).sort(([, left], [, right]) => right[0].urgency - left[0].urgency);
   const canManageAlerts =
     currentUser?.role === "admin" ||
     (currentUser?.role === "user" && Boolean(currentUser?.can_manage_alerts));
@@ -696,8 +701,11 @@ function Viewer({
             </div>
             <strong className="danger-text">{offlineDevices.length}</strong>
           </div>
-          <div className="control-outage-grid">
-            {visibleOfflineDevices.map((device) => {
+          <div className="control-outage-groups">
+            {offlineGroups.map(([category, categoryDevices]) => <section className="control-outage-group" key={category}>
+              <div className="control-outage-group-title"><Boxes /><strong>{category}</strong><span>{categoryDevices.length}</span></div>
+              <div className="control-outage-grid">
+            {categoryDevices.map((device) => {
               const disconnectedAt = new Date(
                 Number(device.offline_since || device.last_seen || 0) * 1000,
               );
@@ -720,6 +728,8 @@ function Viewer({
                 </article>
               );
             })}
+              </div>
+            </section>)}
             {!offlineDevices.length && <Empty t={t} />}
           </div>
           {offlineDevices.length > 4 && (
@@ -3093,13 +3103,15 @@ function LabelManager({ data, t, refresh }) {
     name: "",
     color: "#5da9ff",
     icon: "boxes",
+    sort_order: 0,
+    control_visible: true,
   };
   const [draft, setDraft] = useState(empty);
   const [message, setMessage] = useState("");
   const items = [
     ...(data.labels?.categories || []),
     ...(data.labels?.tags || []),
-  ].filter((item) => item.id);
+  ];
   const PreviewIcon = categoryIcons[draft.icon] || Tag;
   const save = async () => {
     if (draft.id) {
@@ -3181,7 +3193,12 @@ function LabelManager({ data, t, refresh }) {
               )}
             </select>
           </label>
+          {draft.kind === "category" && <label>
+            {t("controlRoomOrder")}
+            <input type="number" min="0" max="9999" value={draft.sort_order ?? 0} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} />
+          </label>}
         </div>
+        {draft.kind === "category" && <button type="button" className={`setting-toggle label-control-toggle ${draft.control_visible ? "active" : ""}`} onClick={() => setDraft({ ...draft, control_visible: !draft.control_visible })}><span/><div><strong>{t("showInControlRoom")}</strong><small>{t("showInControlRoomHelp")}</small></div></button>}
         <div className="label-editor-actions">
           {Boolean(draft.id) && (
             <button className="button" onClick={() => setDraft(empty)}>
@@ -3214,7 +3231,7 @@ function LabelManager({ data, t, refresh }) {
         </div>
         <div>
           {items.map((item) => (
-            <article key={item.id} style={{ "--label-color": item.color }}>
+            <article key={`${item.kind}-${item.name}`} style={{ "--label-color": item.color }}>
               <span className="label-swatch">
                 <Tag />
               </span>
@@ -3222,7 +3239,7 @@ function LabelManager({ data, t, refresh }) {
                 <strong>{item.name}</strong>
                 <small>
                   {t(item.kind === "category" ? "category" : "tags")} ·{" "}
-                  {item.icon}
+                  {item.icon}{item.kind === "category" ? ` · ${t("controlRoomOrder")} ${item.sort_order ?? 0} · ${t(item.control_visible ? "visible" : "hidden")}` : ""}
                 </small>
               </div>
               <button
@@ -3233,6 +3250,7 @@ function LabelManager({ data, t, refresh }) {
               </button>
               <button
                 className="icon-button danger-text"
+                disabled={!item.id}
                 onClick={() => remove(item)}
               >
                 <Trash2 />
@@ -3359,6 +3377,7 @@ function SettingsDevices({ data, t, refresh }) {
   const [joinReport, setJoinReport] = useState(null);
   const [pendingEdits, setPendingEdits] = useState({});
   const [selected, setSelected] = useState([]);
+  const [bulkDraft, setBulkDraft] = useState({ category: "__keep__", tags: [], tags_mode: "add", critical: "", pinned: "" });
   const [customLabel, setCustomLabel] = useState({ kind: "category", name: "", color: "#5da9ff" });
   const grouped = useMemo(() => {
     const groups = {};
@@ -3450,6 +3469,22 @@ function SettingsDevices({ data, t, refresh }) {
     await refresh();
   };
   const toggleSelected = (ip) => setSelected((current) => current.includes(ip) ? current.filter((item) => item !== ip) : [...current, ip]);
+  const toggleGroup = (devices) => {
+    const ips = devices.map((device) => device.ip);
+    const allSelected = ips.every((ip) => selected.includes(ip));
+    setSelected((current) => allSelected ? current.filter((ip) => !ips.includes(ip)) : [...new Set([...current, ...ips])]);
+  };
+  const applyBulk = async () => {
+    if (!selected.length) return;
+    const payload = { ips: selected, tags: bulkDraft.tags, tags_mode: bulkDraft.tags_mode };
+    if (bulkDraft.category !== "__keep__") payload.category = bulkDraft.category;
+    if (bulkDraft.critical !== "") payload.critical = bulkDraft.critical === "1";
+    if (bulkDraft.pinned !== "") payload.pinned = bulkDraft.pinned === "1";
+    await api("/bulk_update", { method: "POST", body: JSON.stringify(payload) });
+    setSelected([]);
+    setBulkDraft({ category: "__keep__", tags: [], tags_mode: "add", critical: "", pinned: "" });
+    await refresh();
+  };
   const deleteSelected = async (ips = selected) => {
     if (!ips.length || !window.confirm(`${t("delete")} · ${ips.length}`)) return;
     await api("/admin/devices/delete", { method: "POST", body: JSON.stringify({ ips }) });
@@ -3578,8 +3613,17 @@ function SettingsDevices({ data, t, refresh }) {
           <h3>{t("devices")}</h3>
           <div className="settings-device-bulk"><span>{data.devices?.length || 0}</span><button className="button danger" disabled={!selected.length} onClick={() => deleteSelected()}><Trash2 />{t("delete")} ({selected.length})</button></div>
         </div>
+        {selected.length > 0 && <div className="bulk-device-editor">
+          <strong>{selected.length} {t("selectedDevices")}</strong>
+          <label>{t("category")}<select value={bulkDraft.category} onChange={(e) => setBulkDraft({ ...bulkDraft, category: e.target.value })}><option value="__keep__">{t("keepExisting")}</option><option value="">{t("uncategorized")}</option>{(data.labels?.categories || []).map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select></label>
+          <label>{t("critical")}<select value={bulkDraft.critical} onChange={(e) => setBulkDraft({ ...bulkDraft, critical: e.target.value })}><option value="">{t("keepExisting")}</option><option value="1">{t("yes")}</option><option value="0">{t("no")}</option></select></label>
+          <label>{t("pinned")}<select value={bulkDraft.pinned} onChange={(e) => setBulkDraft({ ...bulkDraft, pinned: e.target.value })}><option value="">{t("keepExisting")}</option><option value="1">{t("yes")}</option><option value="0">{t("no")}</option></select></label>
+          <label>{t("tagUpdateMode")}<select value={bulkDraft.tags_mode} onChange={(e) => setBulkDraft({ ...bulkDraft, tags_mode: e.target.value })}><option value="add">{t("addTags")}</option><option value="replace">{t("replaceTags")}</option></select></label>
+          <div className="bulk-tag-picker">{(data.labels?.tags || []).map((item) => <button type="button" key={item.name} className={bulkDraft.tags.includes(item.name) ? "selected" : ""} style={{ "--tag-color": item.color }} onClick={() => setBulkDraft({ ...bulkDraft, tags: bulkDraft.tags.includes(item.name) ? bulkDraft.tags.filter((tag) => tag !== item.name) : [...bulkDraft.tags, item.name] })}><i/>{item.name}</button>)}</div>
+          <button className="button primary" onClick={applyBulk}><CheckCircle2 />{t("applyChanges")}</button>
+        </div>}
         {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([category, devices]) => <div className="settings-device-group" key={category}>
-          <button className="settings-device-group-head" onClick={() => setExpanded({ ...expanded, [category]: !expanded[category] })}><span><Boxes /> <strong>{category}</strong></span><span>{devices.filter((item) => item.status === "online").length}/{devices.length} <ChevronLeft className={expanded[category] ? "expanded" : ""}/></span></button>
+          <div className="settings-device-group-head"><label><input type="checkbox" checked={devices.every((device) => selected.includes(device.ip))} onChange={() => toggleGroup(devices)} /><Boxes /> <strong>{category}</strong></label><button type="button" onClick={() => setExpanded({ ...expanded, [category]: !expanded[category] })}><span>{devices.filter((item) => item.status === "online").length}/{devices.length}</span><ChevronLeft className={expanded[category] ? "expanded" : ""}/></button></div>
           {expanded[category] && <div className="settings-device-rows">{devices.map((device) => { const edit = edits[device.ip] || {}; return <article key={device.ip}><input type="checkbox" checked={selected.includes(device.ip)} onChange={() => toggleSelected(device.ip)} aria-label={`${t("select")} ${device.ip}`}/><StatusDot status={device.status}/><input value={edit.name ?? device.display_name ?? device.name ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, name: e.target.value } })}/><code>{device.ip}</code><select value={edit.category ?? device.category ?? ""} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, category: e.target.value } })}><option value="">{t("uncategorized")}</option>{(data.labels?.categories || []).map((item) => <option key={item.name}>{item.name}</option>)}</select><input value={edit.tags ?? (device.tags || []).join(", ")} onChange={(e) => setEdits({ ...edits, [device.ip]: { ...edit, tags: e.target.value } })} placeholder={t("tags")}/><button className="button" onClick={() => saveInline(device)}>{t("save")}</button><button className="icon-button" onClick={() => location.hash = `#/devices/${encodeURIComponent(device.ip)}`}><ArrowUpRight /></button><button className="icon-button danger" onClick={() => deleteSelected([device.ip])}><Trash2 /></button></article>})}</div>}
         </div>)}
       </section>

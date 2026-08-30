@@ -16,7 +16,7 @@
 <p align="center"><strong>Network intelligence built natively for Home Assistant.</strong><br>Discover, classify and monitor every device with real-time alerts, historical availability and a premium NOC interface.</p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-7.1.4-c47a3b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-7.2.0-c47a3b?style=for-the-badge">
   <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Add--on%20%2B%20Integration-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/UI-React%2019-27e6a4?style=for-the-badge&logo=react&logoColor=07110d">
   <img alt="License" src="https://img.shields.io/github/license/r11a/homeii-network-monitor?style=for-the-badge&color=ffb52e">
@@ -61,6 +61,8 @@ The backend remains the monitoring authority. React consumes the existing API, s
 4. Start the add-on and open its Web UI or Ingress panel.
 
 On the first direct Web UI visit, HOMEii asks you to create the primary administrator. Later visits require a username and password. Home Assistant Ingress uses the authenticated Home Assistant user and currently opens with the administrator workspace, without a second login.
+
+For direct HTTPS access, enable `ssl` in the add-on configuration and browse to `https://<home-assistant-host>:8443`. HOMEii reads `certfile` and `keyfile` from Home Assistant's `/ssl` directory while keeping port `8383` available for Ingress. The certificate must be trusted by the browser and match the hostname used by an HTTPS Home Assistant Web card.
 
 Administrators can create `admin`, `user` and `viewer` accounts under **Settings > Users**. Viewer accounts can be locked to an edge-to-edge, read-only control-room display.
 
