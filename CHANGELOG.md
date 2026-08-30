@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.1
+
+- Fixed editing automatically discovered categories so Save changes renames the existing category and updates all assigned devices instead of creating a duplicate.
+
 ## 7.2.0
 
 - Added per-category control-room visibility and explicit tile ordering.

@@ -2682,6 +2682,7 @@ function UserManagement({ t, currentUser }) {
     can_manage_alerts: false,
   });
   const [message, setMessage] = useState("");
+  const editing = Boolean(draft.id || draft.original_name);
   const load = () =>
     api("/admin/users")
       .then((result) => setUsers(result.users || []))
@@ -3142,6 +3143,10 @@ function LabelManager({ data, t, refresh }) {
         </div>
       </div>
       <section className="label-editor">
+        <div className="label-editor-mode">
+          <span className="eyebrow">{t(editing ? "editMode" : "createMode")}</span>
+          <strong>{t(editing ? "editingExistingLabel" : "creatingNewLabel")}</strong>
+        </div>
         <div className="label-preview" style={{ "--label-color": draft.color }}>
           <span>
             <PreviewIcon />
@@ -3200,7 +3205,7 @@ function LabelManager({ data, t, refresh }) {
         </div>
         {draft.kind === "category" && <button type="button" className={`setting-toggle label-control-toggle ${draft.control_visible ? "active" : ""}`} onClick={() => setDraft({ ...draft, control_visible: !draft.control_visible })}><span/><div><strong>{t("showInControlRoom")}</strong><small>{t("showInControlRoomHelp")}</small></div></button>}
         <div className="label-editor-actions">
-          {Boolean(draft.id) && (
+          {editing && (
             <button className="button" onClick={() => setDraft(empty)}>
               {t("cancel")}
             </button>
@@ -3210,8 +3215,8 @@ function LabelManager({ data, t, refresh }) {
             disabled={!draft.name.trim()}
             onClick={save}
           >
-            {draft.id ? <Pencil /> : <Plus />}
-            {t(draft.id ? "saveChanges" : "add")}
+            {editing ? <Pencil /> : <Plus />}
+            {t(editing ? "saveChanges" : "add")}
           </button>
         </div>
       </section>
@@ -3244,7 +3249,7 @@ function LabelManager({ data, t, refresh }) {
               </div>
               <button
                 className="icon-button"
-                onClick={() => setDraft({ ...item })}
+                onClick={() => setDraft({ ...item, original_name: item.name })}
               >
                 <Pencil />
               </button>

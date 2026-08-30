@@ -1450,6 +1450,7 @@ async def api_save_label(request: Request):
             str(payload.get("kind", "")), str(payload.get("name", "")),
             str(payload.get("color", "")), str(payload.get("icon", "")),
             int(payload.get("sort_order", 0) or 0), bool(payload.get("control_visible", True)),
+            str(payload.get("original_name", "")),
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)

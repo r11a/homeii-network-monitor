@@ -1133,7 +1133,7 @@ def label_definitions_payload() -> dict[str, list[dict[str, Any]]]:
 
 def save_label_definition(
     kind: str, name: str, color: str, icon: str,
-    sort_order: int = 0, control_visible: bool = True,
+    sort_order: int = 0, control_visible: bool = True, previous_name: str = "",
 ) -> dict[str, Any]:
     kind = kind.strip().lower()
     name = name.strip()[:80]
@@ -1143,10 +1143,16 @@ def save_label_definition(
         raise ValueError("invalid_label_definition")
     sort_order = max(0, min(9999, int(sort_order or 0)))
     control_visible = 1 if control_visible else 0
+    previous_name = previous_name.strip()[:80]
     ts = now_ts()
     with _db_lock:
         conn = db()
         try:
+            if kind == "category" and previous_name and previous_name.casefold() != name.casefold():
+                conn.execute(
+                    "UPDATE devices SET category=?,updated_at=? WHERE category=? COLLATE NOCASE",
+                    (name, ts, previous_name),
+                )
             conn.execute(
                 "INSERT INTO label_definitions(kind,name,color,icon,sort_order,control_visible,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) "
                 "ON CONFLICT(kind,name) DO UPDATE SET color=excluded.color,icon=excluded.icon,sort_order=excluded.sort_order,control_visible=excluded.control_visible,updated_at=excluded.updated_at",
