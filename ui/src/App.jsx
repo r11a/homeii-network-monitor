@@ -3156,8 +3156,8 @@ function LabelManager({ data, t, refresh }) {
             <strong>{draft.name || t("newLabel")}</strong>
           </div>
         </div>
-        <div className="form-grid">
-          <label>
+        <div className="form-grid label-definition-fields">
+          <label className="label-field-type">
             {t("type")}
             <select
               disabled={Boolean(draft.id)}
@@ -3168,14 +3168,14 @@ function LabelManager({ data, t, refresh }) {
               <option value="tag">{t("tags")}</option>
             </select>
           </label>
-          <label>
+          <label className="label-field-name">
             {t("name")}
             <input
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
           </label>
-          <label>
+          <label className="label-field-color">
             {t("color")}
             <input
               type="color"
@@ -3183,7 +3183,7 @@ function LabelManager({ data, t, refresh }) {
               onChange={(e) => setDraft({ ...draft, color: e.target.value })}
             />
           </label>
-          <label>
+          <label className="label-field-icon">
             {t("icon")}
             <select
               value={draft.icon}
@@ -3198,7 +3198,7 @@ function LabelManager({ data, t, refresh }) {
               )}
             </select>
           </label>
-          {draft.kind === "category" && <label>
+          {draft.kind === "category" && <label className="label-field-order">
             {t("controlRoomOrder")}
             <input type="number" min="0" max="9999" value={draft.sort_order ?? 0} onChange={(e) => setDraft({ ...draft, sort_order: Number(e.target.value) })} />
           </label>}

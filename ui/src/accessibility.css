@@ -1296,15 +1296,19 @@ textarea {
 }
 .label-editor {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 18px;
-  padding: 18px;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 14px 18px;
+  padding: 20px;
   border: 1px solid var(--line);
   border-radius: 17px;
   background: var(--surface-2);
 }
+.label-editor-mode {
+  grid-column: 1 / -1;
+  margin: 0;
+}
 .label-preview {
-  min-height: 150px;
+  min-height: 132px;
   padding: 18px;
   border: 1px solid color-mix(in srgb, var(--label-color) 48%, var(--line));
   border-radius: 16px;
@@ -1338,10 +1342,34 @@ textarea {
   font-size: 1.15rem;
 }
 .label-editor .form-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-content: start;
   margin: 0;
 }
+.label-editor .label-field-type { grid-column: span 4; }
+.label-editor .label-field-name { grid-column: span 8; }
+.label-editor .label-field-color { grid-column: span 3; }
+.label-editor .label-field-icon { grid-column: span 5; }
+.label-editor .label-field-order { grid-column: span 4; }
+.label-editor .label-field-color input[type="color"] {
+  width: 100%;
+  min-height: 46px;
+  padding: 6px;
+}
+.label-editor .label-control-toggle {
+  grid-column: 1 / -1;
+  justify-self: start;
+  width: auto;
+  min-height: 46px;
+  grid-template-columns: 34px auto;
+  padding: 9px 12px;
+  margin: 0;
+}
+.label-editor .label-control-toggle small {
+  display: none;
+}
 .label-editor-actions {
-  grid-column: 2;
+  grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
@@ -1515,9 +1543,23 @@ textarea {
   }
   .label-editor {
     grid-template-columns: 1fr;
+    padding: 14px;
+  }
+  .label-editor .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .label-editor .label-field-type,
+  .label-editor .label-field-name,
+  .label-editor .label-field-color,
+  .label-editor .label-field-icon,
+  .label-editor .label-field-order {
+    grid-column: span 1;
+  }
+  .label-editor .label-field-name {
+    grid-column: 1 / -1;
   }
   .label-editor-actions {
-    grid-column: 1;
+    grid-column: 1 / -1;
   }
   .label-library > div:last-child {
     grid-template-columns: 1fr;

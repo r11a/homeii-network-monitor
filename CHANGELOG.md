@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.3
+
+- Rebuilt the category editor layout with semantic field sizing, a compact preview, full-width visibility control and stable responsive behavior.
+
 ## 7.2.2
 
 - Fixed the Categories and Tags settings page runtime error that caused a blank screen.
