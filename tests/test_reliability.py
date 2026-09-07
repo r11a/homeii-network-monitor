@@ -47,6 +47,46 @@ class RapidManualEntryTests(unittest.TestCase):
         self.assertEqual(save.call_args.args[1]["status"], "online")
         self.assertEqual(save.call_args.args[1]["name"], "Rapid entry")
 
+    def test_post_saves_all_options_in_one_write_with_normalized_ip(self):
+        import asyncio
+        from unittest.mock import patch
+        import app.api as api_module
+        class Request:
+            async def json(self):
+                return {"ip": "2001:0db8::1", "name": "New monitor", "category": "Servers", "critical": True, "scan_profile": "fast", "tags": [" core ", "core"]}
+        original_base, original_db = main.BASE_DIR, main.DB_PATH
+        with tempfile.TemporaryDirectory(prefix="homeii-manual-options-") as directory:
+            try:
+                main.BASE_DIR = Path(directory)
+                main.DB_PATH = main.BASE_DIR / "homeii.db"
+                main.init_db()
+                with patch.object(api_module, "manual_device_preflight", return_value={"ip": "2001:db8::1", "reachable": False, "conflicts": []}) as probe:
+                    result = asyncio.run(api_module.api_add_manual_post(Request()))
+                probe.assert_called_once()
+                self.assertEqual(result["device"]["ip"], "2001:db8::1")
+                conn = main.db()
+                try:
+                    row = conn.execute("SELECT category,critical,scan_profile,tags_json,status FROM devices WHERE ip=?", ("2001:db8::1",)).fetchone()
+                    self.assertEqual((row["category"], row["critical"], row["scan_profile"], row["status"]), ("Servers", 1, "fast", "offline"))
+                    self.assertEqual(json.loads(row["tags_json"]), ["core"])
+                finally:
+                    conn.close()
+            finally:
+                main.BASE_DIR, main.DB_PATH = original_base, original_db
+
+    def test_invalid_options_are_rejected_before_probe_or_save(self):
+        import asyncio
+        from unittest.mock import patch
+        import app.api as api_module
+        class Request:
+            async def json(self):
+                return {"ip": "127.0.0.1", "critical": "false", "scan_profile": "unexpected"}
+        with patch.object(api_module, "manual_device_preflight") as probe, patch.object(api_module, "create_manual_device") as save:
+            result = asyncio.run(api_module.api_add_manual_post(Request()))
+        self.assertEqual(result.status_code, 400)
+        probe.assert_not_called()
+        save.assert_not_called()
+
 
 class PingPlatformTests(unittest.TestCase):
     def test_platform_specific_ping_arguments(self):

@@ -3463,6 +3463,9 @@ function SettingsDevices({ data, t, refresh }) {
   const [result, setResult] = useState(null);
   const [preflight, setPreflight] = useState(null);
   const [busy, setBusy] = useState(false);
+  const ipRef = useRef(null);
+  const operationRef = useRef(false);
+  useEffect(() => { if (addOpen && !busy) ipRef.current?.focus(); }, [addOpen, busy]);
   const [expanded, setExpanded] = useState({});
   const [edits, setEdits] = useState({});
   const [joinReport, setJoinReport] = useState(null);
@@ -3481,6 +3484,8 @@ function SettingsDevices({ data, t, refresh }) {
   }, [data.devices, t]);
   const pending = (data.devices || []).filter((device) => device.status === "new" && !device.approved && !device.quarantined && !device.ignored);
   const runPreflight = async () => {
+    if (operationRef.current) return;
+    operationRef.current = true;
     setBusy(true);
     setResult(null);
     try {
@@ -3489,37 +3494,27 @@ function SettingsDevices({ data, t, refresh }) {
     } catch (error) {
       setResult({ ok: false, error: error.message, ip: draft.ip });
     } finally {
+      operationRef.current = false;
       setBusy(false);
     }
   };
   const add = async () => {
+    if (operationRef.current) return;
+    operationRef.current = true;
     setBusy(true);
     setResult(null);
     try {
-      const checked = preflight?.ip === draft.ip ? preflight : await api("/devices/preflight", { method: "POST", body: JSON.stringify({ ip: draft.ip, mac: draft.mac, name: draft.name }) });
-      if (!checked.can_add) throw new Error("device_identity_conflict");
-      await api("/add_manual", { method: "POST", body: JSON.stringify(draft) });
-      await query("/update", {
-        ip: draft.ip,
-        name: draft.name,
-        category: draft.category,
-        scan_profile: draft.scan_profile,
-        critical: draft.critical ? 1 : 0,
-        tags: draft.tags.join(","),
-      });
-      const probe = await api(`/ping_now/${encodeURIComponent(draft.ip)}`);
-      setResult({
-        ok: Boolean(probe.ok),
-        ip: draft.ip,
-        name: draft.name || draft.ip,
-      });
+      // One request validates identity, pings and persists all options together.
+      const saved = await api("/add_manual", { method: "POST", body: JSON.stringify(draft) });
+      setResult({ ok: true, reachable: saved.device?.status === "online", ip: saved.device?.ip || draft.ip, name: draft.name || draft.ip });
       setDraft({ ip: "", mac: "", name: "", category: "", tags: [], scan_profile: "normal", critical: false });
+      setCustomLabel({ kind: "category", name: "", color: "#5da9ff" });
       setPreflight(null);
-      setAddOpen(false);
-      await refresh();
+      void refresh();
     } catch (error) {
-      setResult({ ok: false, error: error.message, ip: draft.ip });
+      setResult({ ok: false, error: t(error.message), ip: draft.ip });
     } finally {
+      operationRef.current = false;
       setBusy(false);
     }
   };
@@ -3600,18 +3595,23 @@ function SettingsDevices({ data, t, refresh }) {
         </div>
         <button className="button primary settings-title-action" onClick={() => { setAddOpen(true); setResult(null); setPreflight(null); }}><Plus />{t("addDevice")}</button>
       </div>
-      {addOpen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setAddOpen(false)}>
-      <section className="modal-card admin-form-modal device-onboarding-modal">
-        <button className="modal-close" onClick={() => setAddOpen(false)}><X /></button>
+      {addOpen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !busy && setAddOpen(false)}>
+      <form className="modal-card admin-form-modal device-onboarding-modal" role="dialog" aria-modal="true" aria-label={t("addDevice")} onSubmit={event => { event.preventDefault(); add(); }}>
+        <button type="button" className="modal-close" disabled={busy} aria-label={t("close")} onClick={() => setAddOpen(false)}><X /></button>
         <span className="eyebrow">{t("manualDevice")}</span><h1>{t("addDevice")}</h1>
         <p className="modal-intro">{t("rapidAddHelp")}</p>
-            {manualResult && <div className={`rapid-add-result state-${manualResult.status}`} role="status"><CheckCircle2 /><div><strong>{manualResult.name || manualResult.ip} · <bdi>{manualResult.ip}</bdi></strong><p>{t(manualResult.status === "online" ? "rapidAddOnline" : "rapidAddOffline")} · {manualResult.category || t("autoDetect")}</p></div></div>}
-        <div className="device-entry-card">
+        {result && <div className={`device-add-result ${result.ok ? "healthy" : "failed"}`} role={result.ok ? "status" : "alert"}>
+          {result.ok ? <CheckCircle2 /> : <AlertTriangle />}<div><strong>{result.name || result.ip}</strong><p>{result.ok ? t(result.reachable ? "rapidAddOnline" : "rapidAddOffline") : result.error}</p></div>
+        </div>}
+        <fieldset disabled={busy} className="device-entry-card manual-fields">
         <div className="form-grid">
           <label>
             {t("ip")}
             <input
               autoFocus
+              ref={ipRef}
+              required
+              dir="ltr"
               value={draft.ip}
               onChange={(e) => { setDraft({ ...draft, ip: e.target.value }); setPreflight(null); }}
               placeholder="192.168.1.50"
@@ -3677,17 +3677,17 @@ function SettingsDevices({ data, t, refresh }) {
           </div>
         </button>
         {preflight && <div className={`device-add-result ${preflight.reachable ? "healthy" : "failed"}`}><Radar /><div><strong>{preflight.reachable ? t("deviceReachable") : t("deviceNotReachable")}</strong><span>{preflight.mac || "MAC —"} · {preflight.vendor || "—"}</span>{preflight.conflicts?.map((item) => <small key={item.ip}>{item.ip} · {item.reasons.join(", ")}</small>)}</div></div>}
-        <div className="modal-actions"><button className="button" onClick={() => setAddOpen(false)}>{t("cancel")}</button><button className="button" disabled={busy || !draft.ip.trim()} onClick={runPreflight}><Radar />{t("ping")}</button><button className="button primary" disabled={busy || !draft.ip.trim() || !preflight?.can_add} onClick={add}>{busy ? <RefreshCw className="spin" /> : <Plus />}{t("addAndMonitor")}</button></div>
-        </div>
-      </section></div>}
-      {result && (
+        <div className="modal-actions"><button type="button" className="button" disabled={busy} onClick={() => setAddOpen(false)}>{t("cancel")}</button><button type="button" className="button" disabled={busy || !draft.ip.trim()} onClick={runPreflight}><Radar />{t("ping")}</button><button type="submit" className="button primary" disabled={busy || !draft.ip.trim()}>{busy ? <RefreshCw className="spin" /> : <Plus />}{t("addAndMonitor")}</button></div>
+        </fieldset>
+      </form></div>}
+      {result && !addOpen && (
         <div
           className={`device-add-result ${result.ok ? "healthy" : "failed"}`}
         >
           {result.ok ? <CheckCircle2 /> : <AlertTriangle />}
           <div>
             <strong>
-              {result.ok ? t("deviceReachable") : t("deviceNotReachable")}
+              {result.ok ? t(result.reachable ? "rapidAddOnline" : "rapidAddOffline") : t("manualDeviceFailed")}
             </strong>
             <span>
               {result.name || result.error} · {result.ip}
@@ -4731,6 +4731,7 @@ export default function App() {
   };
   if (route === "settings" && role === "admin")
     return (
+      <PageErrorBoundary key="settings">
       <SettingsPage
         data={data}
         connectionFailed={connectionFailed}
@@ -4741,6 +4742,7 @@ export default function App() {
         currentUser={auth.user}
         onExit={() => setRoute("dashboard")}
       />
+      </PageErrorBoundary>
     );
   return (
     <div

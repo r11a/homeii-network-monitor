@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.3.2
+
+- Fixed the Settings Add device dialog crash caused by a reference to another component's state.
+- Made Settings onboarding a single direct add-and-ping request that saves category, tags, scan profile and critical status together.
+- Kept the form open for consecutive additions, with cleared inputs after success and retained inputs on errors.
+- Protected Settings with the existing page recovery boundary.
+- Added mandatory undefined-variable/JSX checks to builds and 29 UI regression tests to CI; expanded backend coverage to 32 tests.
+
 ## 7.3.1
 
 - Fixed the Settings screen crash by passing connection health explicitly into the Settings component.

@@ -27,3 +27,6 @@ jobs:
       - name: Build React UI
         working-directory: ui
         run: npm ci --no-audit --no-fund && npm run build
+      - name: Run UI regression tests
+        working-directory: ui
+        run: npm test

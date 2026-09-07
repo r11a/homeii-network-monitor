@@ -1340,7 +1340,8 @@ def api_ping_now(ip: str, request: Request):
 
 
 def create_manual_device(
-    preflight: dict[str, Any], name: str = "", category: str = "", notes: str = ""
+    preflight: dict[str, Any], name: str = "", category: str = "", notes: str = "",
+    critical: bool = False, scan_profile: str = "normal", tags: list[str] | None = None,
 ) -> dict[str, Any]:
     ip = preflight["ip"]
     # Keep rapid entry bounded by the ping; scheduled monitoring enriches DNS later.
@@ -1355,7 +1356,7 @@ def create_manual_device(
         "mac": preflight.get("mac", ""),
         "status": "online" if reachable else "offline",
         "last_seen": now_ts() if reachable else 0,
-        "critical": False,
+        "critical": critical,
         "pinned": False,
         "manual": True,
         "ignored": False,
@@ -1370,9 +1371,9 @@ def create_manual_device(
         "assigned_network": infer_assigned_network(ip),
         "maintenance": False,
         "mute_alerts": False,
-        "scan_profile": "normal",
+        "scan_profile": scan_profile,
         "device_profile": "generic",
-        "tags": [],
+        "tags": tags or [],
     }
     upsert_device(ip, d)
     log_event("info", f"Manual device added: {name or ip}", "device_manual", ip)
@@ -1407,6 +1408,14 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "",
 @app.post("/api/add_manual")
 async def api_add_manual_post(request: Request):
     payload = await request.json()
+    if not isinstance(payload, dict):
+        return JSONResponse({"error": "invalid_device_payload"}, status_code=400)
+    critical = payload.get("critical", False)
+    scan_profile = payload.get("scan_profile", "normal")
+    tags = payload.get("tags", [])
+    if not isinstance(critical, bool) or scan_profile not in ("slow", "normal", "fast") or not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
+        return JSONResponse({"error": "invalid_device_options"}, status_code=400)
+    tags = list(dict.fromkeys(tag.strip() for tag in tags if tag.strip()))
     try:
         preflight = await run_in_threadpool(manual_device_preflight,
             str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip(),
@@ -1423,18 +1432,10 @@ async def api_add_manual_post(request: Request):
         str(payload.get("name", "")).strip(),
         str(payload.get("category", "")).strip(),
         str(payload.get("notes", "")).strip(),
+        critical=critical,
+        scan_profile=scan_profile,
+        tags=tags,
     )
-    tags = payload.get("tags", [])
-    if result.get("ok") and isinstance(tags, list):
-        conn = db()
-        try:
-            conn.execute(
-                "UPDATE devices SET tags_json=?, updated_at=? WHERE ip=?",
-                (json.dumps([str(tag).strip() for tag in tags if str(tag).strip()]), now_ts(), str(payload.get("ip", "")).strip()),
-            )
-            conn.commit()
-        finally:
-            conn.close()
     return result
 
 

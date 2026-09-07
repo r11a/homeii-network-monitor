@@ -1,12 +1,14 @@
 {
   "name": "homeii-network-monitor-ui",
   "private": true,
-  "version": "7.3.1",
+  "version": "7.3.2",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "build": "npm run lint && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "lint": "eslint src",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fontsource-variable/heebo": "^5.2.8",
@@ -16,7 +18,14 @@
     "recharts": "3.10.1"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@vitejs/plugin-react": "6.0.5",
-    "vite": "8.2.1"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.12.0",
+    "jsdom": "^30.0.1",
+    "vite": "8.2.1",
+    "vitest": "^5.0.0"
   }
 }

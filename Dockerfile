@@ -4,7 +4,7 @@ FROM node:22-alpine AS ui-builder
 WORKDIR /build
 COPY ui/package.json ui/package-lock.json ./
 RUN npm ci --no-audit --no-fund
-COPY ui/index.html ui/vite.config.js ./
+COPY ui/index.html ui/vite.config.js ui/eslint.config.js ./
 COPY ui/public ./public
 COPY ui/src ./src
 RUN npm run build
