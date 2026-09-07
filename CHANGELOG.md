@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.3.1
+
+- Fixed the Settings screen crash by passing connection health explicitly into the Settings component.
+- Stabilized settings synchronization when opening Settings before initial data finishes loading.
+
 ## 7.3.0
 
 - Added a configurable control center with saved per-user layouts, category visibility, display density and optional widgets.

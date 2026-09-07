@@ -3725,6 +3725,7 @@ function SettingsDevices({ data, t, refresh }) {
 
 function SettingsPage({
   data,
+  connectionFailed = false,
   t,
   language,
   refresh,
@@ -3780,7 +3781,7 @@ function SettingsPage({
           data.settingsPayload?.discovery_protocols || f.discovery_protocols,
       })),
     [
-      settings,
+      data.settings,
       data.settingsPayload?.discovery_mode,
       data.settingsPayload?.discovery_protocols,
     ],
@@ -4732,6 +4733,7 @@ export default function App() {
     return (
       <SettingsPage
         data={data}
+        connectionFailed={connectionFailed}
         t={t}
         language={language}
         refresh={refresh}
