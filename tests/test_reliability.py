@@ -36,6 +36,84 @@ class ProbeStateTests(unittest.TestCase):
         self.assertEqual(next_probe_status("offline", True, True, 0, 1, 2), "online")
 
 
+class RapidManualEntryTests(unittest.TestCase):
+    def test_manual_add_preserves_category_without_waiting_for_dns(self):
+        from unittest.mock import patch
+        import app.api as api_module
+        with patch.object(api_module, "reverse_dns", side_effect=AssertionError("DNS must not delay entry")), patch.object(api_module, "upsert_device") as save, patch.object(api_module, "log_event"):
+            result = api_module.create_manual_device({"ip": "192.0.2.245", "reachable": True}, "Rapid entry", "Cameras", "Test")
+        self.assertTrue(result["ok"])
+        self.assertEqual(save.call_args.args[1]["category"], "Cameras")
+        self.assertEqual(save.call_args.args[1]["status"], "online")
+        self.assertEqual(save.call_args.args[1]["name"], "Rapid entry")
+
+
+class PingPlatformTests(unittest.TestCase):
+    def test_platform_specific_ping_arguments(self):
+        from unittest.mock import Mock, patch
+        for platform, expected in [("nt", ["ping", "-n", "1", "-w", "1000", "127.0.0.1"]), ("posix", ["ping", "-c", "1", "-W", "1", "127.0.0.1"])]:
+            with patch.object(main.os, "name", platform), patch.object(main.subprocess, "run", return_value=Mock(returncode=0)) as run:
+                self.assertTrue(main.ping("127.0.0.1"))
+                self.assertEqual(run.call_args.args[0], expected)
+
+    def test_ping_timeout_is_unreachable(self):
+        from unittest.mock import patch
+        with patch.object(main.subprocess, "run", side_effect=main.subprocess.TimeoutExpired("ping", 3)):
+            self.assertFalse(main.ping("192.0.2.1"))
+
+
+class MonitorSchedulingTests(unittest.TestCase):
+    def test_overlapping_pass_does_not_advance_samples(self):
+        from unittest.mock import patch
+        guard = main._monitor_pass_locks[False]
+        guard.acquire()
+        try:
+            with patch.object(main, "_run_monitor_pass") as run:
+                main.run_monitor_pass(False)
+                run.assert_not_called()
+        finally:
+            guard.release()
+
+    def test_failed_pass_releases_guard(self):
+        from unittest.mock import patch
+        with patch.object(main, "_run_monitor_pass", side_effect=RuntimeError("probe failed")):
+            with self.assertRaises(RuntimeError):
+                main.run_monitor_pass(False)
+        with patch.object(main, "_run_monitor_pass") as run:
+            main.run_monitor_pass(False)
+            run.assert_called_once_with(False)
+
+
+class ManagedInventoryRetentionTests(unittest.TestCase):
+    def test_long_outage_does_not_remove_managed_devices(self):
+        from unittest.mock import patch
+        original_base, original_db = main.BASE_DIR, main.DB_PATH
+        with tempfile.TemporaryDirectory(prefix="homeii-retention-") as directory:
+            try:
+                main.BASE_DIR = Path(directory)
+                main.DB_PATH = main.BASE_DIR / "homeii.db"
+                main.init_db()
+                conn = main.db()
+                old = main.now_ts() - 3 * 86400
+                try:
+                    for ip, approved, manual in [("192.0.2.1", 1, 0), ("192.0.2.2", 0, 1), ("192.0.2.3", 0, 0)]:
+                        conn.execute("INSERT INTO devices(ip,status,approved,manual,last_seen,first_seen,updated_at) VALUES(?,'offline',?,?,?,?,?)", (ip, approved, manual, old, old, old))
+                    conn.commit()
+                finally:
+                    conn.close()
+                with patch.object(main, "ping", return_value=False):
+                    result = main.maintain_recycle_bin(force=True)
+                self.assertEqual(result["trashed"], 1)
+                conn = main.db()
+                try:
+                    active = [row[0] for row in conn.execute("SELECT ip FROM devices WHERE trashed_at=0 ORDER BY ip")]
+                    self.assertEqual(active, ["192.0.2.1", "192.0.2.2"])
+                finally:
+                    conn.close()
+            finally:
+                main.BASE_DIR, main.DB_PATH = original_base, original_db
+
+
 class PasswordTests(unittest.TestCase):
     def test_control_role_is_supported(self):
         self.assertIn("control", VALID_USER_ROLES)
@@ -76,6 +154,21 @@ class WorkerHealthTests(unittest.TestCase):
 
 
 class AvailabilityTimelineTests(unittest.TestCase):
+    def test_new_device_has_no_history_before_discovery_or_after_now(self):
+        from unittest.mock import patch
+        first_seen = main.now_ts() - 120
+        device = {"ip": "192.0.2.240", "status": "online", "first_seen": first_seen, "category": "Test"}
+        with patch.object(main, "get_devices", return_value=[device]):
+            payload = main.viewer_categories_payload()
+        timeline = payload["devices"][device["ip"]]
+        observed = sum(point["observed_seconds"] for point in timeline["series"])
+        self.assertGreaterEqual(observed, 120)
+        self.assertLessEqual(observed, 123)
+        self.assertEqual(timeline["availability_24h"], 100.0)
+        self.assertEqual(payload["summary"]["availability_24h"], 100.0)
+        self.assertEqual(payload["categories"][0]["availability_24h"], 100.0)
+        self.assertTrue(all(point.get("inferred") for point in timeline["series"] if point["ts"] + 3600 <= first_seen))
+
     def test_viewer_timeline_is_a_rolling_24_hour_window(self):
         payload = main.viewer_categories_payload()
         series = payload["summary"]["series"]

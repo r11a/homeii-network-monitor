@@ -16,7 +16,7 @@
 <p align="center"><strong>Network intelligence built natively for Home Assistant.</strong><br>Discover, classify and monitor every device with real-time alerts, historical availability and a premium NOC interface.</p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-7.2.3-c47a3b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-7.3.0-c47a3b?style=for-the-badge">
   <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Add--on%20%2B%20Integration-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/UI-React%2019-27e6a4?style=for-the-badge&logo=react&logoColor=07110d">
   <img alt="License" src="https://img.shields.io/github/license/r11a/homeii-network-monitor?style=for-the-badge&color=ffb52e">
@@ -36,6 +36,18 @@ Version 6 combines a React 19 control plane with the proven FastAPI scanner, SQL
 | Diagnostics | Ping, traceroute, DNS, ports and internet speed tests |
 | Home Assistant | Sensors, binary sensors, buttons, services and diagnostics |
 | Languages | Full RTL Hebrew and English support |
+
+## Daily monitoring workflow
+
+- Open **Devices > Add device**, enter an IPv4 or IPv6 address and an optional name. Choose an existing category or type a new one. Unreachable devices are still saved and monitored; invalid addresses and duplicate identities show an inline error.
+- After each successful manual addition the form stays open, clears all fields and focuses IP for the next device. The ping result and saved device are shown in the form; failures preserve the entered fields. DNS enrichment happens in background monitoring.
+- Open **Control center > Customize control room** to choose side-by-side or stacked panels, compact/comfortable density, visible categories and optional summary, history or journal widgets. Categories and outages are shown first; overflowing lists scroll within the board on desktop. Preferences are saved per account in this browser.
+- Filter the device inventory by category, then pin important devices in their editor.
+- Open **Overview > My dashboard** to select a category, pinned devices, problems only, or a compact display. These preferences are saved per account in the current browser.
+- A stale-monitoring warning means displayed device states may be outdated. Check worker health in Settings before treating the last reported state as current.
+- Approved and manually added devices remain monitored during long outages; automatic cleanup only trashes unmanaged discoveries. Previously trashed devices are not automatically migrated back: restore them using the existing recycle-bin controls.
+
+Reachability monitoring uses ICMP ping. Devices that block ICMP can appear offline even when their applications work. This is not an HTTP/TCP service monitor. Empty availability strips indicate missing history, rather than an assumed 24-hour uptime. The UI supports Hebrew RTL and English.
 
 ## Architecture
 

@@ -293,23 +293,14 @@ function Empty({ t }) {
 
 function AvailabilityStrip({ series = [], status = "unknown", t }) {
   const history = Array.isArray(series) ? series.filter(Boolean).slice(-24) : [];
-  const fallbackAvailability =
-    status === "online"
-      ? 100
-      : status === "unstable" || status === "new"
-        ? 50
-        : status === "offline"
-          ? 0
-          : null;
   const values = history.length
     ? [
         ...Array.from({ length: Math.max(0, 24 - history.length) }, () => ({ availability_pct: null })),
         ...history,
       ]
     : Array.from({ length: 24 }, (_, index) => ({
-        availability_pct: fallbackAvailability,
-        state: status,
-        inferred: true,
+        availability_pct: null,
+        state: "unknown",
         ts: Math.floor(Date.now() / 3600000) * 3600 - (23 - index) * 3600,
       }));
   return (
@@ -318,7 +309,7 @@ function AvailabilityStrip({ series = [], status = "unknown", t }) {
       title={t ? t("availability24h") : "24h availability"}
     >
       {values.map((item, index) => {
-        const raw = item.availability_pct ?? item.availability;
+        const raw = item.inferred ? null : item.availability_pct ?? item.availability;
         const pct = raw === null || raw === undefined ? null : Number(raw);
         const hour = item.ts
           ? new Date(Number(item.ts) * 1000).toLocaleTimeString([], {
@@ -361,7 +352,25 @@ function outageUrgency(lastSeen) {
   return 0;
 }
 
-function Dashboard({ data, t, setRoute, language }) {
+function Dashboard({ data, t, setRoute, language, currentUser }) {
+  const preferenceKey = `homeii-dashboard-${currentUser?.id || currentUser?.username || "default"}`;
+  const [preferences, setPreferences] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(preferenceKey)) || {}; } catch { return {}; }
+  });
+  const updatePreferences = (patch) => {
+    const next = { ...preferences, ...patch };
+    setPreferences(next);
+    try { localStorage.setItem(preferenceKey, JSON.stringify(next)); } catch { /* Storage may be disabled. */ }
+  };
+  const personalDevices = (data.devices || []).filter(device =>
+    !device.quarantined && !device.trashed_at && !device.ignored &&
+    (!preferences.category || device.category === preferences.category) &&
+    (!preferences.pinnedOnly || device.pinned) &&
+    (!preferences.problemsOnly || ["offline", "unstable", "unknown"].includes(device.status))
+  ).sort((a, b) => Number(b.critical) - Number(a.critical) ||
+    Number(a.status === "online") - Number(b.status === "online") ||
+    (a.display_name || a.ip).localeCompare(b.display_name || b.ip));
+  const categories = [...new Set((data.devices || []).map(device => device.category).filter(Boolean))].sort();
   const { status, viewer } = data;
   const devices = (data.devices || []).filter(
     (device) => !device.quarantined && !device.trashed_at,
@@ -383,9 +392,9 @@ function Dashboard({ data, t, setRoute, language }) {
       language === "he" ? "he-IL" : "en-US",
       { hour: "2-digit", minute: "2-digit" },
     ),
-    availability: Number(point.availability_pct || 0),
+    availability: point.inferred ? null : Number(point.availability_pct || 0),
   }));
-  const healthy = Number(status?.offline || 0) === 0 && Number(status?.unstable || 0) === 0;
+  const healthy = Boolean(status?.total) && !status?.monitoring_stale && !Object.values(status?.workers || {}).some(worker => worker.last_error) && Number(status?.offline || 0) === 0 && Number(status?.unstable || 0) === 0;
   const metrics = [
     ["online", status?.online || 0, Wifi],
     ["offline", status?.offline || 0, WifiOff],
@@ -400,10 +409,36 @@ function Dashboard({ data, t, setRoute, language }) {
         </div>
         <div>
           <span className="eyebrow">{t("overview")}</span>
-          <h1>{healthy ? t("systemHealthy") : t("attention")}</h1>
+          <h1>{!status?.total ? t("noMeasurements") : status?.monitoring_stale ? t("monitoringUnavailable") : healthy ? t("systemHealthy") : t("attention")}</h1>
           <p>{status?.total || 0} {t("monitored")} · {status?.networks?.length || 0} {t("network")}</p>
         </div>
-        <strong>{viewer?.summary?.availability_24h ?? 0}%</strong>
+        <strong>{status?.total ? `${viewer?.summary?.availability_24h ?? 0}%` : "—"}</strong>
+      </section>
+
+      <section className="panel personal-dashboard">
+        <div className="section-heading">
+          <div><h2>{t("personalDashboard")}</h2><p>{t("personalDashboardHelp")}</p></div>
+          <button className="button" onClick={() => setRoute("devices")}>{t("devices")} <ChevronLeft /></button>
+        </div>
+        <div className="personal-controls">
+          <label>{t("category")}<select value={preferences.category || ""} onChange={event => updatePreferences({ category: event.target.value })}>
+            <option value="">{t("allCategories")}</option>
+            {categories.map(category => <option key={category} value={category}>{category}</option>)}
+          </select></label>
+          <label><input type="checkbox" checked={Boolean(preferences.pinnedOnly)} onChange={event => updatePreferences({ pinnedOnly: event.target.checked })}/>{t("pinnedOnly")}</label>
+          <label><input type="checkbox" checked={Boolean(preferences.problemsOnly)} onChange={event => updatePreferences({ problemsOnly: event.target.checked })}/>{t("problemsOnly")}</label>
+          <label><input type="checkbox" checked={Boolean(preferences.compact)} onChange={event => updatePreferences({ compact: event.target.checked })}/>{t("compactDisplay")}</label>
+          <span>{personalDevices.length} {t("devices")}</span>
+        </div>
+        <div className={`personal-monitor-grid ${preferences.compact ? "compact" : ""}`}>
+          {personalDevices.map(device => <button className={`personal-monitor state-${device.status}`} key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}>
+            <div><StatusDot status={device.status}/><strong>{device.display_name || device.name || device.ip}</strong><span>{t(device.status)}</span></div>
+            <small><bdi>{device.ip}</bdi> · {device.category || t("uncategorized")}</small>
+            {!preferences.compact && <AvailabilityStrip series={device.availability_series || []} status={device.status} t={t}/>}
+            <small>{t("last24h")}: {device.availability_history_samples > 0 && device.availability_24h != null ? `${Number(device.availability_24h).toFixed(1)}%` : "—"}</small>
+          </button>)}
+        </div>
+        {!personalDevices.length && <Empty t={t}/>}
       </section>
 
       <section className="overview-metrics" aria-label={t("overview")}>
@@ -482,12 +517,24 @@ function Viewer({
   setAlertSound,
   currentUser,
 }) {
-  const categories = data.viewer?.categories || [];
+  const preferenceKey = `homeii-control-room-${currentUser?.id || currentUser?.username || "default"}`;
+  const defaults = { layout: "split", density: "compact", showSummary: false, showTrend: false, showJournal: false, hiddenCategories: [] };
+  const [preferences, setPreferences] = useState(() => {
+    try { return { ...defaults, ...JSON.parse(localStorage.getItem(preferenceKey) || "{}") }; } catch { return defaults; }
+  });
+  const [customizing, setCustomizing] = useState(false);
+  const updatePreferences = patch => {
+    const next = { ...preferences, ...patch };
+    setPreferences(next);
+    try { localStorage.setItem(preferenceKey, JSON.stringify(next)); } catch { /* Browser storage can be unavailable. */ }
+  };
+  const allCategories = data.viewer?.categories || [];
+  const hiddenCategories = Array.isArray(preferences.hiddenCategories) ? preferences.hiddenCategories : [];
+  const categories = allCategories.filter(item => !hiddenCategories.includes(item.category));
   const [selected, setSelected] = useState(null);
   const [categoryCheck, setCategoryCheck] = useState(null);
-  const [showAllOutages, setShowAllOutages] = useState(false);
   const devices = (data.devices || []).filter(
-    (device) => !device.quarantined && !device.trashed_at,
+    (device) => !device.quarantined && !device.trashed_at && !hiddenCategories.includes(device.category || ""),
   );
   const activeAlerts = (data.alerts || []).filter(
     (alert) => alert.status === "open",
@@ -511,7 +558,7 @@ function Viewer({
         right.urgency - left.urgency ||
         Number(left.last_seen || 0) - Number(right.last_seen || 0),
     );
-  const visibleOfflineDevices = showAllOutages ? offlineDevices : offlineDevices.slice(0, 4);
+  const visibleOfflineDevices = offlineDevices;
   const offlineGroups = Object.entries(
     visibleOfflineDevices.reduce((groups, device) => {
       const category = device.category || t("uncategorized");
@@ -527,7 +574,7 @@ function Viewer({
       language === "he" ? "he-IL" : "en-US",
       { hour: "2-digit", minute: "2-digit" },
     ),
-    availability: Number(point.availability_pct || 0),
+    availability: point.inferred ? null : Number(point.availability_pct || 0),
     incidents:
       Number(point.offline_events || 0) + Number(point.unstable_events || 0),
   }));
@@ -538,10 +585,8 @@ function Viewer({
     await api(`/acknowledge_alert/${id}`, { method: "POST" });
     await refresh();
   };
-  const selectedDevices = selected
-    ? data.viewer?.devices?.[selected] ||
-      data.devices?.filter((device) => (device.category || "") === selected) ||
-      []
+  const selectedDevices = selected !== null
+    ? devices.filter(device => (device.category || "") === selected)
     : [];
   const selectedCategory = categories.find(
     (item) => item.category === selected,
@@ -549,7 +594,7 @@ function Viewer({
   const categoryTrend = (selectedCategory?.series || []).map(
     (point, index) => ({
       hour: `${String(index).padStart(2, "0")}:00`,
-      availability: Number(point.availability_pct || 0),
+      availability: point.inferred ? null : Number(point.availability_pct || 0),
       disconnects: Number(point.offline_events || 0),
     }),
   );
@@ -574,7 +619,7 @@ function Viewer({
     ),
   );
   const checkCategory = async () => {
-    if (!selected) return;
+    if (selected === null || !selected) return;
     setCategoryCheck({ running: true });
     await api(`/categories/${encodeURIComponent(selected)}/check`, {
       method: "POST",
@@ -588,7 +633,7 @@ function Viewer({
     }, 1200);
   };
   return (
-    <div className="page-stack noc-page">
+    <div className={`page-stack noc-page configurable-noc density-${preferences.density}`}>
       <div className="page-heading noc-heading">
         <div>
           <span className="eyebrow">{t("liveOperations")}</span>
@@ -596,6 +641,7 @@ function Viewer({
           <p>{t("controlRoomHelp")}</p>
         </div>
         <div className="noc-heading-actions">
+          <button className="button" onClick={() => setCustomizing(true)}><LayoutDashboard />{t("customizeControlRoom")}</button>
           <button
             className={`button ${alertSound ? "sound-active" : ""}`}
             onClick={() => {
@@ -612,11 +658,96 @@ function Viewer({
           </button>
           <div className="live-badge">
             <span className="live-dot" />
-            {t("monitorLive")}
+            {t(data.status?.monitoring_stale ? "monitoringUnavailable" : "monitorLive")}
           </div>
         </div>
       </div>
-      <section className="noc-command-grid">
+      <section className={`control-board layout-${preferences.layout}`} aria-label={t("viewer")}>
+<section className="panel control-category-panel">      <div className="noc-section-heading">
+        <div>
+          <span className="eyebrow">{t("categoryHealth")}</span>
+          <h2>{t("categories")}</h2>
+        </div>
+        <p>{t("selectCategory")}</p>
+      </div>
+      <section className="category-grid">
+        {categories.map((item) => (
+          <button
+            className={`category-card ${item.offline ? "has-alert" : ""} ${selected === item.category ? "selected" : ""}`}
+            style={{ "--category-color": item.color || "#5da9ff" }}
+            key={item.category}
+            onClick={() =>
+              setSelected(selected === item.category ? null : item.category)
+            }
+          >
+            <div className="category-top">
+              <span className="icon-box category-icon">
+                <CategoryIcon name={item.icon} />
+              </span>
+              <span className="availability-score">
+                {item.availability_24h ?? 0}%
+              </span>
+            </div>
+            <h2>{item.category || t("uncategorized")}</h2>
+            <strong className="category-count">
+              {item.total ?? item.count ?? 0}
+            </strong>
+            <div className="category-tags">
+              <span className="category-ratio">
+                <strong>{item.online || 0}/{item.total ?? item.count ?? 0}</strong> {t("online")}
+              </span>
+              {item.offline > 0 && (
+                <span className="danger-tag">
+                  {item.offline} {t("offline")}
+                </span>
+              )}
+            </div>
+            <AvailabilityStrip series={item.series} />
+          </button>
+        ))}
+      </section>
+{!categories.length && <Empty t={t}/>}</section>        <article className="panel noc-priority control-outages">
+          <div className="panel-title">
+            <div>
+              <span className="eyebrow">{t("priorityQueue")}</span>
+              <h2>{t("disconnectedDevices")}</h2>
+            </div>
+            <strong className="danger-text">{offlineDevices.length}</strong>
+          </div>
+          <div className="control-outage-groups">
+            {offlineGroups.map(([category, categoryDevices]) => <section className="control-outage-group" key={category}>
+              <div className="control-outage-group-title"><Boxes /><strong>{category}</strong><span>{categoryDevices.length}</span></div>
+              <div className="control-outage-grid">
+            {categoryDevices.map((device) => {
+              const disconnectedAt = new Date(
+                Number(device.offline_since || device.last_seen || 0) * 1000,
+              );
+              return (
+                <article
+                  className={`control-outage-card urgency-${device.urgency} ${device.critical ? "critical" : ""}`}
+                  key={device.ip}
+                >
+                  <div className="urgency-rail" aria-label={`${t("urgencyLevel")} ${device.urgency}`} />
+                  <div className="outage-copy">
+                    <strong>
+                      {device.display_name || device.name || device.ip}
+                    </strong>
+                    <small><bdi>{device.ip}</bdi>{device.critical ? ` · ${t("critical")}` : ""}</small>
+                  </div>
+                  <time className="outage-disconnected-at" dateTime={Number(device.offline_since || device.last_seen) > 0 ? disconnectedAt.toISOString() : undefined}>
+                    <span>{t("lastSeen")}</span>
+                    <strong><TimeAgo timestamp={device.offline_since || device.last_seen} language={language}/></strong>
+                  </time>
+                </article>
+              );
+            })}
+              </div>
+            </section>)}
+            {!offlineDevices.length && <Empty t={t} />}
+          </div>
+
+        </article>      </section>
+      {preferences.showSummary && <section className="noc-command-grid">
         <article
           className={`noc-health-card ${problemDevices.some((device) => device.status === "offline") ? "danger" : "healthy"}`}
         >
@@ -648,8 +779,8 @@ function Viewer({
             </p>
           </div>
         </article>
-      </section>
-      <section className="noc-live-grid">
+      </section>}
+      {preferences.showTrend && <section className="noc-live-grid">
         <article className="panel noc-trend">
           <div className="panel-title">
             <div>
@@ -693,58 +824,9 @@ function Viewer({
             </ResponsiveContainer>
           </div>
         </article>
-        <article className="panel noc-priority control-outages">
-          <div className="panel-title">
-            <div>
-              <span className="eyebrow">{t("priorityQueue")}</span>
-              <h2>{t("disconnectedDevices")}</h2>
-            </div>
-            <strong className="danger-text">{offlineDevices.length}</strong>
-          </div>
-          <div className="control-outage-groups">
-            {offlineGroups.map(([category, categoryDevices]) => <section className="control-outage-group" key={category}>
-              <div className="control-outage-group-title"><Boxes /><strong>{category}</strong><span>{categoryDevices.length}</span></div>
-              <div className="control-outage-grid">
-            {categoryDevices.map((device) => {
-              const disconnectedAt = new Date(
-                Number(device.offline_since || device.last_seen || 0) * 1000,
-              );
-              return (
-                <article
-                  className={`control-outage-card urgency-${device.urgency} ${device.critical ? "critical" : ""}`}
-                  key={device.ip}
-                >
-                  <div className="urgency-rail" aria-label={`${t("urgencyLevel")} ${device.urgency}`} />
-                  <div className="outage-copy">
-                    <strong>
-                      {device.display_name || device.name || device.ip}
-                    </strong>
-                    <small>{device.category || t("uncategorized")}</small>
-                  </div>
-                  <time className="outage-disconnected-at" dateTime={disconnectedAt.toISOString()}>
-                    <span>{disconnectedAt.toLocaleDateString(language === "he" ? "he-IL" : "en-US")}</span>
-                    <strong>{disconnectedAt.toLocaleTimeString(language === "he" ? "he-IL" : "en-US", { hour: "2-digit", minute: "2-digit" })}</strong>
-                  </time>
-                </article>
-              );
-            })}
-              </div>
-            </section>)}
-            {!offlineDevices.length && <Empty t={t} />}
-          </div>
-          {offlineDevices.length > 4 && (
-            <button
-              className="button subtle control-outage-toggle"
-              onClick={() => setShowAllOutages((value) => !value)}
-            >
-              {t(showAllOutages ? "showLess" : "showMore")}
-              {!showAllOutages && ` · ${offlineDevices.length - 4}`}
-              <ChevronDown className={showAllOutages ? "expanded" : ""} />
-            </button>
-          )}
-        </article>
-      </section>
-      <section className="panel noc-journal">
+
+      </section>}
+      {preferences.showJournal && <section className="panel noc-journal">
         <div className="panel-title">
           <div>
             <span className="eyebrow">{t("liveJournal")}</span>
@@ -797,57 +879,14 @@ function Viewer({
               </article>
             ))}
         </div>
-      </section>
-      <div className="noc-section-heading">
-        <div>
-          <span className="eyebrow">{t("categoryHealth")}</span>
-          <h2>{t("categories")}</h2>
-        </div>
-        <p>{t("selectCategory")}</p>
-      </div>
-      <section className="category-grid">
-        {categories.map((item) => (
-          <button
-            className={`category-card ${item.offline ? "has-alert" : ""} ${selected === item.category ? "selected" : ""}`}
-            style={{ "--category-color": item.color || "#5da9ff" }}
-            key={item.category}
-            onClick={() =>
-              setSelected(selected === item.category ? null : item.category)
-            }
-          >
-            <div className="category-top">
-              <span className="icon-box category-icon">
-                <CategoryIcon name={item.icon} />
-              </span>
-              <span className="availability-score">
-                {item.availability_24h ?? 0}%
-              </span>
-            </div>
-            <h2>{item.category || t("uncategorized")}</h2>
-            <strong className="category-count">
-              {item.total ?? item.count ?? 0}
-            </strong>
-            <div className="category-tags">
-              <span className="category-ratio">
-                {t("availableCount")} <strong>{item.online || 0}</strong>{" "}
-                {t("outOf")} <strong>{item.total ?? item.count ?? 0}</strong>
-              </span>
-              {item.offline > 0 && (
-                <span className="danger-tag">
-                  {item.offline} {t("offline")}
-                </span>
-              )}
-            </div>
-            <AvailabilityStrip series={item.series} />
-          </button>
-        ))}
-      </section>
-      {selected && (
-        <section className="panel category-detail">
+      </section>}
+      {selected !== null && (
+        <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setSelected(null); }}>
+        <section role="dialog" aria-modal="true" aria-label={selected || t("uncategorized")} className="panel category-detail">
           <div className="panel-title">
             <div>
               <span className="eyebrow">{t("deviceHealth")}</span>
-              <h2>{selected}</h2>
+              <h2>{selected || t("uncategorized")}</h2>
               <small>
                 {t("lastCheck")}:{" "}
                 <TimeAgo
@@ -859,7 +898,7 @@ function Viewer({
             <div className="category-actions">
               <button
                 className="button"
-                disabled={categoryCheck?.running}
+                disabled={categoryCheck?.running || !selected}
                 onClick={checkCategory}
               >
                 <Radar className={categoryCheck?.running ? "spin" : ""} />
@@ -978,7 +1017,29 @@ function Viewer({
             ))}
           </div>
         </section>
+        </div>
       )}
+      {customizing && <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setCustomizing(false); }}>
+        <section className="modal-card control-customizer" role="dialog" aria-modal="true" aria-label={t("customizeControlRoom")}>
+          <div className="section-heading"><h2>{t("customizeControlRoom")}</h2><button className="icon-button" aria-label={t("close")} onClick={() => setCustomizing(false)}><X /></button></div>
+          <p>{t("controlPreferencesHelp")}</p>
+          <div className="detail-grid">
+            <label>{t("controlLayout")}<select value={preferences.layout} onChange={event => updatePreferences({ layout: event.target.value })}>
+              <option value="split">{t("controlSplit")}</option><option value="outages-first">{t("controlOutagesFirst")}</option><option value="stacked">{t("controlStacked")}</option>
+            </select></label>
+            <label>{t("controlDensity")}<select value={preferences.density} onChange={event => updatePreferences({ density: event.target.value })}>
+              <option value="compact">{t("compactDisplay")}</option><option value="comfortable">{t("controlComfortable")}</option>
+            </select></label>
+          </div>
+          <fieldset><legend>{t("controlExtraWidgets")}</legend>
+            {[["showSummary", "fleetHealth"], ["showTrend", "healthTimeline"], ["showJournal", "operatorJournal"]].map(([key, label]) => <label key={key}><input type="checkbox" checked={Boolean(preferences[key])} onChange={event => updatePreferences({ [key]: event.target.checked })}/>{t(label)}</label>)}
+          </fieldset>
+          <fieldset><legend>{t("categories")}</legend>
+            {allCategories.map(item => <label key={item.category}><input type="checkbox" checked={!hiddenCategories.includes(item.category)} onChange={event => updatePreferences({ hiddenCategories: event.target.checked ? hiddenCategories.filter(name => name !== item.category) : [...hiddenCategories, item.category] })}/>{item.category || t("uncategorized")}</label>)}
+          </fieldset>
+          <div className="modal-actions"><button className="button" onClick={() => updatePreferences(defaults)}>{t("controlReset")}</button><button className="button primary" onClick={() => setCustomizing(false)}>{t("close")}</button></div>
+        </section>
+      </div>}
     </div>
   );
 }
@@ -1003,6 +1064,13 @@ function Devices({
   );
   const [sortBy, setSortBy] = useState("priority");
   const [manualDevice, setManualDevice] = useState(null);
+  const [manualBusy, setManualBusy] = useState(false);
+  const manualIpRef = useRef(null);
+  const manualSubmitRef = useRef(false);
+  const [manualResult, setManualResult] = useState(null);
+  useEffect(() => { if (manualDevice && !manualBusy) manualIpRef.current?.focus(); }, [manualBusy, Boolean(manualDevice)]);
+  const [manualError, setManualError] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [cloneDevice, setCloneDevice] = useState(null);
   const [newTagDraft, setNewTagDraft] = useState({ name: "", color: "#5da9ff" });
   const [newCategoryDraft, setNewCategoryDraft] = useState({ name: "", color: "#5da9ff" });
@@ -1012,7 +1080,7 @@ function Devices({
     if (selected) setEditing(selected);
     else setFilter(initialFilter);
   }, [initialFilter, data.devices]);
-  useEffect(() => setVisibleCount(48), [search, filter]);
+  useEffect(() => setVisibleCount(48), [search, filter, categoryFilter]);
   const devices = useMemo(
     () =>
       (data.devices || [])
@@ -1032,7 +1100,7 @@ function Devices({
                     ? device.pinned
                     : device.status === filter);
           return (
-            (!search || text.includes(search.toLowerCase())) && matchesFilter
+            (!search || text.includes(search.toLowerCase())) && matchesFilter && (!categoryFilter || device.category === categoryFilter)
           );
         })
         .sort((left, right) => {
@@ -1052,7 +1120,7 @@ function Devices({
             Number(right.critical) - Number(left.critical)
           );
         }),
-    [data.devices, search, filter, sortBy],
+    [data.devices, search, filter, sortBy, categoryFilter],
   );
   const action = async (path) => {
     await api(path);
@@ -1145,14 +1213,26 @@ function Devices({
     }
   };
   const addManualDevice = async () => {
-    await api("/add_manual", {
-      method: "POST",
-      body: JSON.stringify(manualDevice),
-    });
-    await refresh();
-    setManualDevice(null);
-    setNotice(t("manualDeviceAdded"));
-    setTimeout(() => setNotice(""), 2500);
+    if (manualSubmitRef.current) return;
+    manualSubmitRef.current = true;
+    setManualBusy(true);
+    setManualResult(null);
+    setManualError("");
+    try {
+      const result = await api("/add_manual", {
+        method: "POST",
+        body: JSON.stringify(manualDevice),
+      });
+      setManualResult({ ip: result.device?.ip || manualDevice.ip, name: manualDevice.name, category: manualDevice.category, status: result.device?.status });
+      setManualDevice({ ip: "", name: "", category: "", notes: "" });
+      setNotice(result.device?.status === "offline" ? t("manualDeviceOffline") : t("manualDeviceAdded"));
+      void refresh();
+    } catch (error) {
+      setManualError(t(error.message) === error.message ? t("manualDeviceFailed") + " · " + error.message : t(error.message));
+    } finally {
+      manualSubmitRef.current = false;
+      setManualBusy(false);
+    }
   };
   const saveClone = async () => {
     await api(`/devices/${encodeURIComponent(cloneDevice.source_ip)}/clone`, {
@@ -1168,7 +1248,7 @@ function Devices({
   const editingTrend = (editing?.availability_series || []).map(
     (point, index) => ({
       hour: `${String(index).padStart(2, "0")}:00`,
-      availability: Number(point.availability_pct || 0),
+      availability: point.inferred ? null : Number(point.availability_pct || 0),
       disconnects: Number(point.offline_events || 0),
     }),
   );
@@ -1199,7 +1279,7 @@ function Devices({
             <button
               className="button primary"
               onClick={() =>
-                setManualDevice({ ip: "", name: "", category: "", notes: "" })
+                (setManualError(""), setManualResult(null), setManualDevice({ ip: "", name: "", category: "", notes: "" }))
               }
             >
               <Plus />
@@ -1229,6 +1309,10 @@ function Devices({
           )}
         </div>
         <div className="inventory-controls">
+          <label>{t("category")}<select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)}>
+            <option value="">{t("allCategories")}</option>
+            {[...new Set((data.devices || []).map(device => device.category).filter(Boolean))].sort().map(category => <option key={category} value={category}>{category}</option>)}
+          </select></label>
           <label>
             <ArrowUpDown size={16} />
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
@@ -1461,23 +1545,27 @@ function Devices({
         <div
           className="modal-backdrop"
           onMouseDown={(e) =>
-            e.target === e.currentTarget && setManualDevice(null)
+            e.target === e.currentTarget && !manualBusy && setManualDevice(null)
           }
         >
-          <div className="modal-card manual-device-modal">
-            <button
+          <form className="modal-card manual-device-modal" role="dialog" aria-modal="true" aria-label={t("addDevice")} onSubmit={event => { event.preventDefault(); addManualDevice(); }}>
+            <button type="button"
               className="modal-close"
-              onClick={() => setManualDevice(null)}
+              onClick={() => !manualBusy && setManualDevice(null)}
             >
               <X />
             </button>
             <span className="eyebrow">{t("manualDevice")}</span>
             <h1>{t("addDevice")}</h1>
-            <p className="modal-intro">{t("manualDeviceHelp")}</p>
-            <div className="detail-grid">
+            <p className="modal-intro">{t("rapidAddHelp")}</p>
+            {manualResult && <div className={`rapid-add-result state-${manualResult.status}`} role="status"><CheckCircle2 /><div><strong>{manualResult.name || manualResult.ip} · <bdi>{manualResult.ip}</bdi></strong><p>{t(manualResult.status === "online" ? "rapidAddOnline" : "rapidAddOffline")} · {manualResult.category || t("autoDetect")}</p></div></div>}
+            <fieldset disabled={manualBusy} className="detail-grid manual-fields">
               <label>
                 {t("ip")}
                 <input
+                  ref={manualIpRef}
+                  required
+                  dir="ltr"
                   autoFocus
                   value={manualDevice.ip}
                   onChange={(e) =>
@@ -1497,7 +1585,7 @@ function Devices({
               </label>
               <label>
                 {t("category")}
-                <select
+                <input list="manual-categories"
                   value={manualDevice.category}
                   onChange={(e) =>
                     setManualDevice({
@@ -1505,14 +1593,11 @@ function Devices({
                       category: e.target.value,
                     })
                   }
-                >
-                  <option value="">{t("autoDetect")}</option>
-                  {(data.labels?.categories || []).map((item) => (
-                    <option key={item.name} value={item.name}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder={t("categoryOrCreate")}
+                />
+                <datalist id="manual-categories">
+                  {[...new Set([...(data.labels?.categories || []).map(item => item.name), ...(data.devices || []).map(device => device.category).filter(Boolean)])].map(name => <option key={name} value={name}/>)}
+                </datalist>
               </label>
               <label>
                 {t("notes")}
@@ -1523,21 +1608,22 @@ function Devices({
                   }
                 />
               </label>
-            </div>
+            </fieldset>
+            {manualError && <p className="error-banner" role="alert">{manualError}</p>}
             <div className="modal-actions">
-              <button className="button" onClick={() => setManualDevice(null)}>
+              <button type="button" className="button" onClick={() => !manualBusy && setManualDevice(null)}>
                 {t("cancel")}
               </button>
               <button
                 className="button primary"
-                disabled={!manualDevice.ip.trim()}
-                onClick={addManualDevice}
+                type="submit"
+                disabled={manualBusy || !manualDevice.ip.trim()}
               >
                 <Plus />
-                {t("addAndMonitor")}
+                {manualBusy ? t("checkingDevice") : t("addAndMonitor")}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
       {cloneDevice && (
@@ -3518,7 +3604,8 @@ function SettingsDevices({ data, t, refresh }) {
       <section className="modal-card admin-form-modal device-onboarding-modal">
         <button className="modal-close" onClick={() => setAddOpen(false)}><X /></button>
         <span className="eyebrow">{t("manualDevice")}</span><h1>{t("addDevice")}</h1>
-        <p className="modal-intro">{t("manualDeviceHelp")}</p>
+        <p className="modal-intro">{t("rapidAddHelp")}</p>
+            {manualResult && <div className={`rapid-add-result state-${manualResult.status}`} role="status"><CheckCircle2 /><div><strong>{manualResult.name || manualResult.ip} · <bdi>{manualResult.ip}</bdi></strong><p>{t(manualResult.status === "online" ? "rapidAddOnline" : "rapidAddOffline")} · {manualResult.category || t("autoDetect")}</p></div></div>}
         <div className="device-entry-card">
         <div className="form-grid">
           <label>
@@ -3840,9 +3927,9 @@ function SettingsPage({
           ))}
         </nav>
         <div className="settings-version">
-          <span className="live-dot" />
+          <span className={connectionFailed || data.status?.monitoring_stale ? "status-dot offline" : "live-dot"} />
           <div>
-            <strong>{t("monitorLive")}</strong>
+            <strong>{t(connectionFailed || data.status?.monitoring_stale ? "monitoringUnavailable" : "monitorLive")}</strong>
             <small>v{data.status?.version}</small>
           </div>
         </div>
@@ -4353,6 +4440,9 @@ export default function App() {
   });
   const notificationReady = useRef(false);
   const refreshInFlight = useRef(false);
+  const latestRefresh = useRef(null);
+  const [lastSync, setLastSync] = useState(0);
+  const [connectionFailed, setConnectionFailed] = useState(false);
   const audioContext = useRef(null);
   const knownOfflineAlerts = useRef(null);
   const [alertSound, setAlertSound] = useState(
@@ -4468,14 +4558,19 @@ export default function App() {
         history,
         labels,
       });
+      setLastSync(Date.now() / 1000);
+      setConnectionFailed(false);
       showAlertNotifications(alertItems);
     } catch (e) {
+      setConnectionFailed(true);
+      setData(current => ({ ...current, status: current.status ? { ...current.status, monitoring_stale: true } : null }));
       setError(e.message);
     } finally {
       refreshInFlight.current = false;
       setLoading(false);
     }
   };
+  latestRefresh.current = refresh;
   useEffect(() => {
     loadAuth();
   }, []);
@@ -4483,13 +4578,13 @@ export default function App() {
     if (!auth.authenticated) return;
     const interval =
       Math.max(10, Number(data.settings?.auto_refresh || 30)) * 1000;
-    const id = setInterval(refresh, interval);
+    const id = setInterval(() => latestRefresh.current(), interval);
     return () => clearInterval(id);
   }, [auth.authenticated, data.settings?.auto_refresh]);
   useEffect(() => {
     if (!auth.authenticated) return;
     const stream = new EventSource("./api/stream");
-    stream.addEventListener("update", refresh);
+    stream.addEventListener("update", () => latestRefresh.current());
     return () => stream.close();
   }, [auth.authenticated]);
   useEffect(() => {
@@ -4574,7 +4669,7 @@ export default function App() {
     (role === "viewer" && auth.user?.viewer_edge_to_edge);
   const pages = {
     dashboard: (
-      <Dashboard data={data} t={t} setRoute={setRoute} language={language} />
+      <Dashboard key={auth.user?.id || auth.user?.username} data={data} t={t} setRoute={setRoute} language={language} currentUser={auth.user} />
     ),
     viewer: (
       <Viewer
@@ -4723,9 +4818,9 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-health">
-          <span className="live-dot" />
+          <span className={connectionFailed || data.status?.monitoring_stale ? "status-dot offline" : "live-dot"} />
           <div>
-            <strong>{t("monitorLive")}</strong>
+            <strong>{t(connectionFailed || data.status?.monitoring_stale ? "monitoringUnavailable" : "monitorLive")}</strong>
             <small>v{data.status?.version || "7.1.1"}</small>
           </div>
         </div>
@@ -4766,6 +4861,8 @@ export default function App() {
             )}
           </div>
         </header>
+        {(connectionFailed || data.status?.monitoring_stale || Object.values(data.status?.workers || {}).some(worker => worker.last_error)) && <div className="error-banner" role="alert"><AlertTriangle />{t("monitoringUnavailable")}</div>}
+        {lastSync > 0 && <div className="sync-status">{t("lastSync")}: <TimeAgo timestamp={lastSync} language={language}/></div>}
         {error && (
           <div className="error-banner">
             <AlertTriangle />

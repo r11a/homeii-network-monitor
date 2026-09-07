@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.3.0
+
+- Added a configurable control center with saved per-user layouts, category visibility, display density and optional widgets.
+- Prioritized category health and disconnected devices in viewport-sized panels with scrolling only for overflowing lists.
+- Added rapid consecutive manual entry with immediate ping, inline feedback, cleared fields and restored IP focus; DNS enrichment runs later.
+- Added a personal dashboard, category filtering and explicit stale-monitoring feedback.
+- Kept managed devices monitored during prolonged outages and prevented overlapping monitoring passes.
+- Corrected availability windows and duration weighting; added Windows ping support.
+- Verified with 30 backend tests, a production UI build and browser checks.
+
 ## 7.2.3
 
 - Rebuilt the category editor layout with semantic field sizing, a compact preview, full-width visibility control and stable responsive behavior.

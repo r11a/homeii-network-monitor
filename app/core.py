@@ -38,6 +38,7 @@ except ModuleNotFoundError:
 
 _db_lock = threading.RLock()
 _worker_lock = threading.Lock()
+_monitor_pass_locks = {False: threading.Lock(), True: threading.Lock()}
 _worker_threads: Dict[str, threading.Thread] = {}
 _shutdown_event = threading.Event()
 _login_lock = threading.Lock()
@@ -1727,7 +1728,7 @@ def upsert_device(ip: str, fields: Dict[str, Any]) -> None:
 def ping(ip: str) -> bool:
     try:
         return subprocess.run(
-            ["ping", "-c", "1", "-W", "1", ip],
+            (["ping", "-n", "1", "-w", "1000", ip] if os.name == "nt" else ["ping", "-c", "1", "-W", "1", ip]),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             timeout=3,
@@ -2652,6 +2653,18 @@ def reconcile_network_inventory() -> dict[str, int]:
 
 
 def run_monitor_pass(critical_only: bool = False) -> None:
+    # Scheduled passes, watchdog kicks and manual scans share the same guard.
+    # Concurrent samples must not advance failure thresholds twice.
+    guard = _monitor_pass_locks[bool(critical_only)]
+    if not guard.acquire(blocking=False):
+        return
+    try:
+        _run_monitor_pass(critical_only)
+    finally:
+        guard.release()
+
+
+def _run_monitor_pass(critical_only: bool = False) -> None:
     worker_name = "critical_monitor" if critical_only else "monitor"
     interval = critical_interval_seconds() if critical_only else interval_from_settings()
     set_worker_status(worker_name, last_started=now_ts(), interval=interval)
@@ -2721,7 +2734,7 @@ def maintain_recycle_bin(force: bool = False) -> dict[str, int]:
         try:
             cursor = conn.execute(
                 "UPDATE devices SET trashed_at=?,updated_at=? WHERE ignored=0 AND quarantined=0 "
-                "AND trashed_at=0 AND status='offline' "
+                "AND trashed_at=0 AND status='offline' AND approved=0 AND manual=0 "
                 "AND COALESCE(NULLIF(last_seen,0),NULLIF(first_seen,0),updated_at)<?",
                 (now, now, offline_cutoff),
             )
@@ -3605,6 +3618,14 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         return 0.0
 
     def hourly_availability(device: Dict[str, Any], hour_start: int, hour_end: int) -> Dict[str, Any]:
+        # Never extrapolate backwards before discovery or forwards past now.
+        bucket_ts = hour_start
+        hour_start = max(hour_start, int(device.get("first_seen") or window_start))
+        hour_end = min(hour_end, int(now.timestamp()))
+        observed_seconds = max(0, hour_end - hour_start)
+        if not observed_seconds:
+            return {"ts": bucket_ts, "state": "unknown", "availability_pct": 0.0,
+                    "observed_seconds": 0, "inferred": True, "offline_events": 0, "unstable_events": 0}
         status = device_status_at(device, hour_start)
         cursor = hour_start
         score_seconds = 0.0
@@ -3629,23 +3650,25 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             score_seconds += ((hour_end - cursor) * availability_for_status(status)) / 100.0
         availability_pct = round((score_seconds / max(1, (hour_end - hour_start))) * 100, 1)
         return {
-            "ts": hour_start,
+            "ts": bucket_ts,
+            "observed_seconds": observed_seconds,
             "state": status,
             "availability_pct": availability_pct,
             "offline_events": offline_events,
             "unstable_events": unstable_events,
         }
 
+    def weighted_availability(series: list[dict[str, Any]]) -> float:
+        duration = sum(point.get("observed_seconds", 0) for point in series)
+        return round(sum(point["availability_pct"] * point.get("observed_seconds", 0) for point in series) / max(1, duration), 1)
+
     device_timelines: Dict[str, Dict[str, Any]] = {}
     summary_series = []
-    summary_total = max(1, len(devices))
 
     for device in devices:
         series = []
-        total_score = 0.0
         for point in bucket_points:
             hour_data = hourly_availability(device, point, point + bucket_seconds)
-            total_score += float(hour_data["availability_pct"])
             series.append(hour_data)
         device_timelines[device["ip"]] = {
             "ip": device["ip"],
@@ -3655,7 +3678,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                 if device.get("status") == "offline"
                 else 0
             ) or (int(device.get("last_seen") or 0) if device.get("status") == "offline" else 0),
-            "availability_24h": round(total_score / max(1, len(series)), 1),
+            "availability_24h": weighted_availability(series),
             "history_samples": len(history_by_ip.get(device["ip"], [])),
             "availability_source": "history" if history_by_ip.get(device["ip"]) else "current_status",
             "series": series,
@@ -3664,13 +3687,16 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
     for point_index, point in enumerate(bucket_points):
         counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
         availability_sum = 0.0
+        observed_seconds = 0
         offline_events = 0
         unstable_events = 0
         for device in devices:
             device_point = device_timelines[device["ip"]]["series"][point_index]
             status = device_point["state"]
             counts[status] = counts.get(status, 0) + 1
-            availability_sum += float(device_point["availability_pct"])
+            duration = device_point.get("observed_seconds", 0)
+            observed_seconds += duration
+            availability_sum += float(device_point["availability_pct"]) * duration
             offline_events += int(device_point.get("offline_events") or 0)
             unstable_events += int(device_point.get("unstable_events") or 0)
         summary_series.append(
@@ -3678,7 +3704,9 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                 "ts": point,
                 "state": aggregate_state(counts),
                 "counts": counts,
-                "availability_pct": round(availability_sum / summary_total, 1),
+                "availability_pct": round(availability_sum / max(1, observed_seconds), 1),
+                "observed_seconds": observed_seconds,
+                "inferred": not observed_seconds,
                 "offline_events": offline_events,
                 "unstable_events": unstable_events,
             }
@@ -3692,26 +3720,29 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
             current_counts[device.get("status") or "unknown"] = current_counts.get(device.get("status") or "unknown", 0) + 1
 
         series = []
-        availability_total = 0.0
         for point_index, point in enumerate(bucket_points):
             counts = {"online": 0, "offline": 0, "unstable": 0, "new": 0, "unknown": 0}
             availability_sum = 0.0
+            observed_seconds = 0
             offline_events = 0
             unstable_events = 0
             for device in category_devices:
                 device_point = device_timelines[device["ip"]]["series"][point_index]
                 counts[device_point["state"]] = counts.get(device_point["state"], 0) + 1
-                availability_sum += float(device_point["availability_pct"])
+                duration = device_point.get("observed_seconds", 0)
+                observed_seconds += duration
+                availability_sum += float(device_point["availability_pct"]) * duration
                 offline_events += int(device_point.get("offline_events") or 0)
                 unstable_events += int(device_point.get("unstable_events") or 0)
-            availability_pct = round(availability_sum / max(1, len(category_devices)), 1)
-            availability_total += availability_pct
+            availability_pct = round(availability_sum / max(1, observed_seconds), 1)
             series.append(
                 {
                     "ts": point,
                     "state": aggregate_state(counts),
                     "counts": counts,
                     "availability_pct": availability_pct,
+                    "observed_seconds": observed_seconds,
+                    "inferred": not observed_seconds,
                     "offline_events": offline_events,
                     "unstable_events": unstable_events,
                 }
@@ -3733,7 +3764,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
                 "pinned": sum(1 for device in category_devices if device.get("pinned")),
                 "state": aggregate_state(current_counts),
                 "devices": [device["ip"] for device in category_devices],
-                "availability_24h": round(availability_total / max(1, len(series)), 1),
+                "availability_24h": weighted_availability(series),
                 "series": series,
             }
         )
@@ -3751,10 +3782,7 @@ def viewer_categories_payload(hours: int = 24, buckets: int = 24) -> Dict[str, A
         "categories": payload,
         "devices": device_timelines,
         "summary": {
-            "availability_24h": round(
-                sum(float(point["availability_pct"]) for point in summary_series) / max(1, len(summary_series)),
-                1,
-            ),
+            "availability_24h": weighted_availability(summary_series),
             "series": summary_series,
         },
     }

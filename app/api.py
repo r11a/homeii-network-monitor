@@ -5,6 +5,7 @@ from ipaddress import ip_address
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.core import *
 from app.security import login_attempt_allowed, password_hash, password_matches, record_login_attempt
@@ -1342,7 +1343,8 @@ def create_manual_device(
     preflight: dict[str, Any], name: str = "", category: str = "", notes: str = ""
 ) -> dict[str, Any]:
     ip = preflight["ip"]
-    host = reverse_dns(ip)
+    # Keep rapid entry bounded by the ping; scheduled monitoring enriches DNS later.
+    host = preflight.get("hostname", "")
     vendor = preflight.get("vendor", "")
     reachable = bool(preflight.get("reachable"))
     d = {
@@ -1381,7 +1383,7 @@ def create_manual_device(
 async def api_device_preflight(request: Request):
     payload = await request.json()
     try:
-        return manual_device_preflight(
+        return await run_in_threadpool(manual_device_preflight,
             str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip(),
             str(payload.get("name", "")).strip(),
         )
@@ -1406,7 +1408,7 @@ def api_add_manual(ip: str, name: str = "", category: str = "", notes: str = "",
 async def api_add_manual_post(request: Request):
     payload = await request.json()
     try:
-        preflight = manual_device_preflight(
+        preflight = await run_in_threadpool(manual_device_preflight,
             str(payload.get("ip", "")).strip(), str(payload.get("mac", "")).strip(),
             str(payload.get("name", "")).strip(),
         )
@@ -1416,7 +1418,7 @@ async def api_add_manual_post(request: Request):
         return JSONResponse(
             {"error": "device_identity_conflict", **preflight}, status_code=409
         )
-    result = create_manual_device(
+    result = await run_in_threadpool(create_manual_device,
         preflight,
         str(payload.get("name", "")).strip(),
         str(payload.get("category", "")).strip(),
