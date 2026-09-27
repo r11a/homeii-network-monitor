@@ -1,5 +1,18 @@
 # Changelog
 
+## 7.4.0
+
+- Added a focused network overview with critical priorities, category distribution and inventory drill-down.
+- Added filtered, paginated reports and UTF-8 CSV export with history coverage and explicit estimation limits.
+- Corrected historical reporting: no invented uptime without evidence, consistent device/system calculations, full selected windows, and accurate affected-device counts.
+- Added explicit connection/staleness/worker health and worker diagnostics in Settings.
+- Improved user administration with role guidance, search, password reset, handled errors and session revocation on access changes.
+- Made audit history directly accessible and included legacy administrative GET actions in the audit log.
+- Preserved unfinished settings edits during refreshes and made failed saves visible.
+- Retained the existing unauthenticated Home Assistant dashboard endpoint as explicitly requested; documented the security and deployment limitations in `docs/OPERATIONS.md`.
+- Added a consolidated Home Assistant dashboard feed, 24-hour availability history sensor and an interactive Lovelace card with status and category filters.
+- Added device-entity selection for new Home Assistant integration setups while preserving all existing per-device entities during upgrades.
+
 ## 7.3.2
 
 - Fixed the Settings Add device dialog crash caused by a reference to another component's state.

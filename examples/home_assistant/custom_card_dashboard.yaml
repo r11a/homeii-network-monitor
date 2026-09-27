@@ -3,6 +3,24 @@ views:
     path: homeii
     badges: []
     cards:
+      - type: custom:homeii-network-card
+        title: HOMEii Network
+        devices_entity: sensor.homeii_network_monitor_all_devices_details
+        category_entity: sensor.homeii_network_monitor_category_summary
+        history_entity: sensor.homeii_network_monitor_availability_history
+        total_entity: sensor.homeii_network_monitor_total_devices
+        online_entity: sensor.homeii_network_monitor_connected_devices
+        offline_entity: sensor.homeii_network_monitor_disconnected_devices
+        unstable_entity: sensor.homeii_network_monitor_unstable_devices
+        new_entity: sensor.homeii_network_monitor_new_devices
+        default_view: overview
+        show_summary: true
+        show_categories: true
+        show_graph: true
+        show_history: true
+        statuses: [online, offline, unstable, new]
+        max_items: 12
+
       - type: custom:homeii-dynamic-board-card
         title: HOMEii Dynamic Board
         offline_entity: sensor.homeii_network_monitor_disconnected_devices

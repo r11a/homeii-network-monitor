@@ -4,6 +4,12 @@
 <h1 align="center">HOMEii Network Monitor</h1>
 <p align="center"><strong>Premium network intelligence for Home Assistant</strong></p>
 
+## Operational workspace
+
+The current workspace adds a priority queue, category health, explicit monitoring freshness, filtered CSV reports, user administration and an administrative audit view. Reports distinguish estimated availability from retained history coverage; they are not continuous probe records or SLA measurements.
+
+See [operational behavior and deployment limitations](docs/OPERATIONS.md) before using this system in a security-sensitive environment.
+
 ## 6.1 product experience
 
 - Three focused workspaces: administrator, user and control-room/NOC.
@@ -16,7 +22,7 @@
 <p align="center"><strong>Network intelligence built natively for Home Assistant.</strong><br>Discover, classify and monitor every device with real-time alerts, historical availability and a premium NOC interface.</p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-7.3.2-c47a3b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-7.4.0-c47a3b?style=for-the-badge">
   <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Add--on%20%2B%20Integration-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/UI-React%2019-27e6a4?style=for-the-badge&logo=react&logoColor=07110d">
   <img alt="License" src="https://img.shields.io/github/license/r11a/homeii-network-monitor?style=for-the-badge&color=ffb52e">

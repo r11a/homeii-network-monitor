@@ -141,6 +141,7 @@ def api_devices():
         timeline = timelines.get(str(device.get("ip") or "").strip(), {})
         device["availability_series"] = timeline.get("series", [])
         device["availability_24h"] = timeline.get("availability_24h")
+        device["offline_since"] = int(timeline.get("offline_since") or 0)
         device["availability_source"] = timeline.get("availability_source", "unavailable")
         device["availability_history_samples"] = int(timeline.get("history_samples") or 0)
     return {"devices": devices}
@@ -362,7 +363,8 @@ async def enforce_api_permissions(request: Request, call_next):
         return await call_next(request)
 
     public_auth = {"/api/auth/session", "/api/auth/setup", "/api/auth/login", "/api/auth/logout"}
-    if path in public_auth:
+    public_home_assistant = {"/api/ha/dashboard"}
+    if path in public_auth or (request.method == "GET" and path in public_home_assistant):
         return await call_next(request)
 
     def authorize(*roles: str) -> JSONResponse | None:
@@ -417,9 +419,17 @@ async def enforce_api_permissions(request: Request, call_next):
 
 @app.middleware("http")
 async def audit_api_mutations(request: Request, call_next):
+    legacy_mutation = request.method == "GET" and request.url.path.startswith((
+        "/api/scan", "/api/accept", "/api/add/", "/api/add_all", "/api/add_manual",
+        "/api/remove/", "/api/restore/", "/api/delete_device", "/api/ignore/",
+        "/api/update", "/api/toggle_", "/api/bulk_", "/api/ping_now/",
+        "/api/resolve_alert/", "/api/save_settings",
+    ))
+    should_audit = request.url.path.startswith("/api/") and (legacy_mutation or request.method in {"POST", "PUT", "PATCH", "DELETE"})
+    actor = session_user(request) if should_audit else None
     response = await call_next(request)
-    if request.url.path.startswith("/api/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-        user = session_user(request) or {"username": "anonymous", "role": "anonymous"}
+    if should_audit:
+        user = actor or getattr(request.state, "audit_actor", None) or session_user(request) or {"username": "anonymous", "role": "anonymous"}
         log_audit(
             user.get("username", "anonymous"), user.get("role", "anonymous"),
             request.client.host if request.client else "", f"{request.method} {request.url.path}",
@@ -491,6 +501,7 @@ async def api_auth_login(request: Request):
     finally:
         conn.close()
     record_login_attempt(client_key, True)
+    request.state.audit_actor = user
     token = secrets.token_urlsafe(40)
     conn = db()
     try:
@@ -556,6 +567,21 @@ async def api_admin_create_user(request: Request):
 async def api_admin_update_user(user_id: int, request: Request):
     current = require_role(request, "admin")
     payload = await request.json()
+    if not isinstance(payload, dict):
+        return JSONResponse({"error": "invalid_user"}, status_code=400)
+    if not isinstance(payload, dict):
+        return JSONResponse({"error": "invalid_user"}, status_code=400)
+    conn = db()
+    try:
+        existing = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+        if not existing:
+            return JSONResponse({"error": "user_not_found"}, status_code=404)
+        previous_user = public_user(existing)
+        payload = {**previous_user, **payload}
+    finally:
+        conn.close()
+    if any(not isinstance(payload.get(key), bool) for key in ("active", "viewer_edge_to_edge", "can_manage_alerts")):
+        return JSONResponse({"error": "invalid_user"}, status_code=400)
     role = str(payload.get("role", "viewer"))
     if role not in VALID_USER_ROLES or (current.get("id") == user_id and not payload.get("active", True)):
         return JSONResponse({"error": "invalid_user"}, status_code=400)
@@ -579,6 +605,8 @@ async def api_admin_update_user(user_id: int, request: Request):
             if current_row and current_row["role"] == "admin" and current_row["active"] and active_admins <= 1:
                 return JSONResponse({"error": "last_admin_protected"}, status_code=409)
         conn.execute(f"UPDATE users SET {','.join(fields)} WHERE id=?", values)
+        if password or role != previous_user["role"] or not payload.get("active", True) or payload.get("can_manage_alerts") != previous_user["can_manage_alerts"]:
+            conn.execute("DELETE FROM auth_sessions WHERE user_id=?", (user_id,))
         conn.commit()
     finally:
         conn.close()
@@ -977,6 +1005,45 @@ async def api_import_settings(file: UploadFile = File(...)):
 @app.get("/api/ha/summary")
 def api_ha_summary():
     return ha_summary_payload()
+
+
+@app.get("/api/ha/dashboard")
+def api_ha_dashboard():
+    """Return one read-only, bounded snapshot for the native HA integration."""
+    ensure_background_workers()
+    status = status_payload()
+    devices = get_devices(include_quarantined=True)
+    offline_ips = [device["ip"] for device in devices if device.get("status") == "offline" and device.get("ip")]
+    offline_since = {}
+    if offline_ips:
+        placeholders = ",".join("?" for _ in offline_ips)
+        conn = db()
+        try:
+            rows = conn.execute(
+                f"""
+                SELECT ip, MAX(ts) AS offline_since
+                FROM device_history
+                WHERE kind='status' AND new_status='offline' AND ip IN ({placeholders})
+                GROUP BY ip
+                """,
+                offline_ips,
+            ).fetchall()
+            offline_since = {row["ip"]: int(row["offline_since"] or 0) for row in rows}
+        finally:
+            conn.close()
+    for device in devices:
+        device["offline_since"] = (
+            offline_since.get(device.get("ip"), 0)
+            or (int(device.get("last_seen") or 0) if device.get("status") == "offline" else 0)
+        )
+    return {
+        "status": status,
+        "devices": devices,
+        "alerts": api_alerts(limit=200).get("alerts", []),
+        # Full history remains available in the add-on UI without burdening
+        # Home Assistant's frequent coordinator refresh.
+        "availability": {},
+    }
 
 
 @app.get("/api/ha/entities")
@@ -1686,7 +1753,10 @@ async def api_clone_device(source_ip: str, request: Request):
 
 
 @app.get("/api/resolve_alert/{alert_id}")
-def api_resolve_alert(alert_id: int):
+def api_resolve_alert(alert_id: int, request: Request):
+    user = require_role(request, "admin", "user")
+    if user.get("role") != "admin" and not user.get("can_manage_alerts"):
+        return JSONResponse({"error": "permission_denied"}, status_code=403)
     conn = db()
     try:
         conn.execute("UPDATE alerts SET status='resolved', updated_at=? WHERE id=?", (now_ts(), alert_id))

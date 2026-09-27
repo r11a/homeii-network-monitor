@@ -92,6 +92,8 @@ import {
 } from "recharts";
 import { api, query } from "./api";
 import { translator } from "./i18n";
+import { AuditLog, HealthStrip, OperationsOverview, ReportMethod, ReportsPage, useHistoryReport } from "./Operations";
+import { monitoringHealth, percent } from "./monitoring";
 
 const navItems = [
   ["dashboard", LayoutDashboard],
@@ -99,6 +101,7 @@ const navItems = [
   ["devices", Server],
   ["alerts", Bell],
   ["history", History],
+  ["reports", FileSpreadsheet],
   ["tools", Wrench],
   ["settings", Settings],
 ];
@@ -352,7 +355,7 @@ function outageUrgency(lastSeen) {
   return 0;
 }
 
-function Dashboard({ data, t, setRoute, language, currentUser }) {
+function Dashboard({ data, t, setRoute, language, currentUser, health }) {
   const preferenceKey = `homeii-dashboard-${currentUser?.id || currentUser?.username || "default"}`;
   const [preferences, setPreferences] = useState(() => {
     try { return JSON.parse(localStorage.getItem(preferenceKey)) || {}; } catch { return {}; }
@@ -371,18 +374,10 @@ function Dashboard({ data, t, setRoute, language, currentUser }) {
     Number(a.status === "online") - Number(b.status === "online") ||
     (a.display_name || a.ip).localeCompare(b.display_name || b.ip));
   const categories = [...new Set((data.devices || []).map(device => device.category).filter(Boolean))].sort();
-  const { status, viewer } = data;
+  const { viewer } = data;
   const devices = (data.devices || []).filter(
     (device) => !device.quarantined && !device.trashed_at,
   );
-  const attention = devices
-    .filter((device) => ["offline", "unstable"].includes(device.status))
-    .sort((left, right) =>
-      Number(left.status !== "offline") - Number(right.status !== "offline") ||
-      Number(right.critical) - Number(left.critical) ||
-      Number(left.last_seen || 0) - Number(right.last_seen || 0),
-    )
-    .slice(0, 6);
   const recentlyJoined = devices
     .filter((device) => Number(device.first_seen || 0) > 0)
     .sort((left, right) => Number(right.first_seen || 0) - Number(left.first_seen || 0))
@@ -394,28 +389,11 @@ function Dashboard({ data, t, setRoute, language, currentUser }) {
     ),
     availability: point.inferred ? null : Number(point.availability_pct || 0),
   }));
-  const healthy = Boolean(status?.total) && !status?.monitoring_stale && !Object.values(status?.workers || {}).some(worker => worker.last_error) && Number(status?.offline || 0) === 0 && Number(status?.unstable || 0) === 0;
-  const metrics = [
-    ["online", status?.online || 0, Wifi],
-    ["offline", status?.offline || 0, WifiOff],
-    ["unstable", status?.unstable || 0, Activity],
-    ["new", status?.new || 0, Sparkles],
-  ];
   return (
     <div className="page-stack overview-page">
-      <section className={`overview-status ${healthy ? "healthy" : "attention"}`}>
-        <div className="overview-status-icon">
-          {healthy ? <CheckCircle2 /> : <AlertTriangle />}
-        </div>
-        <div>
-          <span className="eyebrow">{t("overview")}</span>
-          <h1>{!status?.total ? t("noMeasurements") : status?.monitoring_stale ? t("monitoringUnavailable") : healthy ? t("systemHealthy") : t("attention")}</h1>
-          <p>{status?.total || 0} {t("monitored")} · {status?.networks?.length || 0} {t("network")}</p>
-        </div>
-        <strong>{status?.total ? `${viewer?.summary?.availability_24h ?? 0}%` : "—"}</strong>
-      </section>
-
-      <section className="panel personal-dashboard">
+      <OperationsOverview data={data} t={t} setRoute={setRoute} health={health} />
+      <details className="panel personal-dashboard">
+        <summary>{t("personalDashboard")} <ChevronDown /></summary>
         <div className="section-heading">
           <div><h2>{t("personalDashboard")}</h2><p>{t("personalDashboardHelp")}</p></div>
           <button className="button" onClick={() => setRoute("devices")}>{t("devices")} <ChevronLeft /></button>
@@ -439,24 +417,13 @@ function Dashboard({ data, t, setRoute, language, currentUser }) {
           </button>)}
         </div>
         {!personalDevices.length && <Empty t={t}/>}
-      </section>
-
-      <section className="overview-metrics" aria-label={t("overview")}>
-        {metrics.map(([key, value, Icon]) => (
-          <button key={key} className={`overview-metric tone-${key}`} onClick={() => setRoute(`devices/${key}`)}>
-            <Icon />
-            <span>{t(key)}</span>
-            <strong>{value}</strong>
-            <ChevronLeft />
-          </button>
-        ))}
-      </section>
+      </details>
 
       <section className="overview-workspace">
         <article className="panel overview-trend">
           <div className="section-heading">
             <div><h2>{t("uptimeTrend")}</h2><p>{t("last24h")}</p></div>
-            <span className="simple-score">{viewer?.summary?.availability_24h ?? 0}%</span>
+            <span className="simple-score">{percent(chartData.some(point => point.availability != null) ? viewer?.summary?.availability_24h : null)}</span>
           </div>
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height="100%">
@@ -472,23 +439,6 @@ function Dashboard({ data, t, setRoute, language, currentUser }) {
           </div>
         </article>
 
-        <article className="panel overview-attention">
-          <div className="section-heading">
-            <div><h2>{t("disconnectedDevices")}</h2><p>{attention.length} {t("requiresAttention")}</p></div>
-            <button className="text-action" onClick={() => setRoute("devices/offline")}>{t("viewAll")} <ChevronLeft /></button>
-          </div>
-          <div className="decision-list">
-            {attention.map((device) => (
-              <button key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}>
-                <StatusDot status={device.status}/>
-                <span><strong>{device.display_name || device.name || device.ip}</strong><small>{t(device.status)} · {device.category || t("uncategorized")}</small></span>
-                <TimeAgo timestamp={device.last_seen} language={language}/>
-                <ChevronLeft />
-              </button>
-            ))}
-            {!attention.length && <Empty t={t}/>}
-          </div>
-        </article>
       </section>
 
       <section className="panel overview-recent">
@@ -516,6 +466,7 @@ function Viewer({
   alertSound,
   setAlertSound,
   currentUser,
+  health,
 }) {
   const preferenceKey = `homeii-control-room-${currentUser?.id || currentUser?.username || "default"}`;
   const defaults = { layout: "split", density: "compact", showSummary: false, showTrend: false, showJournal: false, hiddenCategories: [] };
@@ -578,9 +529,7 @@ function Viewer({
     incidents:
       Number(point.offline_events || 0) + Number(point.unstable_events || 0),
   }));
-  const overallAvailability = Number(
-    data.viewer?.summary?.availability_24h || 0,
-  );
+  const overallAvailability = data.viewer?.summary?.availability_24h;
   const acknowledgeAlert = async (id) => {
     await api(`/acknowledge_alert/${id}`, { method: "POST" });
     await refresh();
@@ -657,8 +606,8 @@ function Viewer({
             {t(alertSound ? "soundOn" : "soundOff")}
           </button>
           <div className="live-badge">
-            <span className="live-dot" />
-            {t(data.status?.monitoring_stale ? "monitoringUnavailable" : "monitorLive")}
+            <span className={health === "live" ? "live-dot" : "status-dot offline"} />
+            {t(`health_${health}`)}
           </div>
         </div>
       </div>
@@ -685,7 +634,7 @@ function Viewer({
                 <CategoryIcon name={item.icon} />
               </span>
               <span className="availability-score">
-                {item.availability_24h ?? 0}%
+                {percent(item.availability_24h)}
               </span>
             </div>
             <h2>{item.category || t("uncategorized")}</h2>
@@ -694,7 +643,7 @@ function Viewer({
             </strong>
             <div className="category-tags">
               <span className="category-ratio">
-                <strong>{item.online || 0}/{item.total ?? item.count ?? 0}</strong> {t("online")}
+                <strong dir="ltr">{item.online || 0}/{item.total ?? item.count ?? 0}</strong> {t("online")}
               </span>
               {item.offline > 0 && (
                 <span className="danger-tag">
@@ -753,7 +702,7 @@ function Viewer({
         >
           <div>
             <span className="eyebrow">{t("fleetHealth")}</span>
-            <strong>{overallAvailability}%</strong>
+            <strong>{percent(overallAvailability)}</strong>
             <p>
               {devices.length} {t("monitored")} · {problemDevices.length}{" "}
               {t("attention")}
@@ -787,7 +736,7 @@ function Viewer({
               <span className="eyebrow">{t("last24h")}</span>
               <h2>{t("healthTimeline")}</h2>
             </div>
-            <span className="score">{overallAvailability}%</span>
+            <span className="score">{percent(overallAvailability)}</span>
           </div>
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height="100%">
@@ -926,7 +875,7 @@ function Viewer({
             <article className="category-health-chart">
               <div>
                 <span>{t("healthScore")}</span>
-                <strong>{selectedCategory?.availability_24h ?? 0}%</strong>
+                <strong>{percent(selectedCategory?.availability_24h)}</strong>
               </div>
               <div className="chart-wrap">
                 <ResponsiveContainer>
@@ -1076,6 +1025,11 @@ function Devices({
   const [newCategoryDraft, setNewCategoryDraft] = useState({ name: "", color: "#5da9ff" });
   useEffect(() => {
     if (!initialFilter) return;
+    if (initialFilter.startsWith("category:")) {
+      setCategoryFilter(decodeURIComponent(initialFilter.slice(9)) || "__uncategorized__");
+      setFilter("all");
+      return;
+    }
     const selected = (data.devices || []).find((device) => device.ip === decodeURIComponent(initialFilter));
     if (selected) setEditing(selected);
     else setFilter(initialFilter);
@@ -1100,7 +1054,7 @@ function Devices({
                     ? device.pinned
                     : device.status === filter);
           return (
-            (!search || text.includes(search.toLowerCase())) && matchesFilter && (!categoryFilter || device.category === categoryFilter)
+            (!search || text.includes(search.toLowerCase())) && matchesFilter && (!categoryFilter || (categoryFilter === "__uncategorized__" ? !device.category : device.category === categoryFilter))
           );
         })
         .sort((left, right) => {
@@ -1256,14 +1210,7 @@ function Devices({
     (sum, point) => sum + point.disconnects,
     0,
   );
-  const editingAvailability = editingTrend.length
-    ? Math.round(
-        editingTrend.reduce((sum, point) => sum + point.availability, 0) /
-          editingTrend.length,
-      )
-    : editing?.status === "online"
-      ? 100
-      : 0;
+  const editingAvailability = editing?.availability_history_samples > 0 ? editing.availability_24h : null;
   return (
     <div className="page-stack">
       <div className="page-heading">
@@ -1311,6 +1258,7 @@ function Devices({
         <div className="inventory-controls">
           <label>{t("category")}<select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)}>
             <option value="">{t("allCategories")}</option>
+            <option value="__uncategorized__">{t("uncategorized")}</option>
             {[...new Set((data.devices || []).map(device => device.category).filter(Boolean))].sort().map(category => <option key={category} value={category}>{category}</option>)}
           </select></label>
           <label>
@@ -1364,24 +1312,7 @@ function Devices({
       {viewMode === "grid" ? (
         <section className="device-grid inventory-grid">
           {devices.slice(0, visibleCount).map((device) => {
-            const health = Math.max(
-              0,
-              Math.min(
-                100,
-                Math.round(
-                  Number(
-                    device.availability_24h ??
-                      (device.status === "online"
-                        ? 100
-                        : device.status === "unstable"
-                          ? 62
-                          : device.status === "new"
-                            ? 78
-                            : 0),
-                  ),
-                ),
-              ),
-            );
+            const health = device.availability_history_samples > 0 ? device.availability_24h : null;
             return (
               <article
                 className={`device-card premium-device-card state-${device.status}`}
@@ -1461,9 +1392,7 @@ function Devices({
                   <div>
                     <span>24H</span>
                     <small>
-                      {device.availability_series?.length
-                        ? `${t("availability")} · ${health}%`
-                        : `${t("currentStateEstimate")} · ${health}%`}
+                      {`${t("availabilityEstimate")} · ${percent(health)}`}
                     </small>
                   </div>
                   <AvailabilityStrip
@@ -1707,7 +1636,7 @@ function Devices({
             <section className="device-insight-strip device-editor-metrics">
               <div>
                 <span>{t("healthScore")}</span>
-                <strong>{editingAvailability}%</strong>
+                <strong>{percent(editingAvailability)}</strong>
               </div>
               <div>
                 <span>{t("disconnects")}</span>
@@ -1923,7 +1852,17 @@ function Devices({
   );
 }
 
-function Alerts({ data, t, language, refresh, alertSound, setAlertSound }) {
+function Alerts({ data, t, language, refresh, alertSound, setAlertSound, currentUser }) {
+  const canManage = currentUser?.role === "admin" || currentUser?.can_manage_alerts;
+  const [actionError, setActionError] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+  const alertAction = async (path, options) => {
+    if (actionBusy) return;
+    setActionBusy(true); setActionError("");
+    try { await api(path, options); await refresh(); }
+    catch (error) { setActionError(error.message); }
+    finally { setActionBusy(false); }
+  };
   const alerts = data.alerts || [];
   const [filter, setFilter] = useState("open");
   const visible = alerts.filter(
@@ -2019,6 +1958,7 @@ function Alerts({ data, t, language, refresh, alertSound, setAlertSound }) {
         </div>
       </section>
       <section className="alert-list incident-list">
+        {actionError && <div className="error-banner" role="alert">{actionError}</div>}
         {visible.length ? (
           visible.map((alert) => (
             <article
@@ -2056,26 +1996,20 @@ function Alerts({ data, t, language, refresh, alertSound, setAlertSound }) {
                 )}
               </div>
               <div className="alert-side">
-                {alert.status === "open" && !alert.acknowledged_at && (
+                {canManage && alert.status === "open" && !alert.acknowledged_at && (
                   <button
                     className="button primary"
-                    onClick={async () => {
-                      await api(`/acknowledge_alert/${alert.id}`, {
-                        method: "POST",
-                      });
-                      refresh();
-                    }}
+                    disabled={actionBusy}
+                    onClick={() => alertAction(`/acknowledge_alert/${alert.id}`, { method: "POST" })}
                   >
                     {t("acknowledge")}
                   </button>
                 )}
-                {alert.status === "open" && (
+                {canManage && alert.status === "open" && (
                   <button
                     className="button"
-                    onClick={async () => {
-                      await api(`/resolve_alert/${alert.id}`);
-                      refresh();
-                    }}
+                    disabled={actionBusy}
+                    onClick={() => alertAction(`/resolve_alert/${alert.id}`)}
                   >
                     {t("resolve")}
                   </button>
@@ -2091,15 +2025,9 @@ function Alerts({ data, t, language, refresh, alertSound, setAlertSound }) {
   );
 }
 
-function HistoryPage({ history, t, language }) {
-  const [days, setDays] = useState(14);
-  const [report, setReport] = useState(history);
-  useEffect(() => {
-    const toTs = Math.floor(Date.now() / 1000);
-    query("/history/summary", { from_ts: toTs - days * 86400, to_ts: toTs })
-      .then(setReport)
-      .catch(() => setReport(history));
-  }, [days, history]);
+function HistoryPage({ t, language }) {
+  const [days, setDays] = useState(7);
+  const { report, loading, error, reload } = useHistoryReport(days);
   const normalized = (report?.daily_series || []).map((item, index) => ({
     name:
       item.label ||
@@ -2109,7 +2037,7 @@ function HistoryPage({ history, t, language }) {
         { day: "2-digit", month: "2-digit" },
       ) ||
       index,
-    availability: Number(item.availability_pct || 0),
+    availability: item.availability_pct == null ? null : Number(item.availability_pct),
     disconnects: Number(item.disconnects || 0),
   }));
   const summary = report?.summary || {};
@@ -2146,9 +2074,12 @@ function HistoryPage({ history, t, language }) {
           ))}
         </div>
       </div>
-      <section className="history-summary">
+      <ReportMethod t={t} />
+      {loading && <div role="status" className="ops-empty">{t("loadingReport")}</div>}
+      {error && <div role="alert" className="error-banner">{t("reportLoadFailed")}: {error}<button className="button" onClick={reload}>{t("reloadReport")}</button></div>}
+      {report && <><section className="history-summary">
         {[
-          ["availability", `${summary.availability_pct ?? 0}%`, TrendingUp],
+          ["availability", percent(summary.availability_pct), TrendingUp],
           ["disconnects", summary.disconnects || 0, WifiOff],
           ["recoveries", summary.recoveries || 0, CheckCircle2],
           ["affectedDevices", summary.devices_affected || 0, AlertTriangle],
@@ -2163,8 +2094,8 @@ function HistoryPage({ history, t, language }) {
       <section className="history-grid">
         <article className="panel chart-panel wide">
           <div className="panel-title">
-            <h2>{t("availability")}</h2>
-            <span className="score">{summary.availability_pct ?? 0}%</span>
+            <h2>{t("availabilityEstimate")}</h2>
+            <span className="score">{percent(summary.availability_pct)}</span>
           </div>
           <div className="chart-wrap tall">
             <ResponsiveContainer>
@@ -2273,7 +2204,7 @@ function HistoryPage({ history, t, language }) {
                     {item.offline_count || 0} {t("disconnects")}
                   </small>
                 </span>
-                <em>{item.availability_pct}%</em>
+                <em>{percent(item.availability_pct)}</em>
               </div>
             ))}
           </div>
@@ -2298,7 +2229,7 @@ function HistoryPage({ history, t, language }) {
             ))}
           </div>
         </article>
-      </section>
+      </section></>}
     </div>
   );
 }
@@ -2749,7 +2680,7 @@ function AuthScreen({ setupRequired, onAuthenticated }) {
           </button>
         </form>
         <small className="auth-note">
-          HOMEii protects the web console with an encrypted session.
+          הגישה לממשק דורשת חשבון מורשה.
         </small>
       </section>
     </main>
@@ -2768,14 +2699,27 @@ function UserManagement({ t, currentUser }) {
     can_manage_alerts: false,
   });
   const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const mutationLock = useRef(false);
+  const [search, setSearch] = useState("");
+  const [resetUser, setResetUser] = useState(null);
+  const [password, setPassword] = useState("");
+  const mutate = async (task) => {
+    if (mutationLock.current) return;
+    mutationLock.current = true; setBusy(true); setMessage(""); setFailed(false);
+    try { await task(); await load(); }
+    catch (error) { setFailed(true); setMessage(error.message); }
+    finally { mutationLock.current = false; setBusy(false); }
+  };
   const load = () =>
     api("/admin/users")
       .then((result) => setUsers(result.users || []))
-      .catch((error) => setMessage(error.message));
+      .catch((error) => { setFailed(true); setMessage(error.message); });
   useEffect(() => {
     load();
   }, []);
-  const create = async () => {
+  const create = () => mutate(async () => {
     await api("/admin/users", { method: "POST", body: JSON.stringify(draft) });
     setDraft({
       username: "",
@@ -2787,24 +2731,21 @@ function UserManagement({ t, currentUser }) {
     });
     setMessage(t("userCreated"));
     setCreateOpen(false);
-    load();
-  };
-  const update = async (user, next) => {
+  });
+  const update = (user, next) => mutate(async () => {
     await api(`/admin/users/${user.id}`, {
       method: "PATCH",
       body: JSON.stringify({ ...user, ...next }),
     });
-    load();
-  };
+    setMessage(t("settingsSaved"));
+    setResetUser(null); setPassword("");
+  });
   const remove = async (user) => {
     if (user.is_primary || user.id === currentUser?.id || !window.confirm(`${t("delete")} ${user.username}?`)) return;
-    try {
+    await mutate(async () => {
       await api(`/admin/users/${user.id}`, { method: "DELETE" });
       setMessage(t("userDeleted"));
-      load();
-    } catch (error) {
-      setMessage(error.message);
-    }
+    });
   };
   return (
     <div className="users-panel">
@@ -2814,16 +2755,21 @@ function UserManagement({ t, currentUser }) {
           <h2>{t("userManagement")}</h2>
           <p>{t("userManagementHelp")}</p>
         </div>
-        <button className="button primary settings-title-action" onClick={() => setCreateOpen(true)}>
+        <button className="button primary settings-title-action" onClick={() => { setMessage(""); setCreateOpen(true); }} disabled={busy}>
           <UserPlus /> {t("addUser")}
         </button>
       </div>
-      {createOpen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setCreateOpen(false)}>
-      <div className="modal-card admin-form-modal">
-        <button className="modal-close" onClick={() => setCreateOpen(false)}><X /></button>
+      <div className="user-overview"><span><strong>{users.length}</strong>{t("users")}</span><span><strong>{users.filter(user => user.active).length}</strong>{t("active")}</span><span><strong>{users.filter(user => user.role === "admin" && user.active).length}</strong>{t("adminMode")}</span></div>
+      <div className="role-guide">{["admin", "user", "viewer", "control"].map(role => <div key={role}><strong>{t(`${role}Mode`)}</strong><small>{t(`roleHelp_${role}`)}</small></div>)}</div>
+      <label className="user-search">{t("searchUsers")}<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
+      {resetUser && <div className="modal-backdrop"><form className="modal-card admin-form-modal" role="dialog" aria-label={t("resetPassword")} onSubmit={event => { event.preventDefault(); update(resetUser, { password }); }}><button type="button" className="modal-close" disabled={busy} aria-label={t("close")} onClick={() => setResetUser(null)}><X /></button><h2>{t("resetPassword")}</h2><p>{resetUser.display_name || resetUser.username} · {t("sessionsRevokedHelp")}</p><label>{t("password")}<input type="password" autoComplete="new-password" minLength={8} required value={password} onChange={event => setPassword(event.target.value)} /></label>{failed && message && <div className="error-banner" role="alert">{message}</div>}<button className="button primary" disabled={busy || password.length < 8}>{t("save")}</button></form></div>}
+      {createOpen && <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !busy && setCreateOpen(false)}>
+      <div className="modal-card admin-form-modal" role="dialog" aria-label={t("addUser")}>
+        <button className="modal-close" aria-label={t("close")} disabled={busy} onClick={() => setCreateOpen(false)}><X /></button>
         <span className="eyebrow">{t("userManagement")}</span>
         <h1>{t("addUser")}</h1>
         <div className="user-create-card">
+        {failed && message && <div className="error-banner" role="alert">{message}</div>}
         <div className="form-grid">
           <label>
             {t("username")}
@@ -2906,16 +2852,16 @@ function UserManagement({ t, currentUser }) {
         <button
           className="button primary"
           onClick={create}
-          disabled={draft.username.length < 3 || draft.password.length < 8}
+          disabled={busy || draft.username.trim().length < 3 || draft.password.length < 8}
         >
           <UserPlus />
           {t("addUser")}
         </button>
       </div>
       </div></div>}
-      {message && <div className="success-banner">{message}</div>}
+      {message && !createOpen && !resetUser && <div className={failed ? "error-banner" : "success-banner"} role={failed ? "alert" : "status"}>{message}</div>}
       <div className="user-list">
-        {users.map((user) => (
+        {users.filter(user => `${user.username} ${user.display_name} ${user.role}`.toLowerCase().includes(search.toLowerCase())).map((user) => (
           <article key={user.id}>
             <div className="user-avatar">
               {(user.display_name || user.username).slice(0, 1).toUpperCase()}
@@ -2923,12 +2869,14 @@ function UserManagement({ t, currentUser }) {
             <div>
               <strong>{user.display_name || user.username}</strong>
               <small>
-                @{user.username} · {user.role}
+                @{user.username} · {t(`${user.role}Mode`)}
               </small>
+              <small>{t("lastLogin")}: {user.last_login ? new Date(user.last_login * 1000).toLocaleString() : t("never")}</small>
             </div>
             <select
               value={user.role}
-              disabled={user.id === currentUser?.id}
+              aria-label={`${t("role")} ${user.username}`}
+              disabled={busy || user.is_primary || user.id === currentUser?.id}
               onChange={(e) => update(user, { role: e.target.value })}
             >
               <option value="admin">Admin</option>
@@ -2938,7 +2886,7 @@ function UserManagement({ t, currentUser }) {
             </select>
             <button
               className={`mini-toggle ${user.viewer_edge_to_edge ? "active" : ""}`}
-              disabled={user.role === "control"}
+              disabled={busy || user.role === "control"}
               onClick={() =>
                 update(user, { viewer_edge_to_edge: !user.viewer_edge_to_edge })
               }
@@ -2947,7 +2895,7 @@ function UserManagement({ t, currentUser }) {
             </button>
             <button
               className={`mini-toggle ${user.can_manage_alerts ? "active" : ""}`}
-              disabled={user.role === "control"}
+              disabled={busy || user.role === "control"}
               onClick={() =>
                 update(user, { can_manage_alerts: !user.can_manage_alerts })
               }
@@ -2956,12 +2904,13 @@ function UserManagement({ t, currentUser }) {
             </button>
             <button
               className={`mini-toggle ${user.active ? "active" : ""}`}
-              disabled={user.id === currentUser?.id}
+              disabled={busy || user.is_primary || user.id === currentUser?.id}
               onClick={() => update(user, { active: !user.active })}
             >
               {user.active ? t("active") : t("disabled")}
             </button>
-            <button className="icon-button danger" disabled={user.is_primary || user.id === currentUser?.id} title={user.is_primary ? t("primaryAdminProtected") : t("delete")} onClick={() => remove(user)}><Trash2 /></button>
+            <button className="icon-button" disabled={busy} aria-label={`${t("resetPassword")} ${user.username}`} title={t("resetPassword")} onClick={() => { setResetUser(user); setPassword(""); setMessage(""); }}><LockKeyhole /></button>
+            <button className="icon-button danger" disabled={busy || user.is_primary || user.id === currentUser?.id} title={user.is_primary ? t("primaryAdminProtected") : t("delete")} onClick={() => remove(user)}><Trash2 /></button>
           </article>
         ))}
       </div>
@@ -2972,7 +2921,6 @@ function UserManagement({ t, currentUser }) {
 function OperationsManagement({ t, refresh }) {
   const [labels, setLabels] = useState({ categories: [], tags: [] });
   const [recycled, setRecycled] = useState([]);
-  const [audit, setAudit] = useState([]);
   const [draft, setDraft] = useState({
     kind: "category",
     name: "",
@@ -2981,14 +2929,12 @@ function OperationsManagement({ t, refresh }) {
   });
   const [cleanupResult, setCleanupResult] = useState(null);
   const load = async () => {
-    const [labelData, recycleData, auditData] = await Promise.all([
+    const [labelData, recycleData] = await Promise.all([
       api("/labels"),
       api("/recycle-bin"),
-      api("/audit?limit=100"),
     ]);
     setLabels(labelData);
     setRecycled(recycleData.devices || []);
-    setAudit(auditData.records || []);
   };
   useEffect(() => {
     load();
@@ -3167,16 +3113,7 @@ function OperationsManagement({ t, refresh }) {
             {t("clearResolvedAlerts")}
           </button>
         </div>
-        <div className="audit-table">
-          {audit.map((record) => (
-            <div key={record.id}>
-              <time>{new Date(record.ts * 1000).toLocaleString()}</time>
-              <strong>{record.actor}</strong>
-              <code>{record.action}</code>
-              <span className={record.outcome}>{record.outcome}</span>
-            </div>
-          ))}
-        </div>
+        <button className="button" onClick={() => { location.hash = "#/settings/auditLog"; }}><History />{t("auditLog")} <ArrowUpRight /></button>
       </article>
     </div>
   );
@@ -3726,6 +3663,9 @@ function SettingsDevices({ data, t, refresh }) {
 function SettingsPage({
   data,
   connectionFailed = false,
+  health = "unknown",
+  lastSync = 0,
+  initialSection = "general",
   t,
   language,
   refresh,
@@ -3734,7 +3674,9 @@ function SettingsPage({
   onExit,
 }) {
   const settings = data.settings || {};
-  const [form, setForm] = useState({
+  const formDirty = useRef(false);
+  const networksDirty = useRef(false);
+  const [form, setFormState] = useState({
     language: settings.language || language,
     theme: settings.theme || "granite",
     auto_refresh: settings.auto_refresh || "30",
@@ -3753,7 +3695,9 @@ function SettingsPage({
       "vendor",
     ],
   });
-  const [section, setSection] = useState("general");
+  const setForm = next => { formDirty.current = true; setFormState(next); };
+  const [section, setSection] = useState(initialSection || "general");
+  const [saving, setSaving] = useState(false);
   const [transfer, setTransfer] = useState({ type: "", message: "" });
   const [reconcile, setReconcile] = useState(null);
   const [networksText, setNetworksText] = useState("");
@@ -3761,8 +3705,9 @@ function SettingsPage({
   const kumaImportRef = useRef(null);
   const [kumaImport, setKumaImport] = useState({ file: null, plan: null, busy: false });
   useEffect(
-    () =>
-      setForm((f) => ({
+    () => {
+      if (formDirty.current) return;
+      setFormState((f) => ({
         ...f,
         language: settings.language || f.language,
         theme: settings.theme || f.theme,
@@ -3779,7 +3724,8 @@ function SettingsPage({
           data.settingsPayload?.discovery_mode || f.discovery_mode,
         discovery_protocols:
           data.settingsPayload?.discovery_protocols || f.discovery_protocols,
-      })),
+      }));
+    },
     [
       data.settings,
       data.settingsPayload?.discovery_mode,
@@ -3787,37 +3733,41 @@ function SettingsPage({
     ],
   );
   useEffect(
-    () =>
+    () => {
+      if (networksDirty.current) return;
       setNetworksText(
         (data.settingsPayload?.networks || data.status?.networks || []).join(
           "\n",
         ),
-      ),
+      );
+    },
     [data.settingsPayload?.networks, data.status?.networks],
   );
   const saveForm = async (next = form) => {
-    await api("/save_settings", {
-      method: "POST",
-      body: JSON.stringify({
-        ...settings,
-        ...next,
-        networks: data.settingsPayload?.networks || data.status?.networks || [],
-        network_names: data.settingsPayload?.network_names || {},
-      }),
-    });
-    await refresh();
+    if (saving) return;
+    setSaving(true);
+    try {
+      await api("/save_settings", {
+        method: "POST",
+        body: JSON.stringify({ ...settings, ...next, networks: data.settingsPayload?.networks || data.status?.networks || [], network_names: data.settingsPayload?.network_names || {} }),
+      });
+      formDirty.current = false;
+      setTransfer({ type: "success", message: t("settingsSaved") });
+      await refresh();
+    } catch (error) { setTransfer({ type: "error", message: error.message }); }
+    finally { setSaving(false); }
   };
   const save = () => saveForm(form);
   const saveNetworks = async () => {
-    await api("/save_networks", {
-      method: "POST",
-      body: JSON.stringify({
-        networks: networksText,
-        network_names: data.settingsPayload?.network_names || {},
-      }),
-    });
-    await refresh();
-    setTransfer({ type: "success", message: t("networksSaved") });
+    if (saving) return;
+    setSaving(true);
+    try {
+      await api("/save_networks", { method: "POST", body: JSON.stringify({ networks: networksText, network_names: data.settingsPayload?.network_names || {} }) });
+      networksDirty.current = false;
+      await refresh();
+      setTransfer({ type: "success", message: t("networksSaved") });
+    } catch (error) { setTransfer({ type: "error", message: error.message }); }
+    finally { setSaving(false); }
   };
   const runReconciliation = async () => {
     if (!window.confirm(t("reconcileConfirm"))) return;
@@ -3900,9 +3850,13 @@ function SettingsPage({
     ["notification", Bell],
     ["operationsManagement", ShieldAlert],
     ["users", Users],
+    ["auditLog", History],
     ["system", Database],
     ["dataManagement", FileJson],
   ];
+  useEffect(() => {
+    setSection(sections.some(([key]) => key === initialSection) ? initialSection : "general");
+  }, [initialSection]);
   const deferredSaveSections = new Set(["general", "appearance", "discovery"]);
   return (
     <div className="settings-workspace">
@@ -3918,7 +3872,8 @@ function SettingsPage({
           {sections.map(([key, Icon]) => (
             <button
               className={section === key ? "active" : ""}
-              onClick={() => setSection(key)}
+              onClick={() => { setSection(key); location.hash = `#/settings/${key}`; }}
+              aria-current={section === key ? "page" : undefined}
               key={key}
             >
               <Icon />
@@ -3928,14 +3883,15 @@ function SettingsPage({
           ))}
         </nav>
         <div className="settings-version">
-          <span className={connectionFailed || data.status?.monitoring_stale ? "status-dot offline" : "live-dot"} />
+          <span className={health !== "live" ? "status-dot offline" : "live-dot"} />
           <div>
-            <strong>{t(connectionFailed || data.status?.monitoring_stale ? "monitoringUnavailable" : "monitorLive")}</strong>
+            <strong>{t(`health_${health}`)}</strong>
             <small>v{data.status?.version}</small>
           </div>
         </div>
       </aside>
       <main className="settings-main">
+        <HealthStrip health={health} lastSync={lastSync} t={t} language={language} />
         <div className="settings-workspace-heading">
           <div>
             <span className="eyebrow">{t("systemConfiguration")}</span>
@@ -3962,6 +3918,7 @@ function SettingsPage({
         <section
           className={`settings-content settings-surface section-${section}`}
         >
+          {section === "auditLog" && <AuditLog t={t} language={language} />}
           {section === "general" && (
             <>
               <div className="settings-title">
@@ -4226,7 +4183,7 @@ function SettingsPage({
                 {t("networkRanges")}
                 <textarea
                   value={networksText}
-                  onChange={(e) => setNetworksText(e.target.value)}
+                  onChange={(e) => { networksDirty.current = true; setNetworksText(e.target.value); }}
                   placeholder={"192.168.1.0/24\n10.0.0.0/24"}
                 />
                 <small>{t("oneNetworkPerLine")}</small>
@@ -4305,6 +4262,7 @@ function SettingsPage({
                   </dd>
                 </div>
               </dl>
+              <div className="worker-grid">{Object.entries(data.status?.workers || {}).map(([name, worker]) => <article key={name}><strong>{t(`worker_${name}`)}</strong><span className={`state-chip ${worker.alive && !worker.last_error && !(data.status?.stale_workers || []).includes(name) ? "state-online" : "state-offline"}`}>{t(worker.alive && !worker.last_error && !(data.status?.stale_workers || []).includes(name) ? "active" : "unavailable")}</span><small>{t("lastCycle")}: {worker.last_cycle ? new Date(worker.last_cycle * 1000).toLocaleString(language === "he" ? "he-IL" : "en-GB") : "—"}</small><small>{worker.cycle_count || 0} {t("cycles")}</small>{worker.last_error && <p>{worker.last_error}</p>}</article>)}</div>
             </>
           )}
           {section === "dataManagement" && (
@@ -4406,7 +4364,7 @@ function SettingsPage({
           )}
           {deferredSaveSections.has(section) && (
             <div className="settings-actions settings-savebar">
-              <button className="button primary" onClick={save}>
+              <button className="button primary" onClick={save} disabled={saving}>
                 {t("save")}
               </button>
             </div>
@@ -4431,6 +4389,7 @@ export default function App() {
   const [route, setRoute, routeDetail] = useRoute();
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [auth, setAuth] = useState({
@@ -4443,6 +4402,7 @@ export default function App() {
   const refreshInFlight = useRef(false);
   const latestRefresh = useRef(null);
   const [lastSync, setLastSync] = useState(0);
+  const [clock, setClock] = useState(() => Date.now() / 1000);
   const [connectionFailed, setConnectionFailed] = useState(false);
   const audioContext = useRef(null);
   const knownOfflineAlerts = useRef(null);
@@ -4512,6 +4472,7 @@ export default function App() {
   const refresh = async (sessionUser = auth.user) => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
+    setLoading(true);
     try {
       setError("");
       const optionalApi = (path, fallback) => api(path).catch(() => fallback);
@@ -4524,7 +4485,6 @@ export default function App() {
         events,
         settingsPayload,
         viewer,
-        history,
         labels,
       ] = await Promise.all([
         api("/status"),
@@ -4533,9 +4493,6 @@ export default function App() {
         optionalApi("/events?limit=100", { events: data.events || [] }),
         optionalApi("/settings", data.settingsPayload || { settings: data.settings || {} }),
         api("/viewer/categories"),
-        limitedViewer
-          ? Promise.resolve(data.history || {})
-          : optionalApi("/history/summary", data.history || {}),
         limitedViewer
           ? Promise.resolve(data.labels || { categories: [], tags: [] })
           : optionalApi("/labels", data.labels || { categories: [], tags: [] }),
@@ -4556,12 +4513,11 @@ export default function App() {
         settings: settingsPayload.settings || {},
         settingsPayload,
         viewer,
-        history,
         labels,
       });
       setLastSync(Date.now() / 1000);
       setConnectionFailed(false);
-      showAlertNotifications(alertItems);
+      showAlertNotifications(alertItems).catch(() => { /* Notification delivery must not change monitoring health. */ });
     } catch (e) {
       setConnectionFailed(true);
       setData(current => ({ ...current, status: current.status ? { ...current.status, monitoring_stale: true } : null }));
@@ -4573,7 +4529,20 @@ export default function App() {
   };
   latestRefresh.current = refresh;
   useEffect(() => {
+    const timer = setInterval(() => setClock(Date.now() / 1000), 5000);
+    return () => clearInterval(timer);
+  }, []);
+  const health = monitoringHealth(data.status, lastSync, connectionFailed, clock, data.settings?.auto_refresh);
+  useEffect(() => {
     loadAuth();
+  }, []);
+  useEffect(() => {
+    const expired = () => {
+      setData({}); setLastSync(0);
+      setAuth({ loading: false, authenticated: false, setup_required: false, user: null });
+    };
+    addEventListener("homeii-session-expired", expired);
+    return () => removeEventListener("homeii-session-expired", expired);
   }, []);
   useEffect(() => {
     if (!auth.authenticated) return;
@@ -4670,7 +4639,7 @@ export default function App() {
     (role === "viewer" && auth.user?.viewer_edge_to_edge);
   const pages = {
     dashboard: (
-      <Dashboard key={auth.user?.id || auth.user?.username} data={data} t={t} setRoute={setRoute} language={language} currentUser={auth.user} />
+      <Dashboard key={auth.user?.id || auth.user?.username} data={data} t={t} setRoute={setRoute} language={language} currentUser={auth.user} health={health} />
     ),
     viewer: (
       <Viewer
@@ -4681,6 +4650,7 @@ export default function App() {
         alertSound={alertSound}
         setAlertSound={setAlertSound}
         currentUser={auth.user}
+        health={health}
       />
     ),
     devices: (
@@ -4702,9 +4672,11 @@ export default function App() {
         refresh={refresh}
         alertSound={alertSound}
         setAlertSound={setAlertSound}
+        currentUser={auth.user}
       />
     ),
-    history: <HistoryPage history={data.history} t={t} language={language} />,
+    history: <HistoryPage t={t} language={language} />,
+    reports: <ReportsPage t={t} language={language} setRoute={setRoute} />,
     tools: <Tools data={data} t={t} initialTarget={routeDetail} />,
   };
   const allowed =
@@ -4735,6 +4707,9 @@ export default function App() {
       <SettingsPage
         data={data}
         connectionFailed={connectionFailed}
+        health={health}
+        lastSync={lastSync}
+        initialSection={routeDetail}
         t={t}
         language={language}
         refresh={refresh}
@@ -4805,11 +4780,12 @@ export default function App() {
             </button>
           </div>
         </details>
-        <nav>
+        <nav aria-label={t("mainNavigation")}>
           {allowed.map(([key, Icon]) => (
             <button
               key={key}
               className={route === key ? "active" : ""}
+              aria-current={effectiveRoute === key ? "page" : undefined}
               onClick={() => {
                 setRoute(key);
                 setMenuOpen(false);
@@ -4817,15 +4793,16 @@ export default function App() {
             >
               <Icon />
               <span>{t(key)}</span>
+              {key === "alerts" && (data.alerts || []).some(alert => alert.status === "open") && <b className="nav-count">{data.alerts.filter(alert => alert.status === "open").length}</b>}
               {route === key && <i />}
             </button>
           ))}
         </nav>
         <div className="sidebar-health">
-          <span className={connectionFailed || data.status?.monitoring_stale ? "status-dot offline" : "live-dot"} />
+          <span className={health !== "live" ? "status-dot offline" : "live-dot"} />
           <div>
-            <strong>{t(connectionFailed || data.status?.monitoring_stale ? "monitoringUnavailable" : "monitorLive")}</strong>
-            <small>v{data.status?.version || "7.1.1"}</small>
+            <strong>{t(`health_${health}`)}</strong>
+            <small>{data.status?.version ? `v${data.status.version}` : "—"}</small>
           </div>
         </div>
       </aside>
@@ -4833,6 +4810,7 @@ export default function App() {
         <header>
           <button
             className="mobile-menu icon-button"
+            aria-label={t("mainNavigation")}
             onClick={() => setMenuOpen(!menuOpen)}
           >
             <Menu />
@@ -4847,16 +4825,21 @@ export default function App() {
             </h2>
           </div>
           <div className="header-actions">
-            <button className="button subtle" onClick={refresh}>
+            <button className="button subtle" onClick={refresh} disabled={loading} aria-label={t("refresh")}>
               <RefreshCw className={loading ? "spin" : ""} />
               <span>{t("refresh")}</span>
             </button>
             {role === "admin" && (
               <button
                 className="button primary"
+                aria-label={t("scanNow")}
+                disabled={scanning || data.status?.scan?.running}
                 onClick={async () => {
-                  await api("/scan?mode=manual");
-                  refresh();
+                  if (scanning) return;
+                  setScanning(true);
+                  try { await api("/scan?mode=manual"); await refresh(); }
+                  catch (error) { setError(error.message); }
+                  finally { setScanning(false); }
                 }}
               >
                 <Radar />
@@ -4865,8 +4848,7 @@ export default function App() {
             )}
           </div>
         </header>
-        {(connectionFailed || data.status?.monitoring_stale || Object.values(data.status?.workers || {}).some(worker => worker.last_error)) && <div className="error-banner" role="alert"><AlertTriangle />{t("monitoringUnavailable")}</div>}
-        {lastSync > 0 && <div className="sync-status">{t("lastSync")}: <TimeAgo timestamp={lastSync} language={language}/></div>}
+        <HealthStrip health={health} lastSync={lastSync} t={t} language={language} />
         {error && (
           <div className="error-banner">
             <AlertTriangle />

@@ -111,6 +111,12 @@ DETAIL_SENSORS = [
         "icon": "mdi:ip-network-outline",
         "kind": "networks",
     },
+    {
+        "key": "availability_history",
+        "name": "Availability history",
+        "icon": "mdi:chart-timeline-variant-shimmer",
+        "kind": "history",
+    },
 ]
 
 
@@ -223,6 +229,8 @@ class HomeiiCollectionSensor(CoordinatorEntity, SensorEntity):
                 "category": device.get("category"),
                 "network": device.get("assigned_network"),
                 "last_seen": device.get("last_seen"),
+                "offline_since": device.get("offline_since", 0),
+                "availability_24h": device.get("availability_24h"),
                 "critical": bool(device.get("critical")),
                 "pinned": bool(device.get("pinned")),
                 "approved": bool(device.get("approved")),
@@ -285,6 +293,17 @@ class HomeiiCollectionSensor(CoordinatorEntity, SensorEntity):
             )
         return rows
 
+    def _history_items(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "ts": int(item.get("ts") or 0),
+                "availability_pct": item.get("availability_pct", 0),
+                "offline_events": int(item.get("offline_events") or 0),
+                "unstable_events": int(item.get("unstable_events") or 0),
+            }
+            for item in self.coordinator.data.get("availability", {}).get("series", [])
+        ]
+
     def _items(self) -> list[dict[str, Any]]:
         kind = self._spec["kind"]
         if kind == "devices":
@@ -295,6 +314,8 @@ class HomeiiCollectionSensor(CoordinatorEntity, SensorEntity):
             return self._category_items()
         if kind == "networks":
             return self._network_items()
+        if kind == "history":
+            return self._history_items()
         return []
 
     @property

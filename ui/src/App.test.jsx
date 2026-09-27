@@ -47,12 +47,12 @@ async function open(route) {
   return userEvent.setup();
 }
 describe('application routes', () => {
-  it.each(['dashboard', 'viewer', 'devices', 'alerts', 'history', 'tools'])('renders %s', async route => {
+  it.each(['dashboard', 'viewer', 'devices', 'alerts', 'history', 'reports', 'tools'])('renders %s', async route => {
     await open(route);
     expect(document.querySelector('main')?.textContent.length).toBeGreaterThan(0);
     expect(document.querySelector('.page-recovery')).toBeNull();
   });
-  it.each(['general', 'devices', 'labels', 'appearance', 'discovery', 'networks', 'notification', 'operationsManagement', 'users', 'system', 'dataManagement'])('opens settings section %s', async section => {
+  it.each(['general', 'devices', 'labels', 'appearance', 'discovery', 'networks', 'notification', 'operationsManagement', 'users', 'auditLog', 'system', 'dataManagement'])('opens settings section %s', async section => {
     const user = await open('settings');
     await user.click(within(document.querySelector('.settings-nav')).getByRole('button', { name: t(section), exact: true }));
     expect(document.querySelector(`.section-${section}`)).not.toBeNull();
@@ -119,6 +119,38 @@ describe('control center', () => {
 });
 
 describe('secondary forms and navigation', () => {
+  it('shows user creation failures inside the dialog and keeps the draft', async () => {
+    api.mockImplementation((path, options) => path === '/admin/users' && options?.method === 'POST' ? Promise.reject(new Error('username_exists')) : respond(path, options));
+    const user = await open('settings');
+    await user.click(within(document.querySelector('.settings-nav')).getByRole('button', { name: t('users'), exact: true }));
+    await user.click(screen.getByRole('button', { name: t('addUser'), exact: true }));
+    const dialog = screen.getByRole('dialog', { name: t('addUser') });
+    await user.type(within(dialog).getByLabelText(t('username')), 'existing');
+    await user.type(within(dialog).getByLabelText(t('password')), 'test-password-only');
+    await user.click(within(dialog).getByRole('button', { name: t('addUser') }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('username_exists');
+    expect(within(dialog).getByLabelText(t('username')).value).toBe('existing');
+  });
+  it('resets a user password through the existing update API', async () => {
+    api.mockImplementation((path, options) => path === '/admin/users' ? Promise.resolve({ users: [{ id: 2, username: 'operator', role: 'user', active: true }] }) : respond(path, options));
+    const user = await open('settings');
+    await user.click(within(document.querySelector('.settings-nav')).getByRole('button', { name: t('users'), exact: true }));
+    await user.click(await screen.findByRole('button', { name: `${t('resetPassword')} operator` }));
+    const dialog = screen.getByRole('dialog', { name: t('resetPassword') });
+    await user.type(within(dialog).getByLabelText(t('password')), 'test-new-password');
+    await user.click(within(dialog).getByRole('button', { name: t('save') }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const call = api.mock.calls.find(([path, options]) => path === '/admin/users/2' && options.method === 'PATCH');
+    expect(JSON.parse(call[1].body).password).toBe('test-new-password');
+  });
+  it('opens an uncategorized category link and filters the inventory', async () => {
+    inventory.push({ ...device, ip: '127.0.0.2', display_name: 'Uncategorized monitor', category: '' });
+    const user = await open('dashboard');
+    await user.click(within(document.querySelector('.ops-category-list')).getByRole('button', { name: new RegExp(t('uncategorized')) }));
+    await waitFor(() => expect(document.querySelector('.device-toolbar select').value).toBe('__uncategorized__'));
+    expect(screen.getByText('Uncategorized monitor', { exact: true })).toBeTruthy();
+    expect(screen.queryByText('Test device', { exact: true })).toBeNull();
+  });
   it.each([['users', 'addUser'], ['notification', 'addRule']])('opens and closes the %s dialog', async (section, action) => {
     const user = await open('settings');
     await user.click(within(document.querySelector('.settings-nav')).getByRole('button', { name: t(section), exact: true }));

@@ -16,6 +16,13 @@
           "url": "Addon URL",
           "scan_interval": "Refresh interval (seconds)"
         }
+      },
+      "devices": {
+        "title": "Choose device entities",
+        "description": "Select only devices that need individual Home Assistant entities. Summary and dashboard sensors are always created.",
+        "data": {
+          "device_entities": "Devices with individual entities"
+        }
       }
     },
     "error": {

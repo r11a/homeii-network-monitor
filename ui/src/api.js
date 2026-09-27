@@ -14,7 +14,12 @@ export async function api(path, options = {}) {
         : { 'Content-Type': 'application/json', ...(options.headers || {}) },
     })
     const payload = await response.json().catch(() => ({}))
-    if (!response.ok) throw new Error(payload.error || payload.detail || `HTTP ${response.status}`)
+    if (!response.ok) {
+      if (response.status === 401 && !path.startsWith('/auth/')) window.dispatchEvent(new Event('homeii-session-expired'))
+      const error = new Error(payload.error || payload.detail || `HTTP ${response.status}`)
+      error.status = response.status
+      throw error
+    }
     return payload
   } finally {
     clearTimeout(timeout)

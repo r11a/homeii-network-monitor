@@ -194,7 +194,7 @@ class WorkerHealthTests(unittest.TestCase):
 
 
 class AvailabilityTimelineTests(unittest.TestCase):
-    def test_new_device_has_no_history_before_discovery_or_after_now(self):
+    def test_current_status_without_history_is_not_historical_uptime(self):
         from unittest.mock import patch
         first_seen = main.now_ts() - 120
         device = {"ip": "192.0.2.240", "status": "online", "first_seen": first_seen, "category": "Test"}
@@ -202,11 +202,10 @@ class AvailabilityTimelineTests(unittest.TestCase):
             payload = main.viewer_categories_payload()
         timeline = payload["devices"][device["ip"]]
         observed = sum(point["observed_seconds"] for point in timeline["series"])
-        self.assertGreaterEqual(observed, 120)
-        self.assertLessEqual(observed, 123)
-        self.assertEqual(timeline["availability_24h"], 100.0)
-        self.assertEqual(payload["summary"]["availability_24h"], 100.0)
-        self.assertEqual(payload["categories"][0]["availability_24h"], 100.0)
+        self.assertEqual(observed, 0)
+        self.assertIsNone(timeline["availability_24h"])
+        self.assertIsNone(payload["summary"]["availability_24h"])
+        self.assertIsNone(payload["categories"][0]["availability_24h"])
         self.assertTrue(all(point.get("inferred") for point in timeline["series"] if point["ts"] + 3600 <= first_seen))
 
     def test_viewer_timeline_is_a_rolling_24_hour_window(self):

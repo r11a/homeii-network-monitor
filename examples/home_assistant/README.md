@@ -19,6 +19,7 @@ After copying `custom_components/homeii_network_monitor` into Home Assistant and
   - `sensor.homeii_network_monitor_open_alerts_details`
   - `sensor.homeii_network_monitor_category_summary`
   - `sensor.homeii_network_monitor_network_summary`
+  - `sensor.homeii_network_monitor_availability_history`
 - Per-device binary sensors:
   - availability
   - unstable
@@ -60,6 +61,7 @@ The `cards/` folder contains custom Lovelace cards:
 - `homeii-category-health-card.js`
 - `homeii-dynamic-board-card.js`
 - `homeii-category-board-card.js`
+- `homeii-network-card.js` (recommended all-in-one interactive card)
 
 ### Manual install
 
@@ -71,6 +73,7 @@ The `cards/` folder contains custom Lovelace cards:
    - `/local/homeii/homeii-category-health-card.js`
    - `/local/homeii/homeii-dynamic-board-card.js`
    - `/local/homeii/homeii-category-board-card.js`
+   - `/local/homeii/homeii-network-card.js`
 3. Add the cards manually or start from `custom_card_dashboard.yaml`
 
 ### Included custom card example
@@ -78,3 +81,11 @@ The `cards/` folder contains custom Lovelace cards:
 Use `custom_card_dashboard.yaml` as a starting point for a dedicated HOMEii dashboard using the custom cards.
 Use `dynamic_board_card.yaml` for a single dynamic card with clickable counters and a filtered device list.
 Use `category_board_card.yaml` for a dynamic category board with clickable category cards and category device lists.
+
+### Recommended interactive card
+
+`homeii-network-card` combines live counters, clickable status filters, expandable
+categories, a native 24-hour availability graph, disconnected-device timestamps
+and history in one responsive RTL-aware card. Its visual editor controls the title,
+source entities and visible sections; YAML additionally supports `statuses`,
+`default_view` and `max_items`. See `custom_card_dashboard.yaml` for a complete example.

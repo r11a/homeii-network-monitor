@@ -31,11 +31,17 @@ class HomeiiApiClient:
     async def async_fetch_status(self) -> dict[str, Any]:
         return await self._async_get_json("/api/status")
 
+    async def async_fetch_dashboard(self) -> dict[str, Any]:
+        return await self._async_get_json("/api/ha/dashboard")
+
     async def async_fetch_devices(self) -> dict[str, Any]:
         return await self._async_get_json("/api/devices")
 
     async def async_fetch_alerts(self) -> dict[str, Any]:
         return await self._async_get_json("/api/alerts?limit=200")
+
+    async def async_fetch_availability(self) -> dict[str, Any]:
+        return await self._async_get_json("/api/viewer/categories")
 
     async def async_fetch_diagnostics(self) -> dict[str, Any]:
         return await self._async_get_json("/api/ha/diagnostics")

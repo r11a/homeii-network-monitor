@@ -10,7 +10,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import CONF_DEVICE_ENTITIES, DOMAIN
 
 DEVICE_BINARY_SENSORS = [
     {
@@ -50,6 +50,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    selected_ips = (
+        set(entry.data[CONF_DEVICE_ENTITIES])
+        if CONF_DEVICE_ENTITIES in entry.data
+        else None
+    )
     known_entities: set[tuple[str, str]] = set()
 
     @callback
@@ -57,7 +62,7 @@ async def async_setup_entry(
         new_entities = []
         for device in coordinator.data.get("devices", []):
             ip = device.get("ip")
-            if not ip:
+            if not ip or (selected_ips is not None and ip not in selected_ips):
                 continue
             for spec in DEVICE_BINARY_SENSORS:
                 entity_key = (ip, spec["key"])
@@ -137,6 +142,8 @@ class HomeiiDeviceBinarySensor(CoordinatorEntity, BinarySensorEntity):
             "category": device.get("category"),
             "network": device.get("assigned_network"),
             "last_seen": device.get("last_seen"),
+            "offline_since": device.get("offline_since", 0),
+            "availability_24h": device.get("availability_24h"),
             "status": device.get("status"),
             "approved": bool(device.get("approved")),
             "critical": bool(device.get("critical")),
