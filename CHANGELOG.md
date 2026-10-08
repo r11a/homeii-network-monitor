@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.5.0 — Aura
+
+- Applied the Aura interface across overview, devices, control center, alerts, history, reports, tools, settings, account administration and login.
+- Added a floating navigation dock, black layered surfaces, restrained status colors, larger locally bundled Heebo typography and responsive mobile navigation.
+- Reorganized the overview around current counts, a proportional network status ring, attention items, availability and compact category summaries. Secondary information opens on demand.
+- Prioritized critical outages in the control center, with a prominent leading incident, readable elapsed time and preserved per-user layout/category preferences.
+- Simplified the device list, made names open device details, and distinguished permanent monitoring, discovered devices and suspended monitoring. Long inventories scroll within the table and load in batches.
+- Preserved rapid add-and-ping, consecutive entry, permissions, health/staleness warnings, report calculation limits, existing themes and Home Assistant APIs. No database migration or reset is required.
+
 ## 7.4.0
 
 - Added a focused network overview with critical priorities, category distribution and inventory drill-down.

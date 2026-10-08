@@ -93,14 +93,14 @@ import {
 import { api, query } from "./api";
 import { translator } from "./i18n";
 import { AuditLog, HealthStrip, OperationsOverview, ReportMethod, ReportsPage, useHistoryReport } from "./Operations";
-import { monitoringHealth, percent } from "./monitoring";
+import { deviceMonitoringKey, monitoringHealth, percent } from "./monitoring";
 
 const navItems = [
   ["dashboard", LayoutDashboard],
-  ["viewer", CircleGauge],
   ["devices", Server],
-  ["alerts", Bell],
+  ["viewer", CircleGauge],
   ["history", History],
+  ["alerts", Bell],
   ["reports", FileSpreadsheet],
   ["tools", Wrench],
   ["settings", Settings],
@@ -169,14 +169,12 @@ function useRoute() {
 function Logo() {
   return (
     <div className="brand-lockup">
-      <div className="brand-mark">
-        <img src="./icons/homeii-192.png" alt="" />
-      </div>
+      <div className="aura-brand-mark" aria-hidden="true"><i /><i /><i /></div>
       <div>
         <strong>
           HOME<span>ii</span>
         </strong>
-        <small>NETWORK INTELLIGENCE</small>
+        <small>NETWORK OS</small>
       </div>
     </div>
   );
@@ -247,21 +245,22 @@ function TimeAgo({ timestamp, language }) {
   const units =
     language === "he"
       ? [
-          [86400, "ימים"],
-          [3600, "שעות"],
-          [60, "דקות"],
-          [1, "שניות"],
+          [86400, "ימים", "יום"],
+          [3600, "שעות", "שעה"],
+          [60, "דקות", "דקה"],
+          [1, "שניות", "שנייה"],
         ]
       : [
-          [86400, "days"],
-          [3600, "hours"],
-          [60, "minutes"],
-          [1, "seconds"],
+          [86400, "days", "day"],
+          [3600, "hours", "hour"],
+          [60, "minutes", "minute"],
+          [1, "seconds", "second"],
         ];
-  const [size, label] = units.find(([size]) => seconds >= size) || units.at(-1);
+  const [size, label, singular] = units.find(([size]) => seconds >= size) || units.at(-1);
+  const count = Math.floor(seconds / size);
   return (
     <span>
-      {Math.floor(seconds / size)} {label}
+      {count} {count === 1 ? singular : label}
     </span>
   );
 }
@@ -370,7 +369,7 @@ function Dashboard({ data, t, setRoute, language, currentUser, health }) {
     (!preferences.category || device.category === preferences.category) &&
     (!preferences.pinnedOnly || device.pinned) &&
     (!preferences.problemsOnly || ["offline", "unstable", "unknown"].includes(device.status))
-  ).sort((a, b) => Number(b.critical) - Number(a.critical) ||
+  ).sort((a, b) => Number(Boolean(b.critical)) - Number(Boolean(a.critical)) ||
     Number(a.status === "online") - Number(b.status === "online") ||
     (a.display_name || a.ip).localeCompare(b.display_name || b.ip));
   const categories = [...new Set((data.devices || []).map(device => device.category).filter(Boolean))].sort();
@@ -391,7 +390,26 @@ function Dashboard({ data, t, setRoute, language, currentUser, health }) {
   }));
   return (
     <div className="page-stack overview-page">
-      <OperationsOverview data={data} t={t} setRoute={setRoute} health={health} />
+      <OperationsOverview data={data} t={t} setRoute={setRoute} health={health}>
+        <article className="panel overview-trend">
+          <div className="section-heading">
+            <div><h2>{t("uptimeTrend")}</h2><p>{t("last24h")}</p></div>
+            <span className="simple-score">{percent(chartData.some(point => point.availability != null) ? viewer?.summary?.availability_24h : null)}</span>
+          </div>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs><linearGradient id="overviewAvailability" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--green)" stopOpacity=".32"/><stop offset="1" stopColor="var(--green)" stopOpacity="0"/></linearGradient></defs>
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false}/>
+                <XAxis dataKey="time" stroke="var(--chart-axis)" tickLine={false} axisLine={false} minTickGap={28}/>
+                <YAxis domain={[0, 100]} hide/>
+                <Tooltip contentStyle={{ background: "var(--chart-tooltip)", border: "1px solid var(--line)", borderRadius: 12 }}/>
+                <Area type="monotone" dataKey="availability" name={t("availabilityEstimate")} stroke="var(--green)" strokeWidth={3} fill="url(#overviewAvailability)"/>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </article>
+      </OperationsOverview>
       <details className="panel personal-dashboard">
         <summary>{t("personalDashboard")} <ChevronDown /></summary>
         <div className="section-heading">
@@ -419,30 +437,8 @@ function Dashboard({ data, t, setRoute, language, currentUser, health }) {
         {!personalDevices.length && <Empty t={t}/>}
       </details>
 
-      <section className="overview-workspace">
-        <article className="panel overview-trend">
-          <div className="section-heading">
-            <div><h2>{t("uptimeTrend")}</h2><p>{t("last24h")}</p></div>
-            <span className="simple-score">{percent(chartData.some(point => point.availability != null) ? viewer?.summary?.availability_24h : null)}</span>
-          </div>
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs><linearGradient id="overviewAvailability" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#27e6a4" stopOpacity=".32"/><stop offset="1" stopColor="#27e6a4" stopOpacity="0"/></linearGradient></defs>
-                <CartesianGrid stroke="var(--chart-grid)" vertical={false}/>
-                <XAxis dataKey="time" stroke="var(--chart-axis)" tickLine={false} axisLine={false} minTickGap={28}/>
-                <YAxis domain={[0, 100]} hide/>
-                <Tooltip contentStyle={{ background: "var(--chart-tooltip)", border: "1px solid var(--line)", borderRadius: 12 }}/>
-                <Area type="monotone" dataKey="availability" stroke="#27e6a4" strokeWidth={3} fill="url(#overviewAvailability)"/>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </article>
-
-      </section>
-
-      <section className="panel overview-recent">
-        <div className="section-heading"><div><h2>{t("recentlyAdded")}</h2><p>{t("firstSeen")}</p></div></div>
+      <details className="panel overview-recent">
+        <summary>{t("recentlyAdded")} <ChevronDown /></summary>
         <div className="recent-inline-list">
           {recentlyJoined.map((device) => (
             <button key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}>
@@ -453,7 +449,7 @@ function Dashboard({ data, t, setRoute, language, currentUser, health }) {
           ))}
           {!recentlyJoined.length && <Empty t={t}/>}
         </div>
-      </section>
+      </details>
     </div>
   );
 }
@@ -495,7 +491,7 @@ function Viewer({
     .filter((device) => ["offline", "unstable"].includes(device.status))
     .sort(
       (left, right) =>
-        Number(right.critical) - Number(left.critical) ||
+        Number(Boolean(right.critical)) - Number(Boolean(left.critical)) ||
         Number(left.last_seen || 0) - Number(right.last_seen || 0),
     );
   const offlineDevices = devices
@@ -506,6 +502,7 @@ function Viewer({
     }))
     .sort(
       (left, right) =>
+        Number(Boolean(right.critical)) - Number(Boolean(left.critical)) ||
         right.urgency - left.urgency ||
         Number(left.last_seen || 0) - Number(right.last_seen || 0),
     );
@@ -516,7 +513,7 @@ function Viewer({
       (groups[category] ||= []).push(device);
       return groups;
     }, {}),
-  ).sort(([, left], [, right]) => right[0].urgency - left[0].urgency);
+  ).sort(([, left], [, right]) => Number(Boolean(right[0].critical)) - Number(Boolean(left[0].critical)) || right[0].urgency - left[0].urgency);
   const canManageAlerts =
     currentUser?.role === "admin" ||
     (currentUser?.role === "user" && Boolean(currentUser?.can_manage_alerts));
@@ -585,9 +582,7 @@ function Viewer({
     <div className={`page-stack noc-page configurable-noc density-${preferences.density}`}>
       <div className="page-heading noc-heading">
         <div>
-          <span className="eyebrow">{t("liveOperations")}</span>
           <h1>{t("viewer")}</h1>
-          <p>{t("controlRoomHelp")}</p>
         </div>
         <div className="noc-heading-actions">
           <button className="button" onClick={() => setCustomizing(true)}><LayoutDashboard />{t("customizeControlRoom")}</button>
@@ -614,10 +609,8 @@ function Viewer({
       <section className={`control-board layout-${preferences.layout}`} aria-label={t("viewer")}>
 <section className="panel control-category-panel">      <div className="noc-section-heading">
         <div>
-          <span className="eyebrow">{t("categoryHealth")}</span>
           <h2>{t("categories")}</h2>
         </div>
-        <p>{t("selectCategory")}</p>
       </div>
       <section className="category-grid">
         {categories.map((item) => (
@@ -673,18 +666,19 @@ function Viewer({
               );
               return (
                 <article
-                  className={`control-outage-card urgency-${device.urgency} ${device.critical ? "critical" : ""}`}
+                  className={`control-outage-card urgency-${device.urgency} ${device.critical ? "critical" : ""} ${device.ip === offlineDevices[0]?.ip ? "aura-priority-incident" : ""}`}
                   key={device.ip}
                 >
                   <div className="urgency-rail" aria-label={`${t("urgencyLevel")} ${device.urgency}`} />
                   <div className="outage-copy">
+                    <span className="aura-incident-state"><WifiOff />{t("offline")}{device.critical && <b>{t("critical")}</b>}</span>
                     <strong>
                       {device.display_name || device.name || device.ip}
                     </strong>
                     <small><bdi>{device.ip}</bdi>{device.critical ? ` · ${t("critical")}` : ""}</small>
                   </div>
                   <time className="outage-disconnected-at" dateTime={Number(device.offline_since || device.last_seen) > 0 ? disconnectedAt.toISOString() : undefined}>
-                    <span>{t("lastSeen")}</span>
+                    <span>{t(device.offline_since ? "offlineFor" : "lastSeen")}</span>
                     <strong><TimeAgo timestamp={device.offline_since || device.last_seen} language={language}/></strong>
                   </time>
                 </article>
@@ -764,7 +758,7 @@ function Viewer({
                 />
                 <Area
                   type="monotone"
-                  dataKey="availability"
+                  dataKey="availability" name={t("availabilityEstimate")}
                   stroke="#32e6a1"
                   fill="url(#nocHealth)"
                   strokeWidth={3}
@@ -911,7 +905,7 @@ function Viewer({
                     />
                     <Area
                       type="monotone"
-                      dataKey="availability"
+                      dataKey="availability" name={t("availabilityEstimate")}
                       stroke="#35d49a"
                       strokeWidth={3}
                       fill="url(#categoryHealth)"
@@ -1009,7 +1003,7 @@ function Devices({
   const [notice, setNotice] = useState("");
   const [visibleCount, setVisibleCount] = useState(48);
   const [viewMode, setViewMode] = useState(
-    data.settings?.default_view === "table" ? "table" : "grid",
+    data.settings?.default_view === "grid" ? "grid" : "table",
   );
   const [sortBy, setSortBy] = useState("priority");
   const [manualDevice, setManualDevice] = useState(null);
@@ -1071,7 +1065,7 @@ function Devices({
           const rank = { offline: 0, unstable: 1, new: 2, online: 3 };
           return (
             (rank[left.status] ?? 4) - (rank[right.status] ?? 4) ||
-            Number(right.critical) - Number(left.critical)
+            Number(Boolean(right.critical)) - Number(Boolean(left.critical))
           );
         }),
     [data.devices, search, filter, sortBy, categoryFilter],
@@ -1212,10 +1206,9 @@ function Devices({
   );
   const editingAvailability = editing?.availability_history_samples > 0 ? editing.availability_24h : null;
   return (
-    <div className="page-stack">
+    <div className="page-stack devices-page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">{t("assetInventory")}</span>
           <h1>{t("devices")}</h1>
           <p>
             {devices.length} {t("of")} {data.devices?.length || 0}
@@ -1245,6 +1238,7 @@ function Devices({
         <div className="search-box">
           <Search size={18} />
           <input
+            aria-label={t("searchDevices")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("search")}
@@ -1263,7 +1257,7 @@ function Devices({
           </select></label>
           <label>
             <ArrowUpDown size={16} />
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <select aria-label={t("sortPriority")} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
               <option value="priority">{t("sortPriority")}</option>
               <option value="name">{t("sortName")}</option>
               <option value="ip">IP</option>
@@ -1341,6 +1335,7 @@ function Devices({
                     )}
                     <button
                       className="icon-button"
+                      aria-label={`${t("edit")} ${device.display_name || device.name || device.ip}`}
                       onClick={(event) => {
                         event.stopPropagation();
                         setEditing({ ...device });
@@ -1365,8 +1360,7 @@ function Devices({
                     title={t("healthScore")}
                   >
                     <strong>
-                      {health}
-                      <sup>%</sup>
+                      {percent(health)}
                     </strong>
                   </div>
                 </div>
@@ -1385,7 +1379,7 @@ function Devices({
                   </span>
                   <span>
                     <Radar />
-                    {t(device.scan_profile || "normal")}
+                    {t(deviceMonitoringKey(device))}
                   </span>
                 </div>
                 <div className="device-availability">
@@ -1414,15 +1408,14 @@ function Devices({
                 <th>{t("status")}</th>
                 <th>{t("name")}</th>
                 <th>IP</th>
-                <th>{t("vendor")}</th>
                 <th>{t("category")}</th>
-                <th>{t("network")}</th>
+                <th>{t("monitoring")}</th>
                 <th>{t("lastSeen")}</th>
                 <th>{t("actions")}</th>
               </tr>
             </thead>
             <tbody>
-              {devices.map((device) => (
+              {devices.slice(0, visibleCount).map((device) => (
                 <tr key={device.ip} className={`state-${device.status}`}>
                   <td>
                     <span className="table-status">
@@ -1431,22 +1424,23 @@ function Devices({
                     </span>
                   </td>
                   <td>
-                    <strong>
+                    <button className="aura-device-name" onClick={() => { setEditing({ ...device }); setPingState("idle"); }}>
                       {device.display_name || device.name || device.ip}
-                    </strong>
+                    </button>
+                    <small className="aura-device-meta"><bdi>{device.ip}</bdi> · {t(deviceMonitoringKey(device))}</small>
                   </td>
                   <td>
                     <code>{device.ip}</code>
                   </td>
-                  <td>{device.vendor || "—"}</td>
                   <td>{device.category || "—"}</td>
-                  <td>{device.assigned_network || "—"}</td>
+                  <td><span className="aura-monitor-mode">{t(deviceMonitoringKey(device))}</span></td>
                   <td>
                     <TimeAgo timestamp={device.last_seen} language={language} />
                   </td>
                   <td>
                     <button
                       className="icon-button"
+                      aria-label={`${t("edit")} ${device.display_name || device.name || device.ip}`}
                       onClick={() => {
                         setEditing({ ...device });
                         setPingState("idle");
@@ -1462,7 +1456,7 @@ function Devices({
           {!devices.length && <Empty t={t} />}
         </section>
       )}
-      {viewMode === "grid" && devices.length > visibleCount && (
+      {devices.length > visibleCount && (
         <button
           className="button load-more"
           onClick={() => setVisibleCount((count) => count + 48)}
@@ -1484,7 +1478,6 @@ function Devices({
             >
               <X />
             </button>
-            <span className="eyebrow">{t("manualDevice")}</span>
             <h1>{t("addDevice")}</h1>
             <p className="modal-intro">{t("rapidAddHelp")}</p>
             {manualResult && <div className={`rapid-add-result state-${manualResult.status}`} role="status"><CheckCircle2 /><div><strong>{manualResult.name || manualResult.ip} · <bdi>{manualResult.ip}</bdi></strong><p>{t(manualResult.status === "online" ? "rapidAddOnline" : "rapidAddOffline")} · {manualResult.category || t("autoDetect")}</p></div></div>}
@@ -1656,7 +1649,7 @@ function Devices({
                   <AreaChart data={editingTrend}>
                     <Area
                       type="monotone"
-                      dataKey="availability"
+                      dataKey="availability" name={t("availabilityEstimate")}
                       stroke="#35d49a"
                       strokeWidth={2}
                       fill="#35d49a18"
@@ -2051,9 +2044,7 @@ function HistoryPage({ t, language }) {
     <div className="page-stack history-page">
       <div className="page-heading history-heading">
         <div>
-          <span className="eyebrow">HISTORICAL INTELLIGENCE</span>
           <h1>{t("history")}</h1>
-          <p>{t("uptimeTrend")}</p>
         </div>
         <div className="range-pills">
           {[
@@ -2108,8 +2099,8 @@ function HistoryPage({ t, language }) {
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0" stopColor="#35d7ef" stopOpacity=".52" />
-                    <stop offset="1" stopColor="#35d7ef" stopOpacity="0" />
+                    <stop offset="0" stopColor="var(--accent)" stopOpacity=".52" />
+                    <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
@@ -2131,8 +2122,8 @@ function HistoryPage({ t, language }) {
                   }}
                 />
                 <Area
-                  dataKey="availability"
-                  stroke="#35d7ef"
+                  dataKey="availability" name={t("availabilityEstimate")}
+                  stroke="var(--accent)"
                   fill="url(#historyAvailability)"
                   strokeWidth={3}
                 />
@@ -2161,8 +2152,8 @@ function HistoryPage({ t, language }) {
                   }}
                 />
                 <Bar
-                  dataKey="disconnects"
-                  fill="#ff5c70"
+                  dataKey="disconnects" name={t("disconnects")}
+                  fill="var(--red)"
                   radius={[8, 8, 2, 2]}
                 />
               </BarChart>
@@ -2221,7 +2212,7 @@ function HistoryPage({ t, language }) {
                 <span>
                   <strong>{item.name}</strong>
                   <small>
-                    {item.old_status} → {item.new_status}
+                    {t(item.old_status)} → {t(item.new_status)}
                   </small>
                 </span>
                 <time>{formatDate(item.ts)}</time>
@@ -2625,13 +2616,8 @@ function AuthScreen({ setupRequired, onAuthenticated }) {
       <section className="auth-card">
         <Logo />
         <div className="auth-intro">
-          <span className="eyebrow">SECURE NETWORK INTELLIGENCE</span>
           <h1>{setupRequired ? "יצירת מנהל ראשי" : "כניסה מאובטחת"}</h1>
-          <p>
-            {setupRequired
-              ? "הגדר את חשבון המנהל הראשון. הסיסמה חייבת להכיל לפחות 8 תווים."
-              : "הזן שם משתמש וסיסמה כדי להיכנס למערכת."}
-          </p>
+          {setupRequired && <p>סיסמה באורך 8 תווים לפחות.</p>}
         </div>
         <form onSubmit={submit}>
           {setupRequired && (
@@ -2679,9 +2665,6 @@ function AuthScreen({ setupRequired, onAuthenticated }) {
             {setupRequired ? "צור חשבון מנהל" : "כניסה"}
           </button>
         </form>
-        <small className="auth-note">
-          הגישה לממשק דורשת חשבון מורשה.
-        </small>
       </section>
     </main>
   );
@@ -3894,9 +3877,7 @@ function SettingsPage({
         <HealthStrip health={health} lastSync={lastSync} t={t} language={language} />
         <div className="settings-workspace-heading">
           <div>
-            <span className="eyebrow">{t("systemConfiguration")}</span>
             <h1>{t("settings")}</h1>
-            <p>{t("controlPlane")}</p>
           </div>
           <button className="icon-button settings-mobile-exit" onClick={onExit}>
             <X />
@@ -4758,7 +4739,8 @@ export default function App() {
           </div>
         </div>
       )}
-      <aside className={menuOpen ? "open" : ""}>
+      <aside className={`aura-navigation ${menuOpen ? "open" : ""}`}>
+        <button className="icon-button aura-menu-close" onClick={() => setMenuOpen(false)} aria-label={t("close")}><X /></button>
         <Logo />
         <details className="account-menu">
           <summary className="account-chip">
@@ -4780,12 +4762,13 @@ export default function App() {
             </button>
           </div>
         </details>
-        <nav aria-label={t("mainNavigation")}>
+        <nav id="main-navigation" aria-label={t("mainNavigation")}>
           {allowed.map(([key, Icon]) => (
             <button
               key={key}
               className={route === key ? "active" : ""}
               aria-current={effectiveRoute === key ? "page" : undefined}
+              title={t(key)}
               onClick={() => {
                 setRoute(key);
                 setMenuOpen(false);
@@ -4811,12 +4794,13 @@ export default function App() {
           <button
             className="mobile-menu icon-button"
             aria-label={t("mainNavigation")}
+            aria-expanded={menuOpen}
+            aria-controls="main-navigation"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             <Menu />
           </button>
           <div>
-            <span className="eyebrow">HOMEii / {t(route)}</span>
             <h2>
               {new Date().toLocaleDateString(
                 language === "he" ? "he-IL" : "en-US",

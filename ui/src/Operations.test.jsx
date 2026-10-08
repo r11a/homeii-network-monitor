@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReportsPage } from './Operations';
-import { csvText, monitoringHealth } from './monitoring';
+import { csvText, deviceMonitoringKey, monitoringHealth } from './monitoring';
 import * as monitoring from './monitoring';
 import { query } from './api';
 import { translator } from './i18n';
@@ -16,6 +16,14 @@ const report = { window: { from_ts: 1, to_ts: 100 }, devices: [
 beforeEach(() => { query.mockReset().mockResolvedValue(report); });
 
 describe('operational data integrity', () => {
+  it('distinguishes retained monitoring from discovery and suspended devices', () => {
+    expect(deviceMonitoringKey({ manual: true, status: 'offline' })).toBe('alwaysMonitored');
+    expect(deviceMonitoringKey({ approved: true })).toBe('alwaysMonitored');
+    expect(deviceMonitoringKey({ status: 'online' })).toBe('discoveredDevice');
+    for (const flag of ['ignored', 'quarantined', 'trashed_at']) {
+      expect(deviceMonitoringKey({ manual: true, [flag]: 1 })).toBe('monitorPaused');
+    }
+  });
   it('distinguishes unknown, stale, disconnected and degraded states', () => {
     expect(monitoringHealth(null, 0, false, 100)).toBe('unknown');
     expect(monitoringHealth({}, 90, false, 100)).toBe('live');

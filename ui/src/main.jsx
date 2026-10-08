@@ -5,6 +5,7 @@ import App from './App'
 import './styles.css'
 import './accessibility.css'
 import './operations.css'
+import './aura.css'
 
 if ('serviceWorker' in navigator) {
   addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}))

@@ -1,4 +1,9 @@
 // Shared presentation rules: missing evidence must never become a green state.
+export function deviceMonitoringKey(device) {
+  if (device.ignored || device.quarantined || device.trashed_at) return 'monitorPaused';
+  return device.approved || device.manual ? 'alwaysMonitored' : 'discoveredDevice';
+}
+
 export function monitoringHealth(status, lastSync, connectionFailed, now = Date.now() / 1000, refreshSeconds = 30) {
   if (connectionFailed) return 'disconnected';
   if (!status || !lastSync) return 'unknown';

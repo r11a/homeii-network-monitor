@@ -103,6 +103,16 @@ describe('device onboarding', () => {
   });
 });
 describe('control center', () => {
+  it('puts a critical outage ahead of an older noncritical outage', async () => {
+    inventory = [
+      { ...device, ip: '192.0.2.1', display_name: 'Old printer', category: 'Office', status: 'offline', last_seen: 1 },
+      { ...device, ip: '192.0.2.2', display_name: 'Gate camera', category: 'Security', status: 'offline', critical: true, last_seen: Date.now() / 1000 - 90 },
+    ];
+    await open('viewer');
+    const first = document.querySelector('.control-outage-card');
+    expect(first.textContent).toContain('Gate camera');
+    expect(first.classList.contains('aura-priority-incident')).toBe(true);
+  });
   it('opens customization, saves selection, and opens uncategorized detail', async () => {
     const user = await open('viewer');
     await user.click(screen.getByRole('button', { name: t('customizeControlRoom') }));
@@ -119,6 +129,14 @@ describe('control center', () => {
 });
 
 describe('secondary forms and navigation', () => {
+  it('opens a device from its name and shows how it is monitored', async () => {
+    inventory.push({ ...device, ip: '192.0.2.7', display_name: 'Discovered camera', approved: false });
+    const user = await open('devices');
+    const row = screen.getByRole('button', { name: 'Discovered camera', exact: true }).closest('tr');
+    expect(row.textContent).toContain(t('discoveredDevice'));
+    await user.click(screen.getByRole('button', { name: 'Discovered camera', exact: true }));
+    expect(document.querySelector('.device-editor').textContent).toContain('192.0.2.7');
+  });
   it('shows user creation failures inside the dialog and keeps the draft', async () => {
     api.mockImplementation((path, options) => path === '/admin/users' && options?.method === 'POST' ? Promise.reject(new Error('username_exists')) : respond(path, options));
     const user = await open('settings');

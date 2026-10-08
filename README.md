@@ -6,7 +6,11 @@
 
 ## Operational workspace
 
-The current workspace adds a priority queue, category health, explicit monitoring freshness, filtered CSV reports, user administration and an administrative audit view. Reports distinguish estimated availability from retained history coverage; they are not continuous probe records or SLA measurements.
+Version **7.5.0 Aura** brings a consistent interface to the complete application: floating navigation, layered black surfaces, larger Heebo typography, a compact network overview, a focused control center and a cleaner device inventory. Settings, users, alerts, history, reports and network tools use the same visual system. Hebrew RTL, English, mobile layouts and existing light/navy themes remain supported.
+
+The overview links status counts and categories directly to the inventory. The control center prioritizes critical outages and retains your chosen layout and categories. Device rows identify permanent monitoring, discovered devices and paused monitoring; adding a device still pings, saves, clears the fields and focuses the next entry.
+
+Monitoring freshness stays visible. Reports distinguish estimated availability from retained history coverage; they are not continuous probe records or SLA measurements. The upgrade preserves the database, account permissions and existing Home Assistant connections.
 
 See [operational behavior and deployment limitations](docs/OPERATIONS.md) before using this system in a security-sensitive environment.
 
@@ -22,7 +26,7 @@ See [operational behavior and deployment limitations](docs/OPERATIONS.md) before
 <p align="center"><strong>Network intelligence built natively for Home Assistant.</strong><br>Discover, classify and monitor every device with real-time alerts, historical availability and a premium NOC interface.</p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-7.4.0-c47a3b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-7.5.0-c47a3b?style=for-the-badge">
   <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Add--on%20%2B%20Integration-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white">
   <img alt="React" src="https://img.shields.io/badge/UI-React%2019-27e6a4?style=for-the-badge&logo=react&logoColor=07110d">
   <img alt="License" src="https://img.shields.io/github/license/r11a/homeii-network-monitor?style=for-the-badge&color=ffb52e">

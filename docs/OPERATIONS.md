@@ -11,6 +11,8 @@
 - **Settings / Audit log:** server-recorded actions, actors and outcomes; searchable across the latest 500 records. Legacy administrative GET actions are recorded as well as POST/PATCH/DELETE requests. Passwords and request bodies are not included.
 - **Settings / System:** worker heartbeat, lifecycle count and most recent error are visible alongside database status.
 
+The 7.5 Aura interface keeps navigation in a floating dock on desktop and a menu on mobile. Device names open the existing editor. The monitoring column distinguishes permanently retained devices (approved or manually added), discovered devices and suspended monitoring; a discovered device can still be probed according to discovery settings. Long inventories scroll inside the table and load 48 rows at a time. Recent devices and the personal dashboard expand on demand.
+
 ## Reading monitoring status
 
 Device status and monitoring health are different signals. The banner distinguishes current data, initial loading, a failed server connection, expired refresh data and degraded workers. A failed connection preserves the last known inventory with an explicit warning. A green device from an old snapshot is not proof that it is still reachable.

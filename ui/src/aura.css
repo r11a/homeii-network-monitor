@@ -1,0 +1,469 @@
+/* Aura: shared product surfaces and layout. Existing behavior and theme preferences stay intact. */
+:root, [data-theme="granite"], [data-theme="dark"] {
+  --bg: #070809;
+  --surface: #111417;
+  --surface-2: #181d22;
+  --surface-3: #242d35;
+  --text: #f2f5f7;
+  --muted: #b0b8c2;
+  --line: #bacfe026;
+  --line-soft: #bacfe014;
+  --line-strong: #a8c4d24a;
+  --green: #9ac9bd;
+  --red: #ff9c94;
+  --amber: #e1bd87;
+  --blue: #93bddd;
+  --cyan: #b4dcf1;
+  --accent: #c1dbea;
+  --chart-grid: #d2e6f20b;
+  --chart-axis: #a7b4bf;
+  --chart-tooltip: #1a2128;
+  --aura-float: radial-gradient(ellipse at 45% 0, #60748813, transparent 65%), linear-gradient(150deg, #1b2025c9, #111417eb 75%);
+  --aura-shadow: 0 18px 48px #0005, inset 0 1px #d7e8f411;
+  --radius: 22px;
+  color-scheme: dark;
+}
+[data-theme="navy"] {
+  --bg: #080c12; --surface: #101923; --surface-2: #172532; --surface-3: #243647;
+  --text: #f2f5f7; --muted: #b0bdcb; --accent: #c1dbea;
+  --green: #9ac9bd; --red: #ff9c94; --amber: #e1bd87;
+  --aura-float: linear-gradient(145deg, #182735, #101821); color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: #f0f3f6; --surface: #fff; --surface-2: #f5f7fa; --surface-3: #e7edf2;
+  --text: #182c3b; --muted: #536877; --line: #c9d5de; --line-soft: #dbe3e9; --line-strong: #9aacba;
+  --green: #247660; --red: #b63e39; --amber: #866016; --blue: #427da9; --cyan: #306f9a; --accent: #315f80;
+  --chart-grid: #526b8515;
+  --aura-float: linear-gradient(150deg, #fff, #f5f8fb);
+  --aura-shadow: 0 14px 38px #20334b09, inset 0 1px #fff;
+  --chart-axis: #536780; --chart-tooltip: #fff;
+  color-scheme: light;
+}
+html[data-theme] body, body {
+  background: radial-gradient(ellipse at 20% 0, #789ab610, transparent 45%), var(--bg);
+  color: var(--text);
+}
+body::before { display: none; }
+body, button, input, select, textarea { font-size: 16px; }
+button, input, select, textarea, a { -webkit-tap-highlight-color: transparent; }
+button { font-weight: 450; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 4px;
+}
+svg.lucide { stroke-width: 1.6; flex-shrink: 0; }
+h1, h2, h3, p { overflow-wrap: anywhere; }
+h1, .page-heading h1, .settings-workspace-heading h1 { font-size: clamp(32px, 3vw, 44px); font-weight: 450; letter-spacing: -.035em; line-height: 1.25; }
+h2, .panel-title h2, .section-heading h2 { font-size: 20px; font-weight: 500; letter-spacing: -.015em; }
+h3 { font-size: 18px; font-weight: 500; }
+small { line-height: 1.5; }
+.eyebrow { font-weight: 500; letter-spacing: .08em; }
+.page-heading > div > .eyebrow, .settings-workspace-heading .eyebrow { display: none; }
+.page-heading { min-height: 90px; margin: 0; padding: 14px 0 20px; align-items: center; gap: 18px; }
+.page-heading h1 { margin: 0; }
+.page-heading p { font-size: 15px; margin-top: 8px; }
+.page-stack { gap: 24px; animation: aura-arrive .3s ease both; }
+.app-shell { display: block; }
+.main-shell { max-width: 1480px; padding: 0 44px 36px; }
+.app-shell > aside.aura-navigation {
+  position: relative; inset: auto; height: auto; min-height: 98px; width: 100%;
+  display: grid; grid-template-columns: 175px minmax(0, 1fr) 135px; align-items: center; gap: 24px;
+  max-width: 1568px; margin-inline: auto; padding: 22px 44px;
+  background: transparent; border: 0; box-shadow: none; transform: none; backdrop-filter: none; z-index: 40;
+}
+.brand-lockup { gap: 12px; }
+.brand-lockup strong { font-size: 25px; font-weight: 650; letter-spacing: -1px; }
+.brand-lockup strong span { color: inherit !important; }
+.brand-lockup small { color: var(--muted); font-size: 9px !important; letter-spacing: .24em; }
+.aura-brand-mark { width: 28px; height: 32px; display: flex; gap: 4px; align-items: center; transform: skewY(-15deg); }
+.aura-brand-mark i { width: 4px; height: 25px; border-radius: 3px; background: linear-gradient(var(--text), #728794); box-shadow: 0 0 16px #b4dcf118; }
+.aura-brand-mark i:nth-child(2) { height: 13px; }
+.app-shell > .aura-navigation nav {
+  grid-column: 2; grid-row: 1; display: flex; justify-self: center; gap: 3px; margin: 0; padding: 5px;
+  background: var(--aura-float); border: 1px solid var(--line-soft); border-radius: 17px; box-shadow: var(--aura-shadow);
+}
+.app-shell > .aura-navigation nav button { height: 43px; min-height: 43px; padding: 0 12px; gap: 8px; font-size: 15px; color: var(--muted); border-radius: 11px; white-space: nowrap; }
+.app-shell > .aura-navigation nav button:hover { color: var(--text); background: var(--line-soft); }
+.app-shell > .aura-navigation nav button.active { color: var(--text); background: linear-gradient(150deg, #d4eaff16, #d4eaff09); border-color: var(--line-soft); box-shadow: inset 0 1px #e0ecff14, 0 5px 12px #0002; }
+.app-shell > .aura-navigation nav button.active svg { color: var(--accent); }
+.app-shell > .aura-navigation nav button i { inset-inline: 35%; bottom: -6px; height: 1px; width: auto; background: var(--accent); box-shadow: 0 0 10px var(--blue); }
+.aura-navigation .account-menu { grid-column: 3; grid-row: 1; margin: 0; min-width: 0; position: relative; }
+.aura-navigation .account-chip { border: 0; background: transparent; padding: 0; gap: 8px; }
+.aura-navigation .account-chip > span { background: linear-gradient(135deg, #7e8a953d, #80929d10); box-shadow: inset 0 1px #fff3; color: var(--text); width: 34px; height: 34px; border-radius: 50%; font-size: 14px; }
+.aura-navigation .account-chip strong { font-size: 14px; font-weight: 500; }
+.aura-navigation .account-chip small { display: none; }
+.aura-navigation .account-popover { position: absolute; top: 46px; inset-inline-end: 0; min-width: 170px; padding: 10px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: var(--aura-shadow); border-radius: 14px; }
+.aura-navigation .sidebar-health { display: none; }
+.nav-count { min-width: 18px; border-radius: 50%; padding: 1px 5px; font-size: 11px; background: color-mix(in srgb, var(--red) 14%, transparent); }
+.main-shell > header { height: 50px; margin: 0; padding: 0; }
+.main-shell > header h2 { font-size: 14px; font-weight: 400; color: var(--muted); margin: 0; }
+.header-actions { gap: 8px; }
+.header-actions .button { padding: 6px 11px; min-height: 36px; font-size: 13px; background: transparent; color: var(--muted); border-color: var(--line-soft); box-shadow: none; }
+.health-strip { margin-bottom: 6px; padding: 10px 0; border: 0; gap: 8px; }
+.health-strip strong, .health-strip time, .health-strip > span { font-size: 13px; font-weight: 400; }
+.health-strip.health-disconnected, .health-strip.health-stale, .health-strip.health-degraded { padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent); }
+.live-dot, .status-dot { width: 6px; height: 6px; box-shadow: 0 0 9px color-mix(in srgb, var(--green) 45%, transparent); animation: none; }
+.status-dot.offline { border-radius: 2px; background: var(--red); box-shadow: 0 0 9px #ff9c9433; }
+.status-dot.unstable { background: var(--amber); box-shadow: none; }
+.status-dot.new { background: transparent; border: 1px solid var(--blue); box-shadow: none; }
+.status-dot.unknown { background: transparent; border: 1px solid var(--amber); box-shadow: none; }
+.aura-menu-close { display: none; }
+.panel, .toolbar, .device-card, .category-card, .alert-card, .settings-content,
+.modal-card, .auth-card, .category-detail, .settings-surface {
+  background: var(--aura-float); border: 1px solid var(--line-soft); border-radius: var(--radius);
+  box-shadow: var(--aura-shadow); backdrop-filter: none;
+}
+.panel { padding: 25px; }
+.panel-title, .section-heading { border: 0; padding-bottom: 10px; margin-bottom: 0; }
+.panel-title h2, .section-heading h2 { margin: 0; }
+.section-heading p { color: var(--muted); font-size: 14px; }
+.button, .icon-button { border: 1px solid var(--line); border-radius: 12px; background: linear-gradient(150deg, var(--surface-3), var(--surface)); box-shadow: inset 0 1px #ffffff08; color: var(--text); font-size: 15px; font-weight: 450; min-height: 42px; }
+.button { padding: 10px 17px; gap: 9px; }
+.button.primary { color: #10181e; background: linear-gradient(130deg, #eff5f8, #beced9); border-color: #e5eff52b; box-shadow: inset 0 1px #fff9, 0 5px 25px #a4c9f017; font-weight: 550; }
+.button.danger { color: var(--red); background: color-mix(in srgb, var(--red) 9%, var(--surface)); border-color: color-mix(in srgb, var(--red) 25%, transparent); box-shadow: none; }
+.button:hover, .icon-button:hover { transform: translateY(-1px); border-color: var(--line-strong); box-shadow: inset 0 1px #ffffff12; }
+.button:disabled { transform: none; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea,
+.detail-grid input, .form-grid input, .form-grid select, .target-row input {
+  color: var(--text); background: color-mix(in srgb, var(--bg) 60%, var(--surface)); border: 1px solid var(--line); border-radius: 11px; font-size: 16px; min-height: 44px; padding: 10px 13px; box-shadow: inset 0 2px 8px #0001;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+.form-grid label, .detail-grid label, .target-row label, .report-controls label, .audit-filters label { font-size: 14px; gap: 8px; }
+.aura-hero { display: grid; grid-template-columns: .9fr 1.1fr; align-items: center; min-height: 320px; gap: 36px; padding: 10px 12px 15px; }
+.aura-hero h1 { font-size: clamp(42px, 4.3vw, 64px); line-height: 1.14; font-weight: 400; letter-spacing: -.045em; margin: 0 0 25px; }
+.aura-hero h1 > span { display: block; color: var(--muted); }
+.aura-hero .ops-metrics { display: flex; gap: 0; margin-bottom: 25px; }
+.aura-hero .ops-metric { display: flex; flex-direction: column; align-items: start; gap: 6px; background: none; border: 0; border-inline-end: 1px solid var(--line); border-radius: 0; padding: 0 26px; box-shadow: none; }
+.aura-hero .ops-metric:first-child { padding-inline-start: 0; }
+.aura-hero .ops-metric:last-child { border: 0; }
+.aura-hero .ops-metric strong { font-size: 38px; line-height: 1; font-weight: 450; color: var(--text); }
+.aura-hero .metric-offline strong { color: var(--red); }
+.aura-hero .metric-unstable strong { color: var(--amber); }
+.aura-hero .ops-metric > span { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.aura-hero .ops-metric svg { width: 14px; height: 14px; }
+.aura-hero-action { background: transparent; }
+.aura-snapshot-note { display: block; color: var(--amber); font-size: 14px; margin-top: 12px; }
+.aura-orbit-scene { position: relative; display: grid; place-items: center; min-height: 310px; width: 100%; max-width: 540px; justify-self: center; isolation: isolate; }
+.aura-orbit-scene::before { content: ''; position: absolute; width: 80%; height: 90%; background: radial-gradient(ellipse, #9cc7e21b, transparent 68%); z-index: -1; }
+.aura-orbit { width: 262px; height: 262px; position: relative; display: grid; place-items: center; border-radius: 50%; padding: 15px; border: 1px solid #b4dcf121; color: var(--text); background: linear-gradient(130deg, #28343d66, #111517 55%); box-shadow: 0 20px 65px #0009, inset 0 1px #e1f2ff28, 0 0 65px #b4dcf10a; }
+.aura-orbit::before { content: ''; position: absolute; inset: 12px; border-radius: 50%; background: conic-gradient(from -90deg, var(--green) 0 var(--online-angle), var(--red) var(--online-angle) var(--offline-angle), var(--amber) var(--offline-angle) 360deg); mask: radial-gradient(transparent 66%, #000 67% 70%, transparent 71%); opacity: .8; }
+.aura-orbit::after { content: ''; position: absolute; inset: 26px; border: 1px solid #d5ecff15; border-radius: 50%; }
+.aura-orbit.aura-orbit-empty::before { background: var(--line); }
+.aura-orbit-core { display: flex; align-items: center; flex-direction: column; gap: 7px; z-index: 1; }
+.aura-orbit-core > svg { width: 18px; color: var(--accent); }
+.aura-orbit-core > strong { font-size: 70px; line-height: 1.06; font-weight: 350; letter-spacing: -.055em; }
+.aura-orbit-core > span { font-size: 14px; color: var(--muted); }
+.snapshot-unknown .aura-orbit::before, .snapshot-disconnected .aura-orbit::before, .snapshot-stale .aura-orbit::before, .snapshot-degraded .aura-orbit::before { opacity: .25; }
+.aura-orbit-label { position: absolute; display: flex; align-items: center; gap: 10px; padding: 10px 13px; max-width: 180px; border: 1px solid var(--line-soft); border-radius: 14px; background: var(--aura-float); box-shadow: var(--aura-shadow); text-align: start; }
+.aura-orbit-label strong, .aura-orbit-label small { display: block; }
+.aura-orbit-label strong { font-size: 15px; font-weight: 500; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aura-orbit-label small { font-size: 13px !important; color: var(--muted); margin-top: 3px; }
+.orbit-label-0 { top: 16px; inset-inline-start: 2%; }
+.orbit-label-1 { top: 65px; inset-inline-end: -1%; }
+.orbit-label-2 { bottom: 50px; inset-inline-start: 0; }
+.orbit-label-3 { bottom: 3px; inset-inline-end: 4%; }
+.ops-grid { grid-template-columns: 1.1fr 1fr; gap: 24px; }
+.ops-grid .overview-trend { display: flex; flex-direction: column; }
+.ops-grid .overview-trend .chart-wrap { flex: 1; min-height: 180px; max-height: 235px; }
+.aura-category-summary { background: transparent; border: 0; box-shadow: none; padding: 4px 0; }
+.aura-category-summary > .section-heading { display: none; }
+.aura-category-summary .ops-category-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 18px; max-height: 190px; }
+.aura-category-summary .ops-category-list > button { display: flex; flex-direction: column; gap: 10px; border: 0; border-inline-end: 1px solid var(--line); padding: 8px 16px; }
+.aura-category-summary .ops-category-list > button > span { display: flex; flex-direction: column; align-items: start; gap: 6px; }
+.aura-category-summary .segmented-meter { width: 100%; height: 3px; opacity: .75; }
+.aura-category-summary .ops-category-list b { font-size: 12px; }
+.ops-grid .panel { padding: 25px; }
+.ops-issue-list > button { padding: 12px 0; }
+.ops-issue-list strong, .ops-category-list strong { font-size: 16px; font-weight: 500; }
+.ops-issue-list small, .ops-category-list small { font-size: 13px !important; }
+.ops-category-list > button { padding-block: 14px; }
+.ops-category-list b { font-size: 13px; }
+.state-chip { font-size: 13px; border-radius: 7px; padding: 4px 8px; }
+.overview-workspace { margin: 0; }
+.overview-recent { background: transparent; box-shadow: none; border: 0; padding: 10px 0; }
+.overview-recent > summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; font-size: 15px; color: var(--muted); }
+.overview-recent > summary svg { width: 17px; }
+.overview-recent > summary::-webkit-details-marker { display: none; }
+.overview-recent[open] > summary { margin-bottom: 16px; }
+.overview-recent .section-heading p { display: none; }
+.simple-score, .score { color: var(--accent); font-weight: 400; font-size: 34px; }
+.chart-wrap { filter: none; }
+.availability-strip .good { background: var(--green); box-shadow: none; }
+.availability-strip .warn { background: var(--amber); }
+.availability-strip .bad { background: var(--red); }
+.availability-strip span { border: 0; height: 5px; }
+.device-toolbar { display: flex; flex-wrap: wrap; gap: 16px; padding: 0 0 18px; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.device-toolbar .search-box { flex: 1; min-width: 200px; max-width: none; min-height: 46px; background: var(--surface); border-radius: 12px; }
+.search-box input { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+.inventory-controls { display: flex; flex-wrap: wrap; gap: 10px; }
+.inventory-controls label { font-size: 14px; }
+.filter-pills { flex-basis: 100%; flex-wrap: wrap; gap: 6px; }
+.filter-pills button, .range-pills button { font-size: 14px; background: transparent; border-color: transparent; color: var(--muted); border-radius: 10px; padding: 8px 14px; }
+.filter-pills button.active, .range-pills button.active { background: var(--surface-2); border-color: var(--line); color: var(--text); box-shadow: inset 0 1px #fff1; }
+.view-switch { background: var(--surface); border-color: var(--line); border-radius: 12px; }
+.view-switch button.active { color: var(--text); background: var(--surface-3); box-shadow: none; }
+.device-table-wrap { padding: 0 20px; max-height: max(320px, calc(100dvh - 435px)); overflow: auto; }
+.device-table thead { position: sticky; top: 0; z-index: 1; background: var(--surface); }
+.aura-device-meta { display: none; }
+.device-table { width: 100%; min-width: 760px; }
+.device-table th { background: transparent; color: var(--muted); font-size: 13px !important; font-weight: 450; padding: 16px 12px; border-color: var(--line-soft); }
+.device-table td { font-size: 15px; padding: 20px 12px; background: transparent; border-color: var(--line-soft); }
+.device-table tr:hover td { background: #a9cde705; }
+.device-table code { color: var(--muted); font-size: 14px; }
+.table-status { font-size: 14px; white-space: nowrap; }
+.state-offline .table-status { color: var(--red); }
+.state-unstable .table-status { color: var(--amber); }
+.aura-device-name { border: 0; background: none; padding: 0; font-size: 17px; text-align: start; font-weight: 500; }
+.aura-device-name:hover { color: var(--accent); }
+.aura-monitor-mode { font-size: 13px; color: var(--muted); }
+.device-card.premium-device-card { padding: 20px; border-radius: 22px; min-height: 240px; }
+.device-card::after, .device-accent, .category-card::after { display: none; }
+.device-card.state-offline { border-color: #ff9c942c; background: radial-gradient(ellipse at 100% 0, #ff9c9410, transparent 70%), var(--aura-float); }
+.device-card:hover, .category-card:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: var(--aura-shadow); }
+.device-identity h2 { font-size: 20px; font-weight: 500; }
+.device-glyph, .health-score { box-shadow: none; background: transparent; border-color: var(--line-soft); }
+.device-card .device-facts span, .device-card p, .device-card code, .device-availability > div { font-size: 13px !important; }
+.device-card .health-score strong { font-size: 21px; font-weight: 450; }
+.device-facts { border-color: var(--line-soft); }
+.load-more { justify-self: center; }
+.configurable-noc .noc-heading h1 { font-size: 36px; font-weight: 450; }
+.noc-heading-actions .live-badge { display: none; }
+.configurable-noc .control-board { grid-template-columns: minmax(0, .85fr) minmax(0, 1.3fr); gap: 26px; height: max(360px, calc(100dvh - 320px)); }
+.configurable-noc .control-board.layout-outages-first { grid-template-columns: minmax(0, 1.3fr) minmax(0, .85fr); }
+.edge-viewer .configurable-noc .control-board { height: max(360px, calc(100dvh - 245px)); }
+.configurable-noc .control-category-panel { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 10px 0; }
+.configurable-noc .control-outages { background: none; border: 0; border-radius: 0; box-shadow: none; padding: 10px 0; }
+.configurable-noc .control-outages > .panel-title, .configurable-noc .noc-section-heading { margin-bottom: 18px; }
+.configurable-noc .category-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; padding: 2px 4px 20px; }
+.configurable-noc .category-card, .configurable-noc.density-compact .category-card { min-height: 138px; border: 1px solid var(--line-soft); border-radius: 20px; background: var(--aura-float); padding: 17px; box-shadow: var(--aura-shadow); }
+.configurable-noc .category-card.has-alert { border-color: #ff9c942a; background: radial-gradient(ellipse at 0 0, #ff9c940c, transparent 70%), var(--aura-float); }
+.configurable-noc .category-card h2 { font-size: 19px; font-weight: 500; margin-top: 9px; }
+.configurable-noc .category-card .availability-score { color: var(--muted); font-weight: 400; font-size: 15px !important; }
+.configurable-noc .category-ratio, .configurable-noc .category-ratio strong, .configurable-noc .category-tags .danger-tag { font-size: 13px; font-weight: 450; background: transparent; border: 0; padding: 0; }
+.configurable-noc .category-tags { gap: 10px; }
+.configurable-noc .control-outage-groups { gap: 18px; padding: 2px 4px 20px; }
+.configurable-noc .control-outage-group-title { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+.configurable-noc .control-outage-grid { grid-template-columns: 1fr; gap: 10px; }
+.configurable-noc .control-outage-card { position: relative; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; padding: 18px 21px; min-height: 100px; border-radius: 18px; border: 1px solid #ff9c9420; background: var(--aura-float); box-shadow: var(--aura-shadow); }
+.configurable-noc .control-outage-card.urgency-6 { animation: none; }
+.configurable-noc .urgency-rail { display: none; }
+.configurable-noc .outage-copy strong { font-size: 20px; font-weight: 500; white-space: normal; }
+.configurable-noc .outage-copy small { font-size: 14px !important; color: var(--muted); margin-top: 5px; }
+.aura-incident-state { display: flex; align-items: center; gap: 7px; color: var(--red); font-size: 13px; margin-bottom: 10px; }
+.aura-incident-state svg { width: 14px; height: 14px; }
+.aura-incident-state b { font-size: 12px; font-weight: 500; padding: 2px 7px; border-radius: 5px; background: #ff9c9410; }
+.configurable-noc .outage-disconnected-at { color: var(--muted); align-self: center; }
+.configurable-noc .outage-disconnected-at strong { font-size: 17px; font-weight: 450; color: var(--text); }
+.configurable-noc .aura-priority-incident { min-height: 200px; padding: 26px; border-color: #ff9c9435; background: radial-gradient(ellipse at 90% 0, #ff9c9416, transparent 70%), var(--aura-float); }
+.configurable-noc .aura-priority-incident::after { content: ''; position: absolute; bottom: -1px; inset-inline: 25%; height: 1px; background: var(--red); box-shadow: 0 -2px 24px 2px #ff9c9433; }
+.configurable-noc .aura-priority-incident .outage-copy > strong { font-size: clamp(23px, 2.1vw, 32px); }
+.configurable-noc .aura-priority-incident .outage-disconnected-at strong { font-size: 23px; }
+.configurable-noc .layout-stacked { height: auto; }
+.configurable-noc .layout-stacked .control-category-panel, .configurable-noc .layout-stacked .control-outages { max-height: 50dvh; }
+.history-summary, .report-summary { display: grid; grid-template-columns: repeat(4, 1fr); background: transparent; border: 0; box-shadow: none; gap: 0; padding: 10px 0 20px; }
+.history-stat, .report-summary > div { border: 0; border-inline-end: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; padding: 8px 24px; }
+.history-stat:last-child { border: 0; }
+.history-stat svg { display: none; }
+.history-stat { display: flex; flex-direction: column; align-items: start; gap: 8px; }
+.history-stat strong, .report-summary strong { font-size: 36px; font-weight: 400; color: var(--text); }
+.history-stat span, .report-summary span { font-size: 14px; color: var(--muted); }
+.history-grid { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 24px; }
+.chart-wrap.tall { height: 265px; }
+.range-pills { border-radius: 13px; padding: 4px; background: var(--surface); border: 1px solid var(--line-soft); }
+.report-method { background: transparent; border: 0; border-bottom: 1px solid var(--line-soft); border-radius: 0; padding: 9px 0 14px; color: var(--muted); }
+.report-method strong { font-size: 14px; font-weight: 400; }
+.report-method summary > span { font-size: 13px; }
+.report-method p { font-size: 14px; }
+.report-controls { background: transparent; box-shadow: none; border: 0; padding: 0; }
+.report-table th, .report-table td { font-size: 14px; padding-block: 18px; }
+.report-device-link strong { font-size: 16px; font-weight: 500; }
+.report-device-link small { font-size: 13px !important; }
+.settings-workspace { background: transparent; }
+.settings-workspace > .settings-sidebar { background: transparent; border-color: var(--line-soft); padding: 28px 20px; }
+.settings-main { padding: 18px 42px 40px; max-width: 1380px; }
+.settings-workspace-heading { margin-bottom: 30px; }
+.settings-workspace .settings-content { padding: 30px; border-radius: 24px; }
+.settings-nav { gap: 5px; }
+.settings-nav button { font-size: 15px; color: var(--muted); border-radius: 11px; }
+.settings-nav button.active { background: var(--surface-2); color: var(--text); box-shadow: inset 0 1px #fff1; border-color: var(--line); }
+.settings-nav button.active svg { color: var(--accent); }
+.settings-title h2 { font-size: 24px; font-weight: 450; }
+.settings-title p { font-size: 14px; line-height: 1.7; }
+.settings-title > svg { color: var(--accent); background: transparent; border-color: var(--line); }
+.settings-title-action { margin-inline-start: auto; }
+.settings-content .choice-card, .settings-content .user-card, .settings-content .admin-card, .settings-content .label-editor, .settings-content .worker-grid article { background: var(--surface); box-shadow: none; border-color: var(--line-soft); border-radius: 16px; }
+.role-guide { background: transparent; }
+.role-guide > div { background: transparent; border-color: var(--line-soft); }
+.auth-screen { background: radial-gradient(ellipse at 50% 30%, #9ac4e213, transparent 50%), var(--bg); }
+.auth-card { padding: 42px; width: min(460px, calc(100vw - 32px)); }
+.auth-intro h1 { font-size: 32px; font-weight: 450; margin-block: 36px 25px; }
+.modal-backdrop { background: #04080fb0; backdrop-filter: blur(12px); }
+.modal-card { padding: 30px; border-color: var(--line); }
+.modal-card h1 { font-size: 30px; font-weight: 450; }
+.modal-close { background: var(--surface-2); color: var(--muted); border-color: var(--line); }
+.manual-device-modal { max-width: 500px; }
+.manual-device-modal .manual-fields { grid-template-columns: 1fr; }
+.modal-intro { font-size: 14px; color: var(--muted); }
+.rapid-add-result { background: color-mix(in srgb, var(--green) 6%, transparent); border-color: color-mix(in srgb, var(--green) 20%, transparent); }
+.rapid-add-result.state-offline { border-color: color-mix(in srgb, var(--red) 30%, transparent); background: color-mix(in srgb, var(--red) 6%, transparent); }
+.rapid-add-result.state-offline svg { color: var(--red); }
+.offline-toast { background: radial-gradient(ellipse at 100% 0, #ff9c941f, transparent 70%), var(--surface); border-color: #ff9c9444; box-shadow: 0 24px 80px #0009, inset 0 1px #ffffff12; }
+.offline-toast-icon { color: var(--red); background: #ff9c9412; box-shadow: none; }
+.edge-viewer .aura-navigation { display: none !important; }
+.control-topbar { background: transparent; border-color: var(--line-soft); }
+[data-theme="light"] .aura-orbit { background: linear-gradient(135deg, #fff, #e7eff5); box-shadow: 0 20px 65px #56728b20, inset 0 1px #fff; }
+[data-theme="light"] .button.primary { background: #21394c; color: #fff; border-color: #21394c; }
+@keyframes aura-arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@media (max-width: 1280px) {
+  .app-shell > aside.aura-navigation { grid-template-columns: 145px minmax(0,1fr) 45px; padding-inline: 30px; gap: 20px; }
+  .aura-navigation .account-chip > div, .aura-navigation .account-chip > svg { display: none; }
+  .app-shell > .aura-navigation nav button:nth-child(n+5) > span { display: none; }
+  .main-shell { padding-inline: 30px; }
+  .aura-orbit-label { max-width: 150px; }
+  .orbit-label-0 { inset-inline-start: -2%; } .orbit-label-2 { inset-inline-start: -3%; }
+  .configurable-noc .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 980px) {
+  .app-shell > aside.aura-navigation { grid-template-columns: 120px minmax(0,1fr) 35px; gap: 10px; padding-inline: 20px; }
+  .app-shell > .aura-navigation nav button { padding-inline: 9px; gap: 5px; font-size: 14px; }
+  .app-shell > .aura-navigation nav button:nth-child(n+5) { padding-inline: 9px; }
+  .aura-navigation .brand-lockup { gap: 6px; }
+  .aura-navigation .brand-lockup strong { font-size: 22px; }
+  .aura-hero { gap: 20px; }
+  .aura-orbit { width: 220px; height: 220px; }
+  .aura-orbit-label { max-width: 130px; padding: 8px 10px; }
+  .aura-orbit-label strong { font-size: 13px; }
+  .orbit-label-1 { top: 30px; } .orbit-label-2 { bottom: 25px; }
+  .ops-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
+  .ops-grid .panel { padding: 20px; }
+  .configurable-noc .aura-priority-incident { grid-template-columns: 1fr; gap: 12px; padding: 22px; }
+  .configurable-noc .outage-disconnected-at { justify-self: start; }
+  .configurable-noc .control-outage-card { gap: 10px; }
+  .settings-main { padding-inline: 22px; }
+}
+@media (min-width: 761px) {
+  .mobile-menu, .scrim { display: none; }
+  html[dir="rtl"] .app-shell > aside.aura-navigation { transform: none; }
+  .overview-page { grid-template-columns: 1fr 1fr; }
+  .overview-page > .aura-hero, .overview-page > .ops-grid, .overview-page > .aura-category-summary { grid-column: 1/-1; }
+  .overview-page > details { order: 0; align-self: start; }
+  .overview-page > details[open] { grid-column: 1/-1; }
+  .overview-page > .personal-dashboard { padding: 14px 20px; }
+  .overview-page > .overview-recent { padding: 14px 0; }
+}
+@media (max-width: 760px) {
+  .app-shell > aside.aura-navigation, html[dir="rtl"] .app-shell > aside.aura-navigation {
+    position: fixed; inset-block: 0; inset-inline-start: 0; width: min(310px, 85vw); height: 100dvh; display: flex; flex-direction: column; align-items: stretch; justify-content: start; margin: 0; padding: 28px 22px; gap: 25px; overflow-y: auto; background: var(--surface); transform: translateX(-110%); box-shadow: 0 0 70px #0008;
+  }
+  html[dir="rtl"] .app-shell > aside.aura-navigation { transform: translateX(110%); }
+  .app-shell > aside.aura-navigation.open, html[dir="rtl"] .app-shell > aside.aura-navigation.open { transform: none; }
+  .app-shell > .aura-navigation nav { display: grid; width: 100%; box-shadow: none; border: 0; background: transparent; padding: 0; gap: 8px; }
+  .app-shell > .aura-navigation nav button, .app-shell > .aura-navigation nav button:nth-child(n+5) { font-size: 16px; padding: 0 15px; height: 46px; gap: 12px; }
+  .app-shell > .aura-navigation nav button:nth-child(n+5) > span, .aura-navigation .account-chip > div { display: block; }
+  .aura-navigation .account-menu { order: 2; }
+  .aura-navigation .account-popover { top: auto; bottom: 44px; }
+  .aura-navigation .brand-lockup strong { font-size: 27px; }
+  .mobile-menu { display: grid; min-width: 40px; }
+  .aura-menu-close { display: grid; position: absolute; top: 24px; inset-inline-end: 18px; }
+  .scrim { display: block; }
+  .main-shell { padding: 8px 20px 30px; }
+  .main-shell > header { height: 64px; gap: 12px; }
+  .main-shell > header h2 { font-size: 13px; }
+  .header-actions .button span { display: none; }
+  .header-actions .button { min-width: 36px; padding: 6px; }
+  .health-strip { gap: 8px; flex-wrap: wrap; }
+  .health-strip.health-live { margin-bottom: 0; }
+  .health-strip strong, .health-strip time { font-size: 12px; }
+  .health-strip:not(.health-live) > span { display: block; order: 3; flex-basis: 100%; }
+  .aura-hero { min-height: 0; grid-template-columns: 1fr 1fr; padding: 18px 0 25px; gap: 14px; }
+  .aura-hero h1 { font-size: 36px; }
+  .aura-orbit-scene { min-height: 290px; }
+  .aura-orbit { width: 185px; height: 185px; }
+  .aura-orbit-core > strong { font-size: 48px; }
+  .aura-orbit-core > span { font-size: 13px; }
+  .aura-orbit-label { max-width: 120px; padding: 6px 9px; }
+  .orbit-label-0 { top: 0; } .orbit-label-1 { top: 22px; inset-inline-end: 0; }
+  .orbit-label-2 { bottom: 20px; inset-inline-start: 0; } .orbit-label-3 { bottom: 0; inset-inline-end: 0; }
+  .aura-hero .ops-metric { padding-inline: 14px; }
+  .aura-hero .ops-metric strong { font-size: 31px; }
+  .aura-hero .ops-metric > span { font-size: 13px; }
+  .aura-hero .ops-metric svg { display: none; }
+  .ops-grid { grid-template-columns: 1fr; }
+  .page-stack { gap: 20px; }
+  .page-heading { min-height: 80px; flex-wrap: wrap; gap: 15px; padding-block: 14px; }
+  .page-heading h1 { font-size: 32px; }
+  .panel, .ops-grid .panel { padding: 20px; }
+  .inventory-controls { width: 100%; }
+  .inventory-controls { display: grid; grid-template-columns: minmax(0,1fr) auto; }
+  .inventory-controls > label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .inventory-controls > label:first-child { grid-column: 1/-1; }
+  .inventory-controls > label select { flex: 1; width: 100%; min-width: 0; }
+  .filter-pills button { padding: 8px 11px; font-size: 14px; }
+  .device-toolbar { gap: 12px; }
+  .device-table-wrap { padding: 6px 12px; }
+  .aura-device-meta { display: block; color: var(--muted); font-size: 12px !important; margin-top: 5px; }
+  .device-table { min-width: 0; table-layout: fixed; }
+  .device-table th:nth-child(3), .device-table td:nth-child(3), .device-table th:nth-child(4), .device-table td:nth-child(4), .device-table th:nth-child(6), .device-table td:nth-child(6) { display: none; }
+  .device-table th:first-child { width: 78px; }
+  .device-table th:nth-child(5), .device-table td:nth-child(5) { display: none; }
+  .device-table th:last-child { width: 48px; white-space: nowrap; font-size: 12px !important; }
+  .device-table td, .device-table th { padding: 16px 5px; overflow-wrap: anywhere; }
+  .aura-device-name { font-size: 16px; }
+  .table-status { font-size: 13px; gap: 5px; }
+  .device-table .icon-button { border: 0; width: 34px; min-height: 36px; background: transparent; }
+  .configurable-noc .noc-heading h1 { font-size: 32px; }
+  .configurable-noc .control-board, .edge-viewer .configurable-noc .control-board, .configurable-noc .control-board.layout-outages-first, .configurable-noc .control-board.layout-stacked { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; gap: 20px; }
+  .configurable-noc .control-outages { order: -1; }
+  .configurable-noc .control-category-panel, .configurable-noc .control-outages { max-height: none; }
+  .configurable-noc .control-outage-groups { max-height: 65dvh; }
+  .configurable-noc .control-outage-card { grid-template-columns: minmax(0, 1fr) auto; }
+  .configurable-noc .aura-priority-incident { min-height: 180px; }
+  .configurable-noc .aura-priority-incident .outage-disconnected-at strong { font-size: 18px; }
+  .configurable-noc .category-card h2 { font-size: 17px; }
+  .noc-heading-actions { width: 100%; gap: 8px; }
+  .noc-heading-actions .button { font-size: 14px; padding: 9px 12px; }
+  .history-grid, .history-lower { grid-template-columns: 1fr; }
+  .aura-category-summary .ops-category-list { grid-template-columns: repeat(2, minmax(0,1fr)); max-height: 275px; gap: 12px; }
+  .history-summary, .report-summary { grid-template-columns: 1fr 1fr; gap: 18px; }
+  .history-stat, .report-summary > div { padding: 5px 14px; }
+  .history-stat strong, .report-summary strong { font-size: 30px; }
+  .range-pills { flex-wrap: wrap; }
+  .range-pills button { padding: 8px 13px; }
+  .report-method summary { flex-wrap: wrap; }
+  .report-method summary > span { display: none; }
+  .settings-main { padding: 10px 20px 25px; }
+  .settings-workspace > .settings-sidebar { padding: 18px 20px; background: transparent; }
+  .settings-workspace .settings-content { padding: 22px; }
+  .settings-nav button { font-size: 14px; }
+  .modal-card { padding: 25px 20px; }
+  .auth-card { padding: 30px; }
+}
+@media (max-width: 500px) {
+  .aura-hero { grid-template-columns: 1fr; gap: 0; }
+  .aura-hero-copy { padding-top: 14px; }
+  .aura-hero h1 { font-size: 42px; margin-bottom: 22px; }
+  .aura-hero h1 > span { display: inline; margin-inline-start: .2em; }
+  .aura-orbit-scene { min-height: 290px; margin-top: 20px; }
+  .aura-orbit { width: 225px; height: 225px; }
+  .aura-orbit-core > strong { font-size: 60px; }
+  .aura-hero .ops-metric { padding-inline: 24px; }
+  .aura-hero .ops-metric strong { font-size: 34px; }
+  .orbit-label-0 { top: 0; } .orbit-label-1 { top: 45px; }
+  .orbit-label-2 { bottom: 30px; } .orbit-label-3 { bottom: 0; }
+  .main-shell { padding-inline: 16px; }
+  .ops-issue-list > button { grid-template-columns: 6px minmax(0,1fr) auto; gap: 9px; }
+  .ops-issue-list > button > svg { display: none; }
+  .ops-issue-list strong { font-size: 15px; }
+  .state-chip { font-size: 12px; }
+  .device-table th:nth-child(5), .device-table td:nth-child(5) { display: none; }
+  .configurable-noc .control-outage-card { grid-template-columns: 1fr; gap: 14px; }
+  .configurable-noc .outage-disconnected-at { display: flex; align-items: center; gap: 8px; }
+  .configurable-noc .category-grid { gap: 10px; }
+  .configurable-noc .category-card, .configurable-noc.density-compact .category-card { padding: 14px; }
+  .configurable-noc .category-card .availability-score { font-size: 13px !important; }
+  .configurable-noc .category-tags { gap: 5px; }
+  .health-strip time { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
