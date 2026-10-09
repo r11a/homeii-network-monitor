@@ -19,6 +19,7 @@ import {
   Network,
   Pin,
   Play,
+  Pause,
   Radar,
   RefreshCw,
   Route,
@@ -615,7 +616,7 @@ function Viewer({
       <section className="category-grid">
         {categories.map((item) => (
           <button
-            className={`category-card ${item.offline ? "has-alert" : ""} ${selected === item.category ? "selected" : ""}`}
+            className={`category-card category-state-${item.offline ? "offline" : item.unstable ? "unstable" : item.online ? "online" : "unknown"} ${item.offline ? "has-alert" : ""} ${selected === item.category ? "selected" : ""}`}
             style={{ "--category-color": item.color || "#5da9ff" }}
             key={item.category}
             onClick={() =>
@@ -1282,25 +1283,8 @@ function Devices({
           </div>
         </div>
         <div className="filter-pills">
-          {[
-            "all",
-            "online",
-            "offline",
-            "unstable",
-            "new",
-            "recent",
-            "critical",
-            "pinned",
-            "quarantined",
-          ].map((item) => (
-            <button
-              className={filter === item ? "active" : ""}
-              onClick={() => setFilter(item)}
-              key={item}
-            >
-              {t(item)}
-            </button>
-          ))}
+          {["all", "online", "offline", "unstable"].map(item => <button className={filter === item ? "active" : ""} onClick={() => setFilter(item)} key={item}>{t(item)}</button>)}
+          <details className="aura-extra-filters"><summary>{t("moreFilters")}{!["all", "online", "offline", "unstable"].includes(filter) && <b>{t(filter)}</b>}<ChevronDown /></summary><div>{["new", "recent", "critical", "pinned", "quarantined"].map(item => <button key={item} className={filter === item ? "active" : ""} onClick={event => { setFilter(item); event.currentTarget.closest("details").open = false; }}>{t(item)}</button>)}</div></details>
         </div>
       </section>
       {viewMode === "grid" ? (
@@ -3661,7 +3645,7 @@ function SettingsPage({
   const networksDirty = useRef(false);
   const [form, setFormState] = useState({
     language: settings.language || language,
-    theme: settings.theme || "granite",
+    theme: settings.theme === "navy" ? "granite" : settings.theme || "granite",
     auto_refresh: settings.auto_refresh || "30",
     history_retention_days: settings.history_retention_days || "30",
     alert_profile: settings.alert_profile || "normal",
@@ -3986,7 +3970,7 @@ function SettingsPage({
                 </button>
                 <button
                   className={
-                    ["granite", "dark"].includes(form.theme) ? "selected" : ""
+                    ["granite", "dark", "navy"].includes(form.theme) ? "selected" : ""
                   }
                   onClick={() => {
                     const next = { ...form, theme: "granite" };
@@ -3997,20 +3981,7 @@ function SettingsPage({
                 >
                   <MonitorUp />
                   <strong>{t("granite")}</strong>
-                  <span>Charcoal</span>
-                </button>
-                <button
-                  className={form.theme === "navy" ? "selected" : ""}
-                  onClick={() => {
-                    const next = { ...form, theme: "navy" };
-                    setForm(next);
-                    document.documentElement.dataset.theme = "navy";
-                    saveForm(next);
-                  }}
-                >
-                  <MonitorUp />
-                  <strong>{t("navy")}</strong>
-                  <span>Midnight</span>
+                  <span>Obsidian</span>
                 </button>
                 <button
                   className={form.theme === "light" ? "selected" : ""}
@@ -4391,6 +4362,7 @@ export default function App() {
     () => localStorage.getItem("homeii-alert-sound") !== "off",
   );
   const [offlineToast, setOfflineToast] = useState(null);
+  const [motionEnabled, setMotionEnabled] = useState(() => localStorage.getItem("homeii-motion") !== "off");
   const [displayTheme, setDisplayTheme] = useState(
     () => localStorage.getItem("homeii-display-theme") || "",
   );
@@ -4597,9 +4569,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "he" ? "rtl" : "ltr";
-    document.documentElement.dataset.theme =
-      displayTheme || data.settings?.theme || "granite";
-  }, [language, data.settings?.theme, displayTheme]);
+    const selectedTheme = displayTheme || data.settings?.theme || "granite";
+    document.documentElement.dataset.theme = selectedTheme === "navy" ? "granite" : selectedTheme;
+    document.documentElement.dataset.motion = motionEnabled ? "on" : "off";
+  }, [language, data.settings?.theme, displayTheme, motionEnabled]);
   if (auth.loading)
     return (
       <div className="loading-screen">
@@ -4715,7 +4688,7 @@ export default function App() {
             <button
               className="control-theme-button"
               onClick={() => {
-                const themes = ["granite", "navy", "light"];
+                const themes = ["granite", "light"];
                 const current = displayTheme || data.settings?.theme || "granite";
                 const next = themes[(themes.indexOf(current) + 1) % themes.length];
                 localStorage.setItem("homeii-display-theme", next);
@@ -4809,6 +4782,7 @@ export default function App() {
             </h2>
           </div>
           <div className="header-actions">
+            <button className="button subtle" aria-label={t(motionEnabled ? "pauseMotion" : "resumeMotion")} title={t(motionEnabled ? "pauseMotion" : "resumeMotion")} onClick={() => { const next = !motionEnabled; setMotionEnabled(next); localStorage.setItem("homeii-motion", next ? "on" : "off"); }}>{motionEnabled ? <Pause /> : <Play />}</button>
             <button className="button subtle" onClick={refresh} disabled={loading} aria-label={t("refresh")}>
               <RefreshCw className={loading ? "spin" : ""} />
               <span>{t("refresh")}</span>

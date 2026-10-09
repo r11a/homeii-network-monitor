@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.5.1 — Pearl Black
+
+- Replaced navy surfaces throughout the application with neutral black, layered charcoal and pearl edge lighting. Legacy navy preferences resolve to black.
+- Unified subtle status highlights: green for online, yellow for historical warnings, orange for unstable, red for offline and white for neutral/unknown information.
+- Added a live status-ring sweep, a quiet monitoring pulse and a persistent motion pause control; reduced-motion preferences are honored.
+- Reduced filter clutter with a secondary More menu and simplified compact control-center category tiles.
+- Preserved monitoring, consecutive manual device entry, user layouts and Home Assistant APIs; no database migration is required.
+
 ## 7.5.0 — Aura
 
 - Applied the Aura interface across overview, devices, control center, alerts, history, reports, tools, settings, account administration and login.

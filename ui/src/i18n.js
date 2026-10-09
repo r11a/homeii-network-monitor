@@ -1,5 +1,8 @@
 export const dictionaries = {
   he: {
+    pauseMotion: "השהיית תנועה",
+    resumeMotion: "הפעלת תנועה",
+    moreFilters: "עוד",
     auraHeadline: "הרשת שלך.",
     auraSubhead: "במבט אחד.",
     alwaysMonitored: "ניטור קבוע",
@@ -154,7 +157,7 @@ export const dictionaries = {
     categories: "קטגוריות",
     dark: "כהה",
     light: "בהירה",
-    granite: "גרניט",
+    granite: "שחור פנינה",
     navy: "כחול לילה",
     autoRefresh: "רענון אוטומטי",
     historyDays: "ימי שמירת היסטוריה",
@@ -552,6 +555,9 @@ export const dictionaries = {
     tag: "תגית",
   },
   en: {
+    pauseMotion: "Pause motion",
+    resumeMotion: "Enable motion",
+    moreFilters: "More",
     auraHeadline: "Your network.",
     auraSubhead: "At a glance.",
     alwaysMonitored: "Always monitored",
@@ -706,7 +712,7 @@ export const dictionaries = {
     categories: "Categories",
     dark: "Dark",
     light: "Light",
-    granite: "Granite",
+    granite: "Pearl black",
     navy: "Midnight blue",
     autoRefresh: "Auto refresh",
     historyDays: "History retention days",

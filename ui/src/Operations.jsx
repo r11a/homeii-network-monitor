@@ -37,11 +37,11 @@ export function OperationsOverview({ data, t, setRoute, health, children }) {
   const critical = issues.filter(d => d.critical).length;
   const groups = Object.values(devices.reduce((all, device) => {
     const key = device.category || '';
-    const group = all[key] ||= { name: key, total: 0, online: 0, offline: 0, other: 0 };
+    const group = all[key] ||= { name: key, total: 0, online: 0, offline: 0, unstable: 0, other: 0 };
     group.total++;
-    group[device.status === 'online' ? 'online' : device.status === 'offline' ? 'offline' : 'other']++;
+    group[device.status === 'online' ? 'online' : device.status === 'offline' ? 'offline' : device.status === 'unstable' ? 'unstable' : 'other']++;
     return all;
-  }, Object.create(null))).sort((a, b) => b.offline - a.offline || b.other - a.other || a.name.localeCompare(b.name));
+  }, Object.create(null))).sort((a, b) => b.offline - a.offline || b.unstable - a.unstable || b.other - a.other || a.name.localeCompare(b.name));
   const online = devices.filter(d => d.status === 'online').length;
   return <>
     <section className={`aura-hero snapshot-${health}`} aria-label={t('overview')}>
@@ -54,10 +54,10 @@ export function OperationsOverview({ data, t, setRoute, health, children }) {
         {health !== 'live' && <span className="aura-snapshot-note">{t('lastKnownSnapshot')}</span>}
       </div>
       <div className="aura-orbit-scene">
-        <button className={`aura-orbit ${devices.length ? '' : 'aura-orbit-empty'}`} aria-label={`${devices.length} ${t('monitored')}`} onClick={() => setRoute('devices')} style={{ '--online-angle': `${devices.length ? online / devices.length * 360 : 0}deg`, '--offline-angle': `${devices.length ? (online + devices.filter(d => d.status === 'offline').length) / devices.length * 360 : 0}deg` }}>
-          <span className="aura-orbit-core"><Server /><strong>{devices.length}</strong><span>{t('monitored')}</span></span>
+        <button className={`aura-orbit ${devices.length ? '' : 'aura-orbit-empty'}`} aria-label={`${devices.length} ${t('monitored')}`} onClick={() => setRoute('devices')} style={{ '--online-angle': `${devices.length ? online / devices.length * 360 : 0}deg`, '--offline-angle': `${devices.length ? (online + devices.filter(d => d.status === 'offline').length) / devices.length * 360 : 0}deg`, '--unstable-angle': `${devices.length ? devices.filter(d => ['online', 'offline', 'unstable'].includes(d.status)).length / devices.length * 360 : 0}deg` }}>
+          <span className="aura-orbit-sweep" aria-hidden="true" /><span className="aura-orbit-core"><Server /><strong>{devices.length}</strong><span>{t('monitored')}</span></span>
         </button>
-        {groups.slice(0, 4).map((group, index) => <button className={`aura-orbit-label orbit-label-${index}`} key={group.name} onClick={() => setRoute(`devices/category:${encodeURIComponent(group.name)}`)}><span className={`status-dot ${group.offline ? 'offline' : group.other ? 'unstable' : 'online'}`} /><span><strong>{group.name || t('uncategorized')}</strong><small>{group.offline ? `${group.offline} ${t('offline')}` : `${group.online} / ${group.total}`}</small></span></button>)}
+        {groups.slice(0, 4).map((group, index) => <button className={`aura-orbit-label orbit-label-${index}`} key={group.name} onClick={() => setRoute(`devices/category:${encodeURIComponent(group.name)}`)}><span className={`status-dot ${group.offline ? 'offline' : group.unstable ? 'unstable' : group.other ? 'unknown' : 'online'}`} /><span><strong>{group.name || t('uncategorized')}</strong><small>{group.offline ? `${group.offline} ${t('offline')}` : `${group.online} / ${group.total}`}</small></span></button>)}
       </div>
     </section>
     <div className="ops-grid">
