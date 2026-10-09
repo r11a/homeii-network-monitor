@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.5.4 — Vivid Contrast
+
+- Strengthened lime, yellow, orange, red and burgundy status accents against deeper neutral black.
+- Increased status side rails to three pixels and colored overview metric icons by their actual state.
+- Brightened secondary text and improved device-preview name/metadata typography while preserving compact layouts, monitoring behavior and the original logo.
+
 ## 7.5.3 — Network Workspace
 
 - Replaced the large overview orbit with a compact dashboard inspired by the supplied reference: three metrics, availability graph, leading incident and a three-device preview.

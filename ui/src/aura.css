@@ -1,8 +1,8 @@
 /* Aura: shared product surfaces and layout. Existing behavior and theme preferences stay intact. */
  :root, [data-theme="granite"], [data-theme="dark"], [data-theme="navy"] {
-  --bg:#060606; --surface:#111111; --surface-2:#1b1b1b; --surface-3:#282828;
-  --text:#f7f7f7; --muted:#c3c3c3; --line:#ffffff26; --line-soft:#ffffff14; --line-strong:#ffffff4a;
-  --green:#b4ff38; --amber:#ffdc55; --orange:#ff9f48; --red:#ff6572; --burgundy:#ca4d79; --gray:#929296; --white:#f2f2f2; --chart-accent:#2782ff;
+  --bg:#030303; --surface:#111111; --surface-2:#1b1b1b; --surface-3:#282828;
+  --text:#f7f7f7; --muted:#dddddd; --line:#ffffff26; --line-soft:#ffffff14; --line-strong:#ffffff4a;
+  --green:#bcff2f; --amber:#ffe04d; --orange:#ffa136; --red:#ff5169; --burgundy:#d9487a; --gray:#929296; --white:#f2f2f2; --chart-accent:#2782ff;
   --blue:var(--white); --cyan:var(--white); --accent:#deded9;
   --chart-grid:#ffffff0b; --chart-axis:#a9a9a6; --chart-tooltip:#1b1b1b;
   --aura-float:linear-gradient(145deg,#202020,#101010 75%);
@@ -445,7 +445,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 }
 /* Neutral black with pearl edge light; legacy blue surfaces cannot bleed through. */
 html:not([data-theme="light"]) { --aura-float: linear-gradient(145deg, #101010, #090909 75%); --aura-shadow: 0 18px 38px #000c, 0 5px 12px #0009, inset 0 1px #ffffff0c; }
-html:not([data-theme="light"]) body { background: radial-gradient(ellipse at 15% 0, #ffffff05, transparent 45%), #060606; }
+html:not([data-theme="light"]) body { background: radial-gradient(ellipse at 15% 0, #ffffff05, transparent 45%), #030303; }
 html:not([data-theme="light"]) :is(.device-editor, .device-editor-hero, .device-insight-strip, .device-editor-icon, .device-editor-status, .device-mini-chart, .settings-surface, .diagnostic-result, .terminal-head, .terminal-panel, .tool-selector button, .transfer-card, .user-list article, .label-editor, .label-library article, .control-account-actions, .control-theme-button, .control-logout-button, .noc-device, .noc-journal-item, .noc-health-card, .noc-alert-card, .event-tile, .category-health-chart, .category-ranking) { background: var(--aura-float); border-color: var(--line); box-shadow: var(--aura-shadow); }
 html:not([data-theme="light"]) :is(.device-editor-metrics, .device-editor-toolbar, .device-editor input, .device-editor select, .device-editor textarea, .settings-nav button, .settings-exit, .mini-toggle, .settings-version, .toggle-row, .tool-selector) { background-color: #141414; border-color: var(--line); }
 html:not([data-theme="light"]) :is(.icon-box, .category-icon, .device-glyph, .user-avatar, .settings-title > svg, .tool-selector button.active, .category-card .availability-score, .rank-list em) { color: #ddddda; background: #ffffff05; border-color: #ffffff12; }
@@ -508,9 +508,9 @@ html:not([data-theme="light"]) :is(.premium-device-card, .configurable-noc .cate
 }
 html:not([data-theme="light"]) .aura-orbit-label { position:absolute; }
 html:not([data-theme="light"]) :is(.premium-device-card, .configurable-noc .category-card, .configurable-noc .control-outage-card, .aura-orbit-label, .ops-issue-list > button, .personal-monitor, .noc-health-card, .noc-alert-card, .incident-card)::after {
-  content:''; display:block; position:absolute; inset-block:22%; inset-inline-start:0; inset-inline-end:auto; width:2px; height:auto;
+  content:''; display:block; position:absolute; inset-block:22%; inset-inline-start:0; inset-inline-end:auto; width:3px; height:auto;
   border-radius:2px; background:var(--state-color,var(--white)); opacity:.85; pointer-events:none;
-  box-shadow:0 0 7px color-mix(in srgb,var(--state-color,var(--white)) 45%,transparent);
+  box-shadow:0 0 7px color-mix(in srgb,var(--state-color,var(--white)) 55%,transparent);
 }
 html:not([data-theme="light"]) :is(.premium-device-card, .category-card, .control-outage-card, .aura-orbit-label, .ops-issue-list > button, .personal-monitor, .noc-health-card, .noc-alert-card, .incident-card):hover {
   border-color:#ffffff1d; box-shadow:0 22px 46px #000e,0 7px 16px #000b,inset 0 1px #ffffff14;
@@ -544,9 +544,9 @@ html:not([data-theme="light"]) .configurable-noc .aura-priority-incident { anima
 .overview-command-heading > div > span { color:var(--muted); font-size:14px; }
 .overview-metric-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
 .overview-metric { position:relative; display:flex; flex-direction:column; align-items:stretch; min-width:0; text-align:start; padding:16px 20px; gap:5px; border:1px solid var(--line-soft); border-radius:16px; background:var(--aura-float); box-shadow:var(--aura-shadow); }
-.overview-metric::after, .overview-device-row::after { content:''; position:absolute; inset-block:22%; inset-inline-start:0; width:2px; border-radius:2px; background:var(--state-color,var(--white)); box-shadow:0 0 7px color-mix(in srgb,var(--state-color,var(--white)) 45%,transparent); }
+.overview-metric::after, .overview-device-row::after { content:''; position:absolute; inset-block:22%; inset-inline-start:0; width:3px; border-radius:2px; background:var(--state-color,var(--white)); box-shadow:0 0 7px color-mix(in srgb,var(--state-color,var(--white)) 45%,transparent); }
 .overview-metric > span { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:15px; color:var(--text); }
-.overview-metric svg { width:18px; height:18px; color:var(--muted); }
+.overview-metric svg { width:20px; height:20px; color:var(--state-color,var(--white)); filter:drop-shadow(0 0 6px color-mix(in srgb,var(--state-color,var(--white)) 30%,transparent)); }
 .overview-command .overview-metric strong { font-size:46px; font-weight:550; line-height:1.1; letter-spacing:-.045em; color:var(--text); }
 .overview-metric small { color:var(--muted); font-size:13px; }
 .overview-metric::after, .overview-device-row::after { box-shadow:0 0 10px color-mix(in srgb,var(--state-color,var(--white)) 65%,transparent); }
@@ -576,9 +576,9 @@ html:not([data-theme="light"]) .overview-analysis .ops-issue-list > button { min
 .overview-device-row:last-child { border-bottom:0; }
 .overview-device-row:hover { background:#ffffff04; }
 .overview-device-row > svg { width:18px; height:18px; color:var(--muted); }
-.overview-device-row > span > strong { display:block; line-height:1.3; font-size:15px; font-weight:500; }
+.overview-device-row > span > strong { display:block; line-height:1.3; font-size:16px; font-weight:550; }
 .overview-device-row > span { line-height:1.3; }
-.overview-device-row small { color:var(--muted); font-size:12px; line-height:1.3; }
+.overview-device-row small { color:var(--muted); font-size:13px; line-height:1.3; }
 .overview-device-row bdi { color:var(--muted); font-size:13px; }
 .overview-device-state { font-size:13px; }
 .overview-device-row.state-offline.critical { --state-color:var(--burgundy); }
