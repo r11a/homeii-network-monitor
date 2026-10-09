@@ -400,12 +400,12 @@ function Dashboard({ data, t, setRoute, language, currentUser, health }) {
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
-                <defs><linearGradient id="overviewAvailability" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--green)" stopOpacity=".32"/><stop offset="1" stopColor="var(--green)" stopOpacity="0"/></linearGradient></defs>
+                <defs><linearGradient id="overviewAvailability" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--chart-accent)" stopOpacity=".5"/><stop offset="1" stopColor="var(--chart-accent)" stopOpacity="0"/></linearGradient></defs>
                 <CartesianGrid stroke="var(--chart-grid)" vertical={false}/>
                 <XAxis dataKey="time" stroke="var(--chart-axis)" tickLine={false} axisLine={false} minTickGap={28}/>
                 <YAxis domain={[0, 100]} hide/>
                 <Tooltip contentStyle={{ background: "var(--chart-tooltip)", border: "1px solid var(--line)", borderRadius: 12 }}/>
-                <Area type="monotone" dataKey="availability" name={t("availabilityEstimate")} stroke="var(--green)" strokeWidth={3} fill="url(#overviewAvailability)"/>
+                <Area type="monotone" dataKey="availability" name={t("availabilityEstimate")} stroke="var(--chart-accent)" strokeWidth={3} fill="url(#overviewAvailability)"/>
               </AreaChart>
             </ResponsiveContainer>
           </div>

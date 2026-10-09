@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.5.3 — Network Workspace
+
+- Replaced the large overview orbit with a compact dashboard inspired by the supplied reference: three metrics, availability graph, leading incident and a three-device preview.
+- Added narrow persistent side navigation on desktop while preserving mobile navigation, permissions and the original logo.
+- Strengthened lime status rails, electric-blue graph/navigation accents and readable white typography on black surfaces.
+- Kept category summaries and personal controls available on demand; preserved status/category/device drill-down and consecutive device entry.
+- Displayed historical availability only when measured evidence exists; no invented speed or health score. Added regressions for absent/inferred history and measured zero availability.
+
 ## 7.5.2 — Floating Black
 
 - Restored the original HOMEii logo asset and brand subtitle.

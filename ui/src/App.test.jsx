@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { OperationsOverview } from './Operations';
 import { api } from './api';
 import { translator } from './i18n';
 
@@ -208,5 +209,18 @@ describe('secondary forms and navigation', () => {
     await user.click(screen.getByRole('button', { name: t('settings'), exact: true }));
     await screen.findByRole('heading', { name: t('settings'), exact: true });
     expect(document.querySelector('.page-recovery')).toBeNull();
+  });
+});
+
+
+describe('overview availability evidence', () => {
+  it.each([
+    [[], 100, '—'],
+    [[{ availability_pct: 100, inferred: true }], 100, '—'],
+    [[{ availability_pct: 100, inferred: false }], 100, '100.0%'],
+    [[{ availability_pct: 0, inferred: false }], 0, '0.0%'],
+  ])('shows measured availability without inventing history', (series, availability, expected) => {
+    render(<OperationsOverview data={{ devices: [], viewer: { summary: { series, availability_24h: availability } } }} t={t} setRoute={vi.fn()} health="live" />);
+    expect(document.querySelector('.metric-availability strong').textContent).toBe(expected);
   });
 });

@@ -43,35 +43,31 @@ export function OperationsOverview({ data, t, setRoute, health, children }) {
     return all;
   }, Object.create(null))).sort((a, b) => b.offline - a.offline || b.unstable - a.unstable || b.other - a.other || a.name.localeCompare(b.name));
   const online = devices.filter(d => d.status === 'online').length;
+  const offline = devices.filter(device => device.status === 'offline').length;
+  const unstable = devices.filter(device => device.status === 'unstable').length;
+  const summary = data.viewer?.summary;
+  const availability = summary?.series?.some(point => !point.inferred && point.availability_pct != null) ? summary.availability_24h : null;
+  const preview = [...devices].sort((a, b) => Number(b.status === 'offline') - Number(a.status === 'offline') || Number(Boolean(b.critical)) - Number(Boolean(a.critical)) || (a.display_name || a.ip).localeCompare(b.display_name || b.ip)).slice(0, 3);
   return <>
-    <section className={`aura-hero snapshot-${health}`} aria-label={t('overview')}>
-      <div className="aura-hero-copy">
-        <h1>{t('auraHeadline')}<span>{t('auraSubhead')}</span></h1>
-        <section className="ops-metrics" aria-label={t('status')}>
-          {[[CheckCircle2, 'online', online, 'online'], [WifiOff, 'offline', devices.filter(d => d.status === 'offline').length, 'offline'], [Activity, 'unstable', devices.filter(d => d.status === 'unstable').length, 'unstable']].map(([Icon, key, value, filter]) => <button key={key} className={`ops-metric metric-${key}`} onClick={() => setRoute(`devices/${filter}`)}><strong>{value}</strong><span><Icon />{t(key)}</span></button>)}
-        </section>
-        <button className="button aura-hero-action" onClick={() => setRoute('viewer')}>{t('viewer')} <ArrowUpRight /></button>
-        {health !== 'live' && <span className="aura-snapshot-note">{t('lastKnownSnapshot')}</span>}
-      </div>
-      <div className="aura-orbit-scene">
-        <button className={`aura-orbit ${devices.length ? '' : 'aura-orbit-empty'}`} aria-label={`${devices.length} ${t('monitored')}`} onClick={() => setRoute('devices')} style={{ '--online-angle': `${devices.length ? online / devices.length * 360 : 0}deg`, '--offline-angle': `${devices.length ? (online + devices.filter(d => d.status === 'offline').length) / devices.length * 360 : 0}deg`, '--unstable-angle': `${devices.length ? devices.filter(d => ['online', 'offline', 'unstable'].includes(d.status)).length / devices.length * 360 : 0}deg` }}>
-          <span className="aura-orbit-sweep" aria-hidden="true" /><span className="aura-orbit-core"><Server /><strong>{devices.length}</strong><span>{t('monitored')}</span></span>
-        </button>
-        {groups.slice(0, 4).map((group, index) => <button className={`aura-orbit-label orbit-label-${index} state-${group.offline ? 'offline' : group.unstable ? 'unstable' : group.other ? 'unknown' : 'online'}`} key={group.name} onClick={() => setRoute(`devices/category:${encodeURIComponent(group.name)}`)}><span className={`status-dot ${group.offline ? 'offline' : group.unstable ? 'unstable' : group.other ? 'unknown' : 'online'}`} /><span><strong>{group.name || t('uncategorized')}</strong><small>{group.offline ? `${group.offline} ${t('offline')}` : `${group.online} / ${group.total}`}</small></span></button>)}
-      </div>
+    <section className={`aura-hero overview-command snapshot-${health}`} aria-label={t('overview')}>
+      <div className="overview-command-heading"><div><h1>{t('overview')}</h1><span>{devices.length} {t('devices')} · {t('last24h')}</span></div><button className="button subtle" onClick={() => setRoute('viewer')}>{t('viewer')}<ArrowUpRight /></button></div>
+      <section className="overview-metric-row" aria-label={t('status')}>
+        <button className={`overview-metric metric-availability state-${availability == null ? 'unknown' : availability >= 99 ? 'online' : availability >= 60 ? 'warning' : 'offline'}`} onClick={() => setRoute('history')}><span>{t('availabilityEstimate')}<ShieldCheck /></span><strong>{percent(availability)}</strong><small>{t('last24h')}</small></button>
+        <button className="overview-metric metric-online state-online" onClick={() => setRoute('devices/online')}><span>{t('online')}<Server /></span><strong>{online}</strong><small>{online} / {devices.length} {t('devices')}</small></button>
+        <button className={`overview-metric metric-offline state-${offline ? 'offline' : unstable ? 'unstable' : 'online'}`} onClick={() => setRoute(offline ? 'devices/offline' : unstable ? 'devices/unstable' : 'devices/offline')}><span>{t('offline')}<WifiOff /></span><strong>{offline}</strong><small>{unstable} {t('unstable')} · {critical} {t('critical')}</small></button>
+      </section>
+      {health !== 'live' && <span className="aura-snapshot-note">{t('lastKnownSnapshot')}</span>}
     </section>
-    <div className="ops-grid">
-      <section className="panel ops-incidents"><div className="section-heading"><h2>{t('priorityQueue')}</h2><span className="count-badge">{critical > 0 ? `${critical} ${t('critical')}` : issues.length}</span></div>
-        <div className="ops-issue-list">{issues.slice(0, 4).map(device => <button className={`state-${device.status} ${device.critical ? "critical" : ""}`} key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}><span className={`status-dot ${device.status}`} /><span><strong>{device.display_name || device.name || device.ip}</strong><small><bdi>{device.ip}</bdi> · {device.category || t('uncategorized')}</small></span><span className={`state-chip state-${device.status}`}>{device.critical && <AlertTriangle />}{t(device.status)}</span><ArrowUpRight /></button>)}</div>
-        {!issues.length && <div className="ops-empty"><CheckCircle2 /><strong>{t(devices.length && health === 'live' ? 'noActiveIssues' : 'noMeasurements')}</strong></div>}
-        {issues.length > 4 && <button className="text-action" onClick={() => setRoute('devices')}>{t('viewAll')} ({issues.length}) <ArrowUpRight /></button>}
-      </section>
+    <div className="ops-grid overview-analysis">
       {children}
-    </div>
-      <section className="panel ops-categories aura-category-summary"><div className="section-heading"><h2>{t('categories')}</h2><Activity /></div>
-        <div className="ops-category-list">{groups.map(group => <button key={group.name} onClick={() => setRoute(`devices/category:${encodeURIComponent(group.name)}`)}><span><strong>{group.name || t('uncategorized')}</strong><small><bdi dir="ltr">{group.online} / {group.total}</bdi> {t('online')}</small></span><div className="segmented-meter" aria-label={`${group.online} ${t('online')}, ${group.offline} ${t('offline')}`}><i style={{ flex: group.online }} /><i style={{ flex: group.offline }} /><i style={{ flex: group.other }} /></div><b className={group.offline ? 'danger-text' : ''}>{group.offline ? `${group.offline} ${t('offline')}` : group.other ? `${group.other} ${t('requiresAttention')}` : t('online')}</b></button>)}</div>
-        {!groups.length && <p className="ops-empty">{t('noMeasurements')}</p>}
+      <section className="panel ops-incidents"><div className="section-heading"><h2>{t('priorityQueue')}</h2><span className="count-badge">{critical > 0 ? `${critical} ${t('critical')}` : issues.length}</span></div>
+        <div className="ops-issue-list">{issues.slice(0, 1).map(device => <button className={`state-${device.status} ${device.critical ? 'critical' : ''}`} key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}><span><strong>{device.display_name || device.name || device.ip}</strong><small><bdi>{device.ip}</bdi> · {device.category || t('uncategorized')}</small></span><span className={`state-chip state-${device.status}`}>{device.critical && <AlertTriangle />}{t(device.status)}</span><ArrowUpRight /></button>)}</div>
+        {!issues.length && <div className="ops-empty"><CheckCircle2 /><strong>{t(devices.length && health === 'live' ? 'noActiveIssues' : 'noMeasurements')}</strong></div>}
+        {issues.length > 1 && <button className="text-action" onClick={() => setRoute('devices')}>{t('viewAll')} ({issues.length}) <ArrowUpRight /></button>}
       </section>
+    </div>
+    <section className="panel overview-inventory"><div className="section-heading"><h2>{t('devices')}</h2><button className="text-action" onClick={() => setRoute('devices')}>{t('viewAll')}<ArrowUpRight /></button></div><div className="overview-inventory-rows">{preview.map(device => <button className={`overview-device-row state-${device.status} ${device.critical ? 'critical' : ''}`} key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}><Server /><span><strong>{device.display_name || device.name || device.ip}</strong><small>{device.category || t('uncategorized')}</small></span><bdi>{device.ip}</bdi><span className="overview-device-state">{t(device.status)}</span><small>{t(device.approved || device.manual ? 'alwaysMonitored' : 'discoveredDevice')}</small><ArrowUpRight /></button>)}</div>{!devices.length && <p className="ops-empty">{t('noMeasurements')}</p>}</section>
+    <details className="panel ops-categories aura-category-summary"><summary>{t('categories')}<Activity /></summary><div className="ops-category-list">{groups.map(group => <button key={group.name} onClick={() => setRoute(`devices/category:${encodeURIComponent(group.name)}`)}><span><strong>{group.name || t('uncategorized')}</strong><small><bdi dir="ltr">{group.online} / {group.total}</bdi> {t('online')}</small></span><div className="segmented-meter" aria-label={`${group.online} ${t('online')}, ${group.offline} ${t('offline')}`}><i style={{ flex: group.online }} /><i style={{ flex: group.offline }} /><i style={{ flex: group.unstable + group.other }} /></div><b>{group.offline ? `${group.offline} ${t('offline')}` : group.unstable + group.other ? `${group.unstable + group.other} ${t('requiresAttention')}` : t('online')}</b></button>)}</div>{!groups.length && <p className="ops-empty">{t('noMeasurements')}</p>}</details>
   </>;
 }
 
