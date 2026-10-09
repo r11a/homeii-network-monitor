@@ -1,5 +1,14 @@
 # Changelog
 
+## 7.5.2 — Floating Black
+
+- Restored the original HOMEii logo asset and brand subtitle.
+
+- Made device, category, outage, personal-monitor and alert tiles neutral black with deeper shadows and a subtle edge light.
+- Kept tile typography white; replaced colored surfaces, status badges and tinted score rings with a single fine glowing side rail.
+- Unified rails: green online, yellow warning/action pending, orange unstable, gray unknown/paused/resolved, red offline/error, burgundy critical offline/alerts and white neutral/new.
+- Preserved state labels, history tooltips, motion controls and Home Assistant compatibility.
+
 ## 7.5.1 — Pearl Black
 
 - Replaced navy surfaces throughout the application with neutral black, layered charcoal and pearl edge lighting. Legacy navy preferences resolve to black.

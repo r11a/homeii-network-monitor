@@ -170,12 +170,12 @@ function useRoute() {
 function Logo() {
   return (
     <div className="brand-lockup">
-      <div className="aura-brand-mark" aria-hidden="true"><i /><i /><i /></div>
+      <div className="brand-mark"><img src="./icons/homeii-192.png" alt="" /></div>
       <div>
         <strong>
           HOME<span>ii</span>
         </strong>
-        <small>NETWORK OS</small>
+        <small>NETWORK INTELLIGENCE</small>
       </div>
     </div>
   );
@@ -428,7 +428,7 @@ function Dashboard({ data, t, setRoute, language, currentUser, health }) {
           <span>{personalDevices.length} {t("devices")}</span>
         </div>
         <div className={`personal-monitor-grid ${preferences.compact ? "compact" : ""}`}>
-          {personalDevices.map(device => <button className={`personal-monitor state-${device.status}`} key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}>
+          {personalDevices.map(device => <button className={`personal-monitor state-${device.status} ${device.critical ? "critical" : ""} ${deviceMonitoringKey(device) === "monitorPaused" ? "state-paused" : ""}`} key={device.ip} onClick={() => setRoute(`devices/${encodeURIComponent(device.ip)}`)}>
             <div><StatusDot status={device.status}/><strong>{device.display_name || device.name || device.ip}</strong><span>{t(device.status)}</span></div>
             <small><bdi>{device.ip}</bdi> · {device.category || t("uncategorized")}</small>
             {!preferences.compact && <AvailabilityStrip series={device.availability_series || []} status={device.status} t={t}/>}
@@ -580,7 +580,7 @@ function Viewer({
     }, 1200);
   };
   return (
-    <div className={`page-stack noc-page configurable-noc density-${preferences.density}`}>
+    <div className={`page-stack noc-page configurable-noc snapshot-${health} density-${preferences.density}`}>
       <div className="page-heading noc-heading">
         <div>
           <h1>{t("viewer")}</h1>
@@ -616,7 +616,7 @@ function Viewer({
       <section className="category-grid">
         {categories.map((item) => (
           <button
-            className={`category-card category-state-${item.offline ? "offline" : item.unstable ? "unstable" : item.online ? "online" : "unknown"} ${item.offline ? "has-alert" : ""} ${selected === item.category ? "selected" : ""}`}
+            className={`category-card ${offlineDevices.some(device => device.critical && (device.category || "") === (item.category || "")) ? "category-critical" : ""} category-state-${item.offline ? "offline" : item.unstable ? "unstable" : item.online ? "online" : "unknown"} ${item.offline ? "has-alert" : ""} ${selected === item.category ? "selected" : ""}`}
             style={{ "--category-color": item.color || "#5da9ff" }}
             key={item.category}
             onClick={() =>
@@ -693,7 +693,7 @@ function Viewer({
         </article>      </section>
       {preferences.showSummary && <section className="noc-command-grid">
         <article
-          className={`noc-health-card ${problemDevices.some((device) => device.status === "offline") ? "danger" : "healthy"}`}
+          className={`noc-health-card state-${problemDevices.some(device => device.status === "offline") ? "offline" : problemDevices.some(device => device.status === "unstable") ? "unstable" : problemDevices.some(device => device.status === "unknown") ? "unknown" : "online"} ${problemDevices.some((device) => device.status === "offline") ? "danger" : "healthy"}`}
         >
           <div>
             <span className="eyebrow">{t("fleetHealth")}</span>
@@ -1293,7 +1293,7 @@ function Devices({
             const health = device.availability_history_samples > 0 ? device.availability_24h : null;
             return (
               <article
-                className={`device-card premium-device-card state-${device.status}`}
+                className={`device-card premium-device-card state-${device.status} ${device.critical ? "critical" : ""} ${deviceMonitoringKey(device) === "monitorPaused" ? "state-paused" : ""}`}
                 key={device.ip}
                 onClick={() => {
                   setEditing({ ...device });
