@@ -2330,6 +2330,8 @@ def scan_candidate_ip(ip: str, source: str = "ping") -> None:
 
 
 def run_full_scan(mode: str = "manual") -> None:
+    if zabbix_enabled():
+        return
     if scan_state["running"]:
         return
     scan_state.update({"running": True, "last_started": now_ts(), "last_mode": mode, "last_error": ""})
@@ -2662,6 +2664,8 @@ def reconcile_network_inventory() -> dict[str, int]:
 
 
 def run_monitor_pass(critical_only: bool = False) -> None:
+    if zabbix_enabled():
+        return
     # Scheduled passes, watchdog kicks and manual scans share the same guard.
     # Concurrent samples must not advance failure thresholds twice.
     guard = _monitor_pass_locks[bool(critical_only)]
@@ -2891,6 +2895,9 @@ def run_category_check(category: str) -> None:
 
 def rescan_loop() -> None:
     while not _shutdown_event.is_set():
+        if zabbix_enabled():
+            _shutdown_event.wait(30)
+            continue
         try:
             set_worker_status("rescan", last_started=now_ts(), interval=30)
             prune_old_history()
@@ -3887,7 +3894,13 @@ def start_worker(name: str, target, *args) -> None:
         thread.start()
 
 
+def zabbix_enabled() -> bool:
+    return os.environ.get('HOMEII_ENGINE') == 'zabbix' or get_setting('monitoring_engine', 'legacy') == 'zabbix'
+
+
 def start_background_workers() -> None:
+    if zabbix_enabled():
+        return
     _shutdown_event.clear()
     start_worker("monitor", monitor_loop)
     start_worker("critical_monitor", critical_monitor_loop)
@@ -3903,6 +3916,8 @@ def stop_background_workers() -> None:
 
 
 def ensure_background_workers() -> None:
+    if zabbix_enabled():
+        return
     start_background_workers()
     now = now_ts()
     monitor = worker_state.get("monitor", {})

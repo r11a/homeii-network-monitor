@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/heebo'
 import App from './App'
+import ZabbixWorkspace from './ZabbixWorkspace'
 import './styles.css'
 import './accessibility.css'
 import './operations.css'
@@ -13,6 +14,6 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    {new URLSearchParams(location.search).has('legacy') ? <App /> : <ZabbixWorkspace />}
   </React.StrictMode>,
 )

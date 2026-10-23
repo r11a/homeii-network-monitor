@@ -2571,7 +2571,7 @@ function Tools({ data, t, initialTarget = "" }) {
   );
 }
 
-function AuthScreen({ setupRequired, onAuthenticated }) {
+export function AuthScreen({ setupRequired, onAuthenticated }) {
   const [form, setForm] = useState({
     username: "",
     password: "",

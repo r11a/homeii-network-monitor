@@ -1,7 +1,7 @@
-name: "HOMEii Network Monitor"
-slug: "homeii-network-monitor"
-description: "SQLite-based network monitor with configurable discovery, stable network assignment and vendor detection"
-version: "7.5.4"
+name: "HOMEii Network Monitor Beta"
+slug: "homeii-network-monitor-beta"
+description: "Local network operations with an automatically managed Zabbix engine and offline operation"
+version: "8.0.0-beta.1"
 build: .
 startup: services
 boot: auto
@@ -11,15 +11,17 @@ arch:
   - amd64
   - aarch64
 ports:
-  8383/tcp: 8383
-  8443/tcp: 8443
-webui: "http://[HOST]:[PORT:8383]"
+  8384/tcp: 8384
+  8444/tcp: 8444
+webui: "http://[HOST]:[PORT:8384]"
 ingress: true
-ingress_port: 8383
+ingress_port: 8384
+backup: cold
+timeout: 120
 map:
   - share:rw
   - ssl:ro
-watchdog: "http://[HOST]:[PORT:8383]/api/health/live"
+watchdog: "http://[HOST]:[PORT:8384]/api/health/live"
 panel_icon: mdi:shield-check-outline
 options:
   networks:

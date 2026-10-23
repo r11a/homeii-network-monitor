@@ -2,7 +2,7 @@ name: Validate
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/zabbix-local-8]
   pull_request:
 
 jobs:
@@ -21,11 +21,11 @@ jobs:
       - name: Compile Python
         run: python -m compileall app custom_components
       - name: Install backend dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements.txt
+        run: python -m pip install --disable-pip-version-check -r requirements.txt pytest httpx
       - name: Run backend reliability tests
         env:
           HOMEII_DATA_DIR: ${{ runner.temp }}/homeii
-        run: python -m unittest discover -s tests -v
+        run: python -m pytest tests -q
       - name: Build React UI
         working-directory: ui
         run: npm ci --no-audit --no-fund && npm run build
