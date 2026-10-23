@@ -29,6 +29,7 @@
 - [ ] Full suites, fresh independent review, fixes, commit/push branch and PR; attach PR. Keep main unchanged until verified integration.
 
 ## Execution record
+- Final review fixes: ingress identity is accepted only from the Supervisor peer, with proxy-header rewriting disabled; deterministic engine host names enforce concurrent create uniqueness; open dialogs use the latest inventory and refresh history; HA token support, open-event normalization and stable entity IDs added. Ingress/duplicate/dialog regressions observed RED then GREEN. Local suite: 60 backend + 52 UI; production build passed. HA runtime integration still requires on-site validation.
 - Ruling: user requested a testable single add-on; replace Compose with bundled Linux services. Publish separate beta slug and port on the feature branch, leaving main and existing data untouched. Native HA installation/cards and full IT tooling remain preview limitations documented in DOCS.md.
 - Current local validation: 59 backend tests, 51 UI tests and production build passed before final review. Linux CI caught missing PCRE selection; explicitly selected PCRE2.
 - Final review: fix untrusted ingress headers, live dialog state, concurrent host uniqueness, and authenticated HA payload/client compatibility. Regression tests reproduce ingress and concurrency issues and the stale dialog before fixes.

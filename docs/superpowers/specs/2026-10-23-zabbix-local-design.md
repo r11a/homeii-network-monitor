@@ -1,5 +1,7 @@
 # HOMEii 8 — local Zabbix workspace
 
+Latest ruling: the user requested one automatic add-on and a testable preview. The deployment below is superseded by a single image bundling Zabbix/PostgreSQL with HOMEii, on separate beta slug/port 8384. Advanced IT tooling, automatic HA card installation, offline installer and load qualification remain explicitly deferred in DOCS.md. The existing installation remains on main with its own data.
+
 User-approved direction: preserve and back up 7.5.4, create a Zabbix-based version, publish to the repository. All routine operation uses clear forms, no JSON/YAML. Local operation must not depend on Internet. Target thousands of devices; capacity remains a measured deployment property, not a release claim.
 
 Approach: integrate a separately deployed Zabbix 7.0 LTS engine via its API; retain the existing application and database as a reversible legacy workspace. Rejected rebuilding an enterprise collector from scratch; LibreNMS remains an alternative but is not another simultaneous authority. The new workspace owns presentation; Zabbix owns hosts, measurements and incidents. Stable Zabbix host IDs are never replaced by IP identifiers. Discovery proposals require explicit approval; no blind auto-add actions.

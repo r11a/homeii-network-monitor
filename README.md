@@ -1,3 +1,5 @@
+> **HOMEii 8 beta:** This branch contains the separate Zabbix preview add-on. [Installation and test checklist](DOCS.md). [Add the beta repository to Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fr11a%2Fhomeii-network-monitor%23feature%2Fzabbix-local-8). Existing 7.x features described below are not all implemented in the new workspace; see the preview limitations before testing.
+
 <p align="center">
   <img src="docs/brand/homeii-logo-premium.png" alt="HOMEii Network Monitor logo" width="210">
 </p>

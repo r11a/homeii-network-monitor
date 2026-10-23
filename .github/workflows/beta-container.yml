@@ -15,8 +15,15 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Build complete add-on
-        run: docker build -t homeii-beta .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: homeii-beta
+          cache-from: type=gha,scope=homeii-${{ matrix.runner }}
+          cache-to: type=gha,mode=max,scope=homeii-${{ matrix.runner }}
       - name: Boot without external network
         run: docker run -d --network none --name homeii-beta -v homeii-test:/data homeii-beta
       - name: Exercise real API and measurements offline
