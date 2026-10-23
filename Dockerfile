@@ -17,7 +17,7 @@ WORKDIR /build
 RUN curl -fsSL "https://cdn.zabbix.com/zabbix/sources/stable/7.0/zabbix-${ZABBIX_VERSION}.tar.gz" -o zabbix-source.tar.gz \
     && echo "${ZABBIX_SHA256}  zabbix-source.tar.gz" | sha256sum -c - \
     && tar -xzf zabbix-source.tar.gz --strip-components=1 \
-    && ./configure --enable-server --with-postgresql --with-net-snmp --with-libcurl --with-openssl \
+    && ./configure --enable-server --with-postgresql --with-net-snmp --with-libcurl --with-openssl --with-libpcre2 \
        --prefix=/usr/local --sysconfdir=/etc/zabbix \
     && make -j2 && make install
 
