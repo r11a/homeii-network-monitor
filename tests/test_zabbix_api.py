@@ -16,6 +16,18 @@ class ZabbixPermissionTests(unittest.TestCase):
                            'headers': [(b'x-ingress-path', b'/fake'), (b'x-remote-user-name', b'admin')]})
         self.assertFalse(api.ingress_request(request))
 
+    def test_ha_bridge_keeps_open_events_and_stable_device_identity(self):
+        from app import engine_routes
+        snapshot = {'stale': False, 'updated_at': 10, 'counts': {},
+                    'events': [{'id': '7', 'name': 'Disconnected', 'since': 5}],
+                    'devices': [{'id': '42', 'name': 'Camera', 'groups': [], 'last_check': 8}]}
+        with patch.object(engine_routes, 'engine') as mocked:
+            mocked.return_value.snapshot.return_value = snapshot
+            result = engine_routes.ha_dashboard('unused')
+        self.assertEqual(result['alerts'][0]['status'], 'open')
+        self.assertEqual(result['alerts'][0]['message'], 'Disconnected')
+        self.assertEqual(result['devices'][0]['device_id'], 'zabbix-42')
+
     def test_engine_read_requires_login(self):
         with patch.object(api, 'session_user', return_value=None):
             response = TestClient(api.app).get('/api/engine/devices')

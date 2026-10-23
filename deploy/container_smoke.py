@@ -28,6 +28,13 @@ credentials = {'username': 'smoke-admin', 'password': 'Offline-test-only-1234'}
 session = request('/api/auth/session')
 request('/api/auth/setup' if session['setup_required'] else '/api/auth/login', credentials)
 assert request('/api/engine/config')['configured']
+assert request('/api/health/ready')['status'] == 'ready'
+try:
+    urllib.request.urlopen(urllib.request.Request(base + '/api/engine/ha-token', data=b'{}',
+        headers={'Content-Type': 'application/json', 'X-Ingress-Path': '/forged', 'X-Remote-User-Name': 'admin'}))
+    raise AssertionError('Forged ingress identity accepted')
+except urllib.error.HTTPError as exc:
+    assert exc.code == 401
 snapshot = request('/api/engine/devices')
 assert not snapshot['stale'], snapshot
 devices = snapshot['devices']
@@ -54,4 +61,14 @@ assert request('/api/engine/hosts/' + host['id'] + '/check', {})['queued']
 rule = request('/api/engine/discovery', {'network': '192.168.254.254/32'})
 assert request('/api/engine/discovery', {'network': '192.168.254.254/32'})['id'] == rule['id']
 assert 'devices' in request('/api/engine/discovery')
+token = request('/api/engine/ha-token', {})['token']
+with urllib.request.urlopen(urllib.request.Request(base + '/api/ha/dashboard',
+        headers={'Authorization': 'Bearer ' + token})) as response:
+    dashboard = json.load(response)
+assert any(d['device_id'] == 'zabbix-' + host['id'] for d in dashboard['devices'])
+try:
+    urllib.request.urlopen(base + '/api/ha/dashboard')
+    raise AssertionError('Unauthenticated integration access accepted')
+except urllib.error.HTTPError as exc:
+    assert exc.code == 401
 print('PASS: offline boot, authentication, real ICMP, history, deduplication, check-now, discovery')
