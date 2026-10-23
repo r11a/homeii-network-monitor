@@ -314,8 +314,11 @@ class Engine:
             client = self.client()
             rules = client.call('drule.get', {'filter': {'name': [name]}, 'output': ['druleid']})
             if rules: return {'ok': True, 'id': rules[0]['druleid']}
-            result = client.call('drule.create', {'name': name, 'iprange': str(net), 'delay': '10m',
-                'dchecks': [{'type': 12, 'uniq': 0}]})
+            # Zabbix accepts IPv4 CIDR masks only through /30. Keep /31-/32
+            # bounded by listing their actual addresses instead of widening them.
+            iprange = ','.join(str(address) for address in net) if net.prefixlen > 30 else str(net)
+            result = client.call('drule.create', {'name': name, 'iprange': iprange, 'delay': '10m',
+                'dchecks': [{'type': 12}]})
             return {'ok': True, 'id': result['druleids'][0]}
 
     def discoveries(self):

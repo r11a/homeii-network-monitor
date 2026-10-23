@@ -113,6 +113,12 @@ class EngineTests(unittest.TestCase):
             with self.assertRaises(self.z.EngineError): self.engine.discover(network)
         self.assertFalse(any(call[0]['method'] == 'drule.create' for call in self.calls))
 
+    def test_single_address_discovery_uses_engine_supported_range(self):
+        self.engine.discover('192.168.1.4/32')
+        params = next(c[0]['params'] for c in self.calls if c[0]['method'] == 'drule.create')
+        self.assertEqual(params['iprange'], '192.168.1.4')
+        self.assertNotIn('uniq', params['dchecks'][0])
+
     def test_url_rejects_credentials_query_and_non_http(self):
         for value in ('file:///etc/passwd', 'https://user:pass@host', 'https://host?token=x'):
             with self.assertRaises(self.z.EngineError): self.z.normalize_url(value)
