@@ -40,6 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     client = HomeiiApiClient(
         entry.data[CONF_URL],
         async_get_clientsession(hass),
+        entry.data.get('access_token', ''),
     )
     coordinator = HomeiiDataUpdateCoordinator(
         hass,

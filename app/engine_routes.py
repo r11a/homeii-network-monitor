@@ -32,12 +32,13 @@ def ha_dashboard(directory):
     snapshot = engine(directory).snapshot()
     if snapshot['stale']:
         return JSONResponse({'error': 'monitoring_unavailable'}, status_code=503)
-    return {'status': {**snapshot['counts'], 'version': '8.0.0', 'monitoring_stale': False, 'engine': 'zabbix',
+    return {'status': {**snapshot['counts'], 'version': '8.0.0-beta.1', 'monitoring_stale': False, 'engine': 'zabbix',
                        'last_update': snapshot['updated_at'], 'open_alerts': len(snapshot['events'])},
             'devices': [{**d, 'device_id': 'zabbix-' + d['id'], 'display_name': d['name'],
                          'category': ', '.join(d['groups']), 'last_seen': d['last_check'], 'approved': True,
                          'mac': '', 'pinned': False, 'manual': True} for d in snapshot['devices']],
-            'alerts': snapshot['events'], 'availability': {}}
+            'alerts': [{**event, 'status': 'open', 'message': event['name'],
+                        'created_at': event['since']} for event in snapshot['events']], 'availability': {}}
 
 
 def register_engine_routes(app, core, require_role):
@@ -56,7 +57,7 @@ def register_engine_routes(app, core, require_role):
 
     @app.get('/api/engine/config')
     def config():
-        return {**current().public_config(), 'active': core.zabbix_enabled(), 'version_label': '8.0.0'}
+        return {**current().public_config(), 'active': core.zabbix_enabled(), 'version_label': '8.0.0-beta.1'}
 
     @app.post('/api/engine/connect')
     async def connect(request: Request):

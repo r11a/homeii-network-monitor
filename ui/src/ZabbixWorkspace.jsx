@@ -120,9 +120,11 @@ export default function ZabbixWorkspace() {
     if (!modal?.device) return;
     let cancelled = false;
     setHistory(null);
-    api(`/engine/hosts/${modal.device.id}/history`).then(value => { if (!cancelled) setHistory(value); })
+    const read = () => api(`/engine/hosts/${modal.device.id}/history`).then(value => { if (!cancelled) setHistory(value); })
       .catch(e => { if (!cancelled) setHistory({ error: e.message }); });
-    return () => { cancelled = true; };
+    read();
+    const timer = setInterval(read, 30000);
+    return () => { cancelled = true; clearInterval(timer); };
   }, [modal]);
   const act = async (action, success) => {
     setBusy(true); setError(''); setNotice('');
@@ -137,7 +139,7 @@ export default function ZabbixWorkspace() {
   const stateName = state => (labels[state] || labels.unknown)[language === 'he' ? 0 : 1];
   const counts = snapshot?.counts || {};
   const events = snapshot?.events || [];
-  const selected = modal?.device;
+  const selected = modal?.device && (snapshot?.devices.find(d => d.id === modal.device.id) || { ...modal.device, status: 'unknown' });
 
   if (!auth) return <div className="z-loading">HOMEii</div>;
   if (!auth.authenticated) return <AuthScreen setupRequired={auth.setup_required} onAuthenticated={loadSession}/>;

@@ -125,7 +125,7 @@ def initialize():
     client.token = login['sessionid']
     current = Engine(ROOT)
     if not client.call('template.get', {'filter': {'host': ['ICMP Ping']}, 'output': ['templateid']}):
-        template = Path('/opt/zabbix/templates/module/icmp_ping/template_module_icmp_ping.yaml').read_text()
+        template = Path('/opt/zabbix/icmp_ping.yaml').read_text()
         client.call('configuration.import', {'format': 'yaml', 'source': template,
             'rules': {'template_groups': {'createMissing': True}, 'templates': {'createMissing': True},
                       'items': {'createMissing': True}, 'triggers': {'createMissing': True},
@@ -146,7 +146,7 @@ def main():
     try:
         initialize()
         options = json.loads(Path('/data/options.json').read_text()) if Path('/data/options.json').exists() else {}
-        base = ['/opt/venv/bin/python', '-m', 'uvicorn', 'app.main:app', '--host', '0.0.0.0']
+        base = ['/opt/venv/bin/python', '-m', 'uvicorn', 'app.main:app', '--host', '0.0.0.0', '--no-proxy-headers']
         if options.get('ssl'):
             cert = Path('/ssl') / Path(options.get('certfile', 'fullchain.pem')).name
             key = Path('/ssl') / Path(options.get('keyfile', 'privkey.pem')).name

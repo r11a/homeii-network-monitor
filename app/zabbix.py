@@ -279,7 +279,7 @@ class Engine:
             groupid = groups[0]['groupid'] if groups else client.call('hostgroup.create', {'name': group})['groupids'][0]
             templates = client.call('template.get', {'filter': {'host': ['ICMP Ping']}, 'output': ['templateid']})
             if not templates: raise EngineError('icmp_template_missing')
-            result = client.call('host.create', {'host': 'homeii-' + uuid.uuid4().hex, 'name': name,
+            result = client.call('host.create', {'host': 'homeii-' + uuid.uuid5(uuid.NAMESPACE_URL, 'homeii:ip:' + ip).hex, 'name': name,
                 'interfaces': [{'type': 1, 'main': 1, 'useip': 1, 'ip': ip, 'dns': '', 'port': '10050'}],
                 'groups': [{'groupid': groupid}], 'templates': [{'templateid': templates[0]['templateid']}],
                 'tags': [{'tag': 'homeii.priority', 'value': 'critical' if payload.get('critical') is True else 'normal'},

@@ -72,6 +72,12 @@ def api_health_live():
 
 @app.get("/api/health/ready")
 def api_health_ready():
+    if zabbix_enabled():
+        from app.engine_routes import engine
+        snapshot = engine(BASE_DIR).snapshot()
+        ready = not snapshot['stale']
+        return JSONResponse({'status': 'ready' if ready else 'degraded', 'engine': 'zabbix',
+                             'version': APP_VERSION}, status_code=200 if ready else 503)
     database_ok = False
     database_error = ""
     try:
@@ -290,7 +296,8 @@ async def api_tools_run(request: Request):
 
 def ingress_request(request: Request) -> bool:
     return bool(
-        request.headers.get("x-ingress-path")
+        request.client and request.client.host == '172.30.32.2'
+        and request.headers.get("x-ingress-path")
         and (
             request.headers.get("x-remote-user-id")
             or request.headers.get("x-remote-user-name")

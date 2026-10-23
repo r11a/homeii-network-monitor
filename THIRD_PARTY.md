@@ -8,3 +8,7 @@ HOMEii's original code remains MIT licensed. The add-on also distributes separat
 - React, Vite, Recharts and other frontend dependencies retain their respective notices and licenses in the source dependency tree.
 
 This file is an inventory, not a replacement license. Redistribution must retain each component's notices and satisfy its applicable source-distribution obligations. Zabbix is a trademark of its respective owner; HOMEii is not an official Zabbix distribution.
+# Bundled template
+
+`deploy/icmp_ping.yaml` is the unmodified ICMP Ping template from Zabbix tag 7.0.32, under AGPL-3.0: https://github.com/zabbix/zabbix/blob/7.0.32/templates/net/icmp_ping/template_module_icmp_ping.yaml .
+

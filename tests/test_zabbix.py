@@ -98,6 +98,11 @@ class EngineTests(unittest.TestCase):
 
     def test_new_host_uses_template_and_does_not_auto_approve_discoveries(self):
         self.engine.add_host({'ip': '192.0.2.5', 'name': 'New camera', 'group': 'Cameras'})
+        first = next(c[0]['params']['host'] for c in self.calls if c[0]['method'] == 'host.create')
+        self.calls.clear()
+        self.engine.add_host({'ip': '192.0.2.5', 'name': 'Other name'})
+        second = next(c[0]['params']['host'] for c in self.calls if c[0]['method'] == 'host.create')
+        self.assertEqual(first, second, 'Zabbix must enforce one internal host name per address across workers')
         request = next(call[0] for call in self.calls if call[0]['method'] == 'host.create')
         self.assertEqual(request['params']['templates'], [{'templateid': '3'}])
         self.assertEqual(request['params']['interfaces'][0]['ip'], '192.0.2.5')

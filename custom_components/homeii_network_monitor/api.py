@@ -12,14 +12,15 @@ class HomeiiApiClientError(Exception):
 
 
 class HomeiiApiClient:
-    def __init__(self, base_url: str, session: ClientSession) -> None:
+    def __init__(self, base_url: str, session: ClientSession, access_token: str = '') -> None:
         self._base_url = base_url.rstrip("/")
         self._session = session
+        self._headers = {'Authorization': f'Bearer {access_token}'} if access_token else {}
 
     async def _async_get_json(self, path: str) -> dict[str, Any]:
         url = f"{self._base_url}{path}"
         try:
-            async with self._session.get(url, timeout=10) as response:
+            async with self._session.get(url, timeout=10, headers=self._headers) as response:
                 response.raise_for_status()
                 data = await response.json()
         except (ClientError, asyncio.TimeoutError, ValueError) as err:

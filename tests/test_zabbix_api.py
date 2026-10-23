@@ -10,6 +10,12 @@ from app import api, core
 
 
 class ZabbixPermissionTests(unittest.TestCase):
+    def test_lan_cannot_forge_ingress_identity(self):
+        from starlette.requests import Request
+        request = Request({'type': 'http', 'client': ('192.168.1.20', 1234),
+                           'headers': [(b'x-ingress-path', b'/fake'), (b'x-remote-user-name', b'admin')]})
+        self.assertFalse(api.ingress_request(request))
+
     def test_engine_read_requires_login(self):
         with patch.object(api, 'session_user', return_value=None):
             response = TestClient(api.app).get('/api/engine/devices')

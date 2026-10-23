@@ -37,7 +37,7 @@ WORKDIR /app
 COPY --from=engine-builder /usr/local/sbin/zabbix_server /usr/local/sbin/zabbix_server
 COPY --from=engine-builder /build/ui /opt/zabbix/ui
 COPY --from=engine-builder /build/database/postgresql /opt/zabbix/database
-COPY --from=engine-builder /build/templates /opt/zabbix/templates
+COPY deploy/icmp_ping.yaml /opt/zabbix/icmp_ping.yaml
 COPY --from=engine-builder /build/zabbix-source.tar.gz /usr/share/homeii/sources/zabbix-7.0.32.tar.gz
 COPY app /app/app
 COPY requirements.txt /app/requirements.txt

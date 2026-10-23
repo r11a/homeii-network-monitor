@@ -1,21 +1,30 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { api } from './api';
 import ZabbixWorkspace from './ZabbixWorkspace';
 
 vi.mock('./api', () => ({ api: vi.fn() }));
-let configured, stale, role;
+let configured, stale, role, deviceStatus;
 beforeEach(() => {
-  configured = true; stale = false; role = 'admin'; localStorage.clear();
+  configured = true; stale = false; role = 'admin'; deviceStatus = 'online'; localStorage.clear();
   localStorage.setItem('homeii-engine-language', 'en');
   api.mockReset().mockImplementation(async (path) => {
     if (path === '/auth/session') return { authenticated: true, user: { role, username: 'operator' } };
     if (path === '/engine/config') return { configured, active: configured, local_bundle: true };
-    if (path.startsWith('/engine/devices')) return { devices: [{ id: '42', name: 'Camera', ip: '192.0.2.4', status: 'online', groups: ['Cameras'], last_check: 1 }],
+    if (path.startsWith('/engine/devices')) return { devices: [{ id: '42', name: 'Camera', ip: '192.0.2.4', status: deviceStatus, groups: ['Cameras'], last_check: 1 }],
       events: [], counts: { total: 1, online: 1, offline: 0, unknown: 0, problems: 0 }, total: 1, updated_at: Math.floor(Date.now()/1000), stale, error: stale ? 'engine_unreachable' : '' };
     if (path.endsWith('/history')) return { samples: 0, availability: null, coverage: 0, series: [] };
     return { ok: true };
   });
+});
+
+it('updates an open device dialog when a fresh snapshot reports an outage', async () => {
+  render(<ZabbixWorkspace />);
+  fireEvent.click(await screen.findByRole('button', { name: /Camera/ }));
+  expect(within(screen.getByRole('dialog')).getByText('Online')).toBeTruthy();
+  deviceStatus = 'offline';
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+  await waitFor(() => expect(within(screen.getByRole('dialog')).getByText('Offline')).toBeTruthy());
 });
 
 it('offers manual entry with clear fields and submits the host', async () => {
