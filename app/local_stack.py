@@ -120,7 +120,7 @@ def initialize():
     except EngineError:
         login = client.call('user.login', {'username': 'Admin', 'password': 'zabbix', 'userData': True})
         client.token = login['sessionid']
-        client.call('user.update', {'userid': login['userid'], 'passwd': values['administrator']})
+        client.call('user.update', {'userid': login['userid'], 'current_passwd': 'zabbix', 'passwd': values['administrator']})
         login = client.call('user.login', {'username': 'Admin', 'password': values['administrator'], 'userData': True})
     client.token = login['sessionid']
     current = Engine(ROOT)
