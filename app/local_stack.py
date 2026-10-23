@@ -136,7 +136,9 @@ def initialize():
         current.save_config({'url': client.url, 'token': token, 'verify_tls': True, 'version': version})
     default = client.call('host.get', {'filter': {'host': ['Zabbix server']}, 'output': ['hostid']})
     if default and not initialized:
-        client.call('host.update', [{'hostid': host['hostid'], 'status': 1} for host in default])
+        # Remove only the upstream demo host from a freshly seeded database.
+        # On every subsequent boot, existing inventory is left untouched.
+        client.call('host.delete', [host['hostid'] for host in default])
     client.call('user.logout', [])
     print('[HOMEii] Local monitoring engine is ready. No Internet required.', flush=True)
 
