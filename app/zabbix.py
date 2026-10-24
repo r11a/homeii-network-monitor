@@ -74,9 +74,9 @@ def interval_seconds(delay) -> int:
     return max(1, int(match[1]) * {'': 1, 's': 1, 'm': 60, 'h': 3600, 'd': 86400}[match[2]])
 
 
-def history_buckets(rows: list, now: int, interval: int = 60) -> dict:
-    start = now - 86400
-    buckets = [{'start': start + n * 900, 'status': 'unknown', 'samples': 0, 'availability': None} for n in range(96)]
+def history_buckets(rows: list, now: int, interval: int = 60, days: int = 1) -> dict:
+    start = now - 86400 * days
+    buckets = [{'start': start + n * 900 * days, 'status': 'unknown', 'samples': 0, 'availability': None} for n in range(96)]
     values = {}
     for row in rows:
         stamp = int(row['clock'])
@@ -86,7 +86,7 @@ def history_buckets(rows: list, now: int, interval: int = 60) -> dict:
     covered = 0
     end = start
     for stamp, value in sorted(values.items()):
-        counts[min(95, (stamp - start) // 900)].append(value)
+        counts[min(95, (stamp - start) // (900 * days))].append(value)
         span_end = min(now, stamp + interval)
         covered += max(0, span_end - max(stamp, end))
         end = max(end, span_end)
@@ -94,7 +94,7 @@ def history_buckets(rows: list, now: int, interval: int = 60) -> dict:
         if samples:
             bucket.update(samples=len(samples), availability=round(sum(samples) / len(samples) * 100, 2),
                           status='online' if all(samples) else 'offline' if not any(samples) else 'unstable')
-    return {'series': buckets, 'samples': len(values), 'coverage': round(covered / 86400 * 100, 2),
+    return {'series': buckets, 'samples': len(values), 'coverage': round(covered / (86400 * days) * 100, 2),
             'availability': round(sum(values.values()) / len(values) * 100, 2) if values else None,
             'method': 'successful_recorded_checks', 'from': start, 'to': now}
 
@@ -246,38 +246,39 @@ class Engine:
         return {**{k: v for k, v in snapshot.items() if k != 'devices'}, 'devices': devices[(page-1)*limit:page*limit],
                 'total': len(devices), 'page': page, 'limit': limit}
 
-    def history(self, hostid):
+    def history(self, hostid, days=1):
         snapshot = self.snapshot()
         if snapshot['stale']: raise EngineError(snapshot['error'])
         host = next((d for d in snapshot['devices'] if d['id'] == hostid), None)
         if not host: raise EngineError('host_not_found')
         now = int(time.time())
         with self.lock:
-            cached = self.histories.get(hostid)
+            cache_key = (hostid, days)
+            cached = self.histories.get(cache_key)
             if cached and now - cached['to'] < 30: return cached
             rows = []
             if host['itemid']:
                 rows = self.client().call('history.get', {'itemids': [host['itemid']], 'history': 3,
-                    'output': ['clock', 'value'], 'time_from': now-86400, 'time_till': now,
+                    'output': ['clock', 'value'], 'time_from': now-86400*days, 'time_till': now,
                     'sortfield': ['clock'], 'sortorder': 'DESC', 'limit': 20000})
-            result = {**history_buckets(rows, now, host['check_interval']), 'hostid': hostid,
+            result = {**history_buckets(rows, now, host['check_interval'], days), 'hostid': hostid,
                       'truncated': len(rows) == 20000}
             result['metrics'] = {}
             for key, itemid in host.get('metric_items', {}).items():
                 if not itemid: continue
                 measurements = self.client().call('history.get', {'itemids': [itemid], 'history': 0,
-                    'output': ['clock', 'value'], 'time_from': now-86400, 'time_till': now,
+                    'output': ['clock', 'value'], 'time_from': now-86400*days, 'time_till': now,
                     'sortfield': ['clock'], 'sortorder': 'DESC', 'limit': 20000})
                 bins = {}
                 for measurement in measurements:
                     stamp = int(measurement['clock'])
-                    if now-86400 <= stamp <= now:
-                        index = min(95, (stamp-(now-86400))//900)
+                    if now-86400*days <= stamp <= now:
+                        index = min(95, (stamp-(now-86400*days))//(900*days))
                         bins.setdefault(index, []).append(float(measurement['value']) * (1000 if key == 'icmppingsec' else 1))
                 result['metrics'][key] = [{'start': bucket['start'], 'value': round(sum(bins[index])/len(bins[index]), 3) if index in bins else None} for index, bucket in enumerate(result['series'])]
                 result['truncated'] = result['truncated'] or len(measurements) == 20000
             if len(self.histories) > 200: self.histories.clear()
-            self.histories[hostid] = result
+            self.histories[cache_key] = result
             return result
 
     def add_host(self, payload):
@@ -301,6 +302,32 @@ class Engine:
                          {'tag': 'homeii.location', 'value': str(payload.get('location', ''))[:255]}]})
             self.attempted = 0
             return {'id': result['hostids'][0], 'name': name, 'ip': ip}
+
+    def update_host(self, hostid, payload):
+        with self.lock:
+            snapshot = self.snapshot(force=True)
+            if snapshot['stale']: raise EngineError(snapshot['error'])
+            if not any(d['id'] == hostid for d in snapshot['devices']): raise EngineError('host_not_found')
+            client = self.client()
+            hosts = client.call('host.get', {'hostids': [hostid], 'output': ['hostid'], 'selectTags': 'extend'})
+            if not hosts: raise EngineError('host_not_found')
+            update = {'hostid': hostid}
+            if 'name' in payload:
+                name = str(payload['name']).strip()[:128]
+                if not name: raise EngineError('invalid_request')
+                update['name'] = name
+            if 'paused' in payload:
+                if not isinstance(payload['paused'], bool): raise EngineError('invalid_request')
+                update['status'] = '1' if payload['paused'] else '0'
+            if 'location' in payload or 'critical' in payload:
+                tags = {t['tag']: t['value'] for t in hosts[0].get('tags', []) if t['tag'].startswith('homeii.')}
+                if 'location' in payload: tags['homeii.location'] = str(payload['location'])[:255]
+                if 'critical' in payload: tags['homeii.priority'] = 'critical' if payload['critical'] is True else 'normal'
+                update['tags'] = [t for t in hosts[0].get('tags', []) if not t['tag'].startswith('homeii.')] + [{'tag': k, 'value': v} for k, v in tags.items()]
+            client.call('host.update', update)
+            self.attempted = 0
+            self.histories.clear()
+            return {'ok': True}
 
     def acknowledge(self, eventid, actor):
         snapshot = self.snapshot(force=True)

@@ -1,5 +1,6 @@
+import EngineOperations from './EngineOperations';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, ArrowLeft, Bell, Check, ChevronLeft, ChevronRight, CircleHelp, Home, LogOut, Monitor, Plus, Radar, RefreshCw, Search, Server, Settings, ShieldCheck, X } from 'lucide-react';
 import { api } from './api';
 import { AuthScreen } from './App';
@@ -63,10 +64,14 @@ export default function ZabbixWorkspace() {
   const [modal, setModal] = useState(null);
   const [history, setHistory] = useState(null);
   const [discovery, setDiscovery] = useState(null);
+  const [discoveryPage, setDiscoveryPage] = useState(0);
   const [network, setNetwork] = useState('192.168.1.0/24');
   const [draft, setDraft] = useState({ ip: '', name: '', group: '', location: '', critical: false });
   const [connection, setConnection] = useState({ url: '', username: '', password: '' });
   const [haToken, setHaToken] = useState('');
+  const seenEvents = useRef(null);
+  const [notifications, setNotifications] = useState(() => localStorage.getItem('homeii-notifications') === '1');
+  const [wall, setWall] = useState(false);
   const admin = auth?.user?.role === 'admin';
   const operator = admin || auth?.user?.role === 'user';
   const canAcknowledge = admin || (operator && auth?.user?.can_manage_alerts);
@@ -140,22 +145,31 @@ export default function ZabbixWorkspace() {
   const stateName = state => (labels[state] || labels.unknown)[language === 'he' ? 0 : 1];
   const counts = snapshot?.counts || {};
   const events = snapshot?.events || [];
+  useEffect(() => {
+    if (!snapshot || stale) return;
+    const ids = new Set(events.map(e => e.id));
+    if (seenEvents.current && notifications && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      events.filter(e => !seenEvents.current.has(e.id) && !e.suppressed).forEach(e => new Notification('HOMEii', {body: e.name, tag: `homeii-${e.id}`}));
+    }
+    seenEvents.current = ids;
+  }, [snapshot, stale, notifications, events]);
   const selected = modal?.device && (snapshot?.devices.find(d => d.id === modal.device.id) || { ...modal.device, status: 'unknown' });
 
   if (!auth) return <div className="z-loading">HOMEii</div>;
   if (!auth.authenticated) return <AuthScreen setupRequired={auth.setup_required} onAuthenticated={loadSession}/>;
 
-  return <div className="z-workspace" dir={language === 'he' ? 'rtl' : 'ltr'}>
+  return <div className={`z-workspace ${wall ? 'z-wall' : ''}`} dir={language === 'he' ? 'rtl' : 'ltr'}>
     <header className="z-top"><a className="z-brand" href="#/control"><Activity/><strong>HOMEii<span> NETWORK</span></strong></a>
       <div className="z-top-actions"><span className="z-local"><ShieldCheck size={15}/>{l('ניטור מקומי', 'Local monitoring')}</span>
         <button onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}>{language === 'he' ? 'EN' : 'עברית'}</button>
         <button aria-label={l('יציאה', 'Sign out')} onClick={async () => { await post('/auth/logout'); setAuth({ authenticated: false }); }}><LogOut size={17}/></button>
       </div>
+      <button onClick={() => setWall(value => !value)}>{wall ? l('חזור לתפעול', 'Exit wall display') : l('תצוגת קיר', 'Wall display')}</button>
     </header>
     <div className="z-layout">
       <nav className="z-nav" aria-label={l('ניווט ראשי', 'Main navigation')}>
         {[[Monitor, 'control', l('חדר בקרה', 'Control room')], [Server, 'devices', l('התקנים', 'Devices')],
-          [Bell, 'events', l('אירועים', 'Events')], ...(admin ? [[Settings, 'setup', l('הגדרה', 'Setup')]] : [])].map(([Icon, key, name]) =>
+          [Bell, 'events', l('אירועים', 'Events')], [Activity, 'reports', l('דוחות', 'Reports')], ...(admin ? [[Activity, 'tools', l('כלי אבחון', 'Diagnostics')], [Settings, 'users', l('משתמשים', 'Users')], [Activity, 'audit', l('יומן פעולות', 'Audit log')]] : []), ...(admin ? [[Settings, 'setup', l('הגדרה', 'Setup')]] : [])].map(([Icon, key, name]) =>
           <button className={tab === key ? 'selected' : ''} key={key} onClick={() => { setTab(key); setSearch(''); setFilter(''); setPage(1); }}><Icon size={19}/><span>{name}</span>{key === 'events' && counts.problems > 0 && <b>{counts.problems}</b>}</button>)}
         <div className="z-nav-foot"><span>HOMEii 8.0</span><small>{l('נתונים באתר שלך', 'Your data stays on site')}</small></div>
       </nav>
@@ -170,7 +184,7 @@ export default function ZabbixWorkspace() {
           {admin && <button onClick={() => setTab('setup')}>{l('הגדרת חיבור', 'Connection setup')}<ArrowLeft size={16}/></button>}
         </section>}
 
-        {tab === 'setup' && admin ? <div className="z-settings">
+        {['reports','tools','users','audit'].includes(tab) ? <EngineOperations tab={tab} language={language} user={auth.user} l={l}/> : tab === 'setup' && admin ? <div className="z-settings">
           <div className="z-heading"><div><p className="z-eyebrow">HOMEii / SETUP</p><h1>{l('הגדרה פשוטה. ניטור רציף.', 'Simple setup. Continuous monitoring.')}</h1></div></div>
           <section className="z-section"><h2>{l('מנוע הניטור', 'Monitoring engine')}</h2><p>{config?.configured ? l('המנוע מחובר. אפשר להוסיף התקנים ידנית או להגדיר גילוי ברשת.', 'Engine connected. Add devices manually or enable network discovery.') : l('התוסף המקומי מתחבר אוטומטית; חיבור לשרת אחר הוא אפשרות מתקדמת.', 'The local add-on connects automatically; connecting another server is an advanced option.')}</p>
             <details><summary>{l('חיבור לשרת קיים', 'Connect an existing server')}</summary>
@@ -188,13 +202,15 @@ export default function ZabbixWorkspace() {
                 <label>{l('טווח רשת', 'Network range')}<input required value={network} onChange={e => setNetwork(e.target.value)} dir="ltr"/></label><button className="z-primary" disabled={busy}><Radar size={17}/>{l('הפעל גילוי', 'Enable discovery')}</button>
               </form>
               <button disabled={busy} onClick={() => act(async () => setDiscovery(await api('/engine/discovery')))}>{l('הצג תוצאות גילוי', 'Show discovered devices')}</button>
-              {discovery && <><p>{discovery.devices.length} {l('התקנים ממתינים', 'devices awaiting approval')}</p>{discovery.devices.slice(0, 100).map(d => <div className="z-discovered" key={d.ip}><span><strong>{d.name}</strong><small dir="ltr">{d.ip}</small></span><span className="z-discovery-identity"><small dir="ltr">MAC: {d.mac || '—'}</small><small>{l('יצרן כרטיס הרשת', 'Network adapter vendor')}: {d.vendor || l('לא ידוע', 'Unknown')}</small><small>{l('סוג משוער לפי השם', 'Type inferred from name')}: {d.device_type || l('לא ידוע', 'Unknown')}</small><small>{l('נראה לאחרונה', 'Last seen')}: {time(d.last_seen)}</small>{!d.mac && <small>{l('MAC אינו זמין; ייתכן שההתקן נמצא מעבר לנתב', 'MAC unavailable; the device may be behind a router')}</small>}</span><button disabled={busy} onClick={() => add(d.ip)}><Plus size={15}/>{l('הוסף לניטור', 'Add to monitoring')}</button></div>)}</>}
+              {discovery && <><p>{discovery.devices.length} {l('התקנים ממתינים', 'devices awaiting approval')}</p>{discovery.devices.slice(discoveryPage*50, (discoveryPage+1)*50).map(d => <div className="z-discovered" key={d.ip}><span><strong>{d.name}</strong><small dir="ltr">{d.ip}</small></span><span className="z-discovery-identity"><small dir="ltr">MAC: {d.mac || '—'}</small><small>{l('יצרן כרטיס הרשת', 'Network adapter vendor')}: {d.vendor || l('לא ידוע', 'Unknown')}</small><small>{l('סוג משוער לפי השם', 'Type inferred from name')}: {d.device_type || l('לא ידוע', 'Unknown')}</small><small>{l('נראה לאחרונה', 'Last seen')}: {time(d.last_seen)}</small>{!d.mac && <small>{l('MAC אינו זמין; ייתכן שההתקן נמצא מעבר לנתב', 'MAC unavailable; the device may be behind a router')}</small>}</span><button disabled={busy} onClick={() => { add(d.ip); setDraft(value => ({...value, name: d.hostname || ''})); }}><Plus size={15}/>{l('הוסף לניטור', 'Add to monitoring')}</button></div>)}<div className="z-pagination"><button disabled={!discoveryPage} onClick={()=>setDiscoveryPage(discoveryPage-1)}>{l('הקודם','Previous')}</button><span>{discoveryPage+1} / {Math.max(1,Math.ceil(discovery.devices.length/50))}</span><button disabled={(discoveryPage+1)*50>=discovery.devices.length} onClick={()=>setDiscoveryPage(discoveryPage+1)}>{l('הבא','Next')}</button></div></>}
             </section>
             <section className="z-section"><h2>Home Assistant</h2><p>{l('צור מפתח חיבור והדבק אותו בשדה מפתח הגישה של האינטגרציה. המפתח מאפשר קריאת מצב בלבד.', 'Generate a connection key and paste it into the integration access-key field. It grants read-only status access.')}</p>
               <button disabled={busy} onClick={() => act(async () => setHaToken((await post('/engine/ha-token')).token))}>{l('צור מפתח חיבור חדש', 'Generate a new connection key')}</button>
               {haToken && <label>{l('מפתח חיבור — יצירת מפתח חדש מבטלת את הקודם', 'Connection key — generating another revokes the previous key')}<input readOnly value={haToken} onFocus={e => e.target.select()} dir="ltr"/></label>}
             </section>
           </>}
+          <section className="z-section"><h2>{l('התראות בדפדפן', 'Browser notifications')}</h2><p>{l('התראות על אירועים חדשים כשהממשק פתוח. ישויות Home Assistant מאפשרות להגדיר התראות גם כשהדפדפן סגור.', 'New incident alerts while this interface is open. Home Assistant entities support automations when the browser is closed.')}</p><button onClick={async () => { if (notifications) { setNotifications(false); localStorage.setItem('homeii-notifications','0'); return; } if (typeof Notification === 'undefined') {setError('notifications_unavailable');return;} const permission = await Notification.requestPermission(); const enabled = permission === 'granted';setNotifications(enabled);localStorage.setItem('homeii-notifications',enabled?'1':'0'); }}>{notifications ? l('כבה התראות', 'Disable notifications') : l('הפעל התראות', 'Enable notifications')}</button></section>
+          <section className="z-section"><h2>{l('גיבוי ושחזור', 'Backup and restore')}</h2><p>{l('לגיבוי מלא של נתוני הניטור וההגדרות: פתח את הגיבויים בהגדרות Home Assistant וכלול את תוסף HOMEii Beta. גיבוי התוסף עוצר אותו זמנית כדי לשמור את מסד הנתונים באופן עקבי. שחזור נעשה דרך אותו מסך.', 'For a complete backup, open Home Assistant Settings → Backups and include the HOMEii Beta add-on. Add-on backup temporarily stops monitoring to capture a consistent database. Restore through the same screen.')}</p></section>
           <section className="z-section"><h2>{l('הגרסה הקודמת', 'Previous workspace')}</h2><p>{l('הנתונים הקיימים נשמרו בנפרד. נתוני הגרסה הקודמת אינם מצב הניטור החדש.', 'Existing data remains separate. Legacy data does not represent the new monitoring state.')}</p><a href="?legacy=1#/dashboard">{l('פתח את סביבת העבודה הקודמת', 'Open the previous workspace')}</a></section>
         </div> : config?.configured && <>
           <div className="z-heading"><div><p className="z-eyebrow">HOMEii / {tab === 'control' ? 'OPERATIONS' : tab.toUpperCase()}</p><h1>{tab === 'control' ? l('הרשת שלך. תמונה ברורה.', 'Your network. Clearly.') : tab === 'events' ? l('מה דורש טיפול', 'What needs attention') : l('כל ההתקנים, במקום אחד', 'Every device, in one place')}</h1>
@@ -234,10 +250,11 @@ export default function ZabbixWorkspace() {
     </Modal>}
     {selected && <Modal title={selected.name} close={close} l={l}>
       <div className="z-device-summary"><span dir="ltr">{selected.ip}</span><span className={`z-state z-state-${stale ? 'unknown' : selected.status}`}>{stale ? l('מידע לא עדכני', 'Stale data') : stateName(selected.status)}</span></div>
+      <p className="z-muted">MAC: <bdi>{selected.mac || '—'}</bdi> · {l('יצרן כרטיס רשת', 'Adapter vendor')}: {selected.vendor || '—'} · {l('סוג משוער', 'Inferred type')}: {selected.device_type || '—'}</p>
       <h3>{l('24 השעות האחרונות', 'Last 24 hours')}</h3>
       {history?.error ? <p role="alert">{explain(history.error)}</p> : !history ? <p>{l('טוען מדידות…', 'Loading measurements…')}</p> : <>
         <div className="z-history" aria-label={l('היסטוריית זמינות', 'Availability history')} dir="ltr">{history.series.map((bucket, index) => <span key={index} className={`z-bar-${bucket.status}`} title={`${time(bucket.start)} · ${stateName(bucket.status)} · ${bucket.samples}`}/>)}</div>
-        {[[null, 'Availability (%)', '%'], ['icmppingsec', 'Response time', 'ms'], ['icmppingloss', 'Packet loss', '%']].map(([key, title, unit]) => {
+        {[[null, l('זמינות לפי בדיקות', 'Availability (%)'), '%'], ['icmppingsec', l('זמן תגובה', 'Response time'), 'ms'], ['icmppingloss', l('אובדן מנות', 'Packet loss'), '%']].map(([key, title, unit]) => {
           const points = key ? history.metrics?.[key] : history.series.map(b => ({ start: b.start, value: b.availability }));
           return <section key={key || 'availability'}><h3>{title}</h3>{points?.some(p => p.value != null) ? <div style={{ width: '100%', height: 180 }} dir="ltr"><ResponsiveContainer width="100%" height="100%"><AreaChart data={points}><CartesianGrid stroke="#2a3136" vertical={false}/><XAxis dataKey="start" tickFormatter={v => new Date(v*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} minTickGap={45}/><YAxis unit={unit} width={60}/><Tooltip labelFormatter={time}/><Area dataKey="value" stroke="#72cda5" fill="#72cda5" fillOpacity={0.15} connectNulls={false} isAnimationActive={false}/></AreaChart></ResponsiveContainer></div> : <p className="z-muted">{l('אין מדידות', 'No measurements')}</p>}</section>;
         })}
@@ -246,6 +263,7 @@ export default function ZabbixWorkspace() {
         <p className="z-muted">{l('אפור = אין מדידות. אחוז ההצלחה מחושב רק מבדיקות שנשמרו; הוא אינו SLA.', 'Gray means missing measurements. Success rate uses recorded checks only; it is not an SLA.')}</p>
         {history.truncated && <p>{l('מוצגות המדידות האחרונות בלבד.', 'Only the latest measurements are included.')}</p>}
       </>}
+      {admin && <form onSubmit={async e => { e.preventDefault(); const values = new FormData(e.currentTarget); if (await act(() => post(`/engine/hosts/${selected.id}/update`, {name: values.get('name'), location: values.get('location'), critical: values.has('critical')}), l('נשמר', 'Saved'))) close(); }}><h3>{l('עריכת התקן', 'Edit device')}</h3><label>{l('שם', 'Name')}<input name="name" required maxLength={128} defaultValue={selected.name}/></label><label>{l('מיקום', 'Location')}<input name="location" maxLength={255} defaultValue={selected.location}/></label><label className="z-checkbox"><input type="checkbox" name="critical" defaultChecked={selected.critical}/>{l('התקן קריטי', 'Critical device')}</label><button disabled={busy || stale}>{l('שמור', 'Save')}</button><button type="button" disabled={busy || stale} onClick={() => act(() => post(`/engine/hosts/${selected.id}/update`, {paused: !selected.paused}), l('הניטור עודכן', 'Monitoring updated'))}>{selected.paused ? l('חדש ניטור', 'Resume monitoring') : l('השהה ניטור', 'Pause monitoring')}</button></form>}
       {operator && <button disabled={busy || stale} onClick={() => act(() => post(`/engine/hosts/${selected.id}/check`), l('הבדיקה נשלחה למנוע. התוצאה תתעדכן לאחר הביצוע.', 'Check queued. The result updates after execution.'))}><RefreshCw size={17}/>{l('בדוק עכשיו', 'Check now')}</button>}
     </Modal>}
   </div>;

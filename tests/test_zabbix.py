@@ -119,6 +119,32 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(params['iprange'], '192.168.1.4')
         self.assertNotIn('uniq', params['dchecks'][0])
 
+    def test_update_preserves_external_tags_and_sets_pause(self):
+        self.hosts[0]['tags'] = [{'tag': 'owner', 'value': 'IT'}, {'tag': 'homeii.location', 'value': 'old'}]
+        self.engine.update_host('42', {'name': 'Camera gate', 'location': 'Gate', 'critical': True, 'paused': True})
+        params = next(c[0]['params'] for c in self.calls if c[0]['method'] == 'host.update')
+        self.assertEqual(params['status'], '1')
+        self.assertEqual(params['name'], 'Camera gate')
+        self.assertIn({'tag': 'owner', 'value': 'IT'}, params['tags'])
+        self.assertIn({'tag': 'homeii.location', 'value': 'Gate'}, params['tags'])
+        self.assertNotIn('interfaces', params)
+
+    def test_period_report_queries_requested_window_and_separate_cache(self):
+        self.engine.history('42', 7)
+        params = next(c[0]['params'] for c in self.calls if c[0]['method'] == 'history.get')
+        self.assertAlmostEqual(params['time_till'] - params['time_from'], 7*86400, delta=2)
+        count = len(self.calls)
+        self.engine.history('42', 7)
+        self.assertEqual(len(self.calls), count)
+        result = self.engine.history('42', 1)
+        self.assertEqual(result['to'] - result['from'], 86400)
+
+    def test_period_coverage_uses_full_window(self):
+        result = self.z.history_buckets([{'clock': self.now-30, 'value': '1'}], self.now, 30, 7)
+        self.assertEqual(result['to']-result['from'], 7*86400)
+        self.assertEqual(len(result['series']), 96)
+        self.assertLess(result['coverage'], 0.01)
+
     def test_url_rejects_credentials_query_and_non_http(self):
         for value in ('file:///etc/passwd', 'https://user:pass@host', 'https://host?token=x'):
             with self.assertRaises(self.z.EngineError): self.z.normalize_url(value)

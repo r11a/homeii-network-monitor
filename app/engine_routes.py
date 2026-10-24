@@ -49,7 +49,7 @@ def ha_dashboard(directory):
     snapshot = engine(directory).snapshot()
     if snapshot['stale']:
         return JSONResponse({'error': 'monitoring_unavailable'}, status_code=503)
-    return {'status': {**snapshot['counts'], 'version': '8.0.0-beta.2', 'monitoring_stale': False, 'engine': 'zabbix',
+    return {'status': {**snapshot['counts'], 'version': '8.0.0-beta.3', 'monitoring_stale': False, 'engine': 'zabbix',
                        'last_update': snapshot['updated_at'], 'open_alerts': len(snapshot['events'])},
             'devices': [{**d, 'device_id': 'zabbix-' + d['id'], 'display_name': d['name'],
                          'category': ', '.join(d['groups']), 'last_seen': d['last_check'], 'approved': True,
@@ -74,7 +74,7 @@ def register_engine_routes(app, core, require_role):
 
     @app.get('/api/engine/config')
     def config():
-        return {**current().public_config(), 'active': core.zabbix_enabled(), 'version_label': '8.0.0-beta.2'}
+        return {**current().public_config(), 'active': core.zabbix_enabled(), 'version_label': '8.0.0-beta.3'}
 
     @app.post('/api/engine/connect')
     async def connect(request: Request):
@@ -88,14 +88,18 @@ def register_engine_routes(app, core, require_role):
 
     @app.get('/api/engine/devices')
     def devices(search: str = '', state: str = '', page: int = Query(1, ge=1), limit: int = Query(50, ge=1, le=100)):
-        return current().inventory(search[:200], state, page, limit)
+        return discovery_identity(current().inventory(search[:200], state, page, limit), core)
 
     @app.get('/api/engine/hosts/{hostid}/history')
-    def history(hostid: str): return current().history(hostid)
+    def history(hostid: str, days: int = Query(1, ge=1, le=30)): return current().history(hostid, days)
 
     @app.post('/api/engine/hosts')
     async def create_host(request: Request):
         return await run_in_threadpool(current().add_host, await body(request))
+
+    @app.post('/api/engine/hosts/{hostid}/update')
+    async def update_host(hostid: str, request: Request):
+        return await run_in_threadpool(current().update_host, hostid, await body(request))
 
     @app.post('/api/engine/hosts/{hostid}/check')
     def check(hostid: str): return current().check_now(hostid)

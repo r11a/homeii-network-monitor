@@ -58,6 +58,8 @@ while True:
 history = request('/api/engine/hosts/' + host['id'] + '/history')
 assert history['samples'] > 0 and len(history['series']) == 96, history
 assert request('/api/engine/hosts/' + host['id'] + '/check', {})['queued']
+assert request('/api/engine/hosts/' + host['id'] + '/update', {'name': 'Local loopback', 'location': 'CI', 'critical': True})['ok']
+assert request('/api/engine/hosts/' + host['id'] + '/history?days=7')['to'] - request('/api/engine/hosts/' + host['id'] + '/history?days=7')['from'] == 7*86400
 rule = request('/api/engine/discovery', {'network': '192.168.254.254/32'})
 assert request('/api/engine/discovery', {'network': '192.168.254.254/32'})['id'] == rule['id']
 assert 'devices' in request('/api/engine/discovery')

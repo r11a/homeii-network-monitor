@@ -67,3 +67,18 @@ it('explains local automatic initialization without exposing configuration code'
   expect(await screen.findByText('Preparing your local monitoring engine')).toBeTruthy();
   expect(screen.queryByText('JSON')).toBeNull();
 });
+
+it('edits metadata through the engine and offers pause', async () => {
+  render(<ZabbixWorkspace />);
+  fireEvent.click(await screen.findByRole('button', {name:/Camera/}));
+  fireEvent.change(screen.getByLabelText('Name'), {target:{value:'Gate camera'}});
+  fireEvent.click(screen.getByRole('button', {name:'Save'}));
+  await waitFor(()=>expect(api.mock.calls.some(([path, options]) => path === '/engine/hosts/42/update' && JSON.parse(options.body).name === 'Gate camera')).toBe(true));
+});
+it('loads reports from the engine inventory and selected period', async () => {
+  render(<ZabbixWorkspace />);
+  fireEvent.click(await screen.findByRole('button', {name:'Reports'}));
+  fireEvent.change(screen.getByLabelText('Report period'), {target:{value:'7'}});
+  fireEvent.click(await screen.findByRole('button', {name:'Generate report'}));
+  await waitFor(()=>expect(api.mock.calls.some(([path])=>path === '/engine/hosts/42/history?days=7')).toBe(true));
+});

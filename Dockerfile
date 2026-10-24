@@ -29,7 +29,7 @@ RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin
     python3 python3-venv python3-pip postgresql-15 postgresql-client-15 nginx \
     php8.2-fpm php8.2-pgsql php8.2-bcmath php8.2-mbstring php8.2-xml php8.2-gd php8.2-curl \
     libpq5 libsnmp40 libevent-2.1-7 libevent-extra-2.1-7 libevent-pthreads-2.1-7 libpcre2-8-0 libcurl4 libssl3 \
-    fping iputils-ping dnsutils iproute2 ca-certificates tzdata tini \
+    fping iputils-ping traceroute dnsutils iproute2 ca-certificates tzdata tini \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --no-create-home --shell /usr/sbin/nologin zabbix \
     && chmod u+s /usr/bin/fping

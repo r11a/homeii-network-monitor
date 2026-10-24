@@ -7,5 +7,5 @@
   "integration_type": "hub",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/r11a/homeii-network-monitor/issues",
-  "version": "8.0.0-beta.2"
+  "version": "8.0.0-beta.3"
 }
