@@ -1,7 +1,7 @@
 name: "HOMEii Network Monitor Beta"
 slug: "homeii-network-monitor-beta"
 description: "Local network operations with an automatically managed Zabbix engine and offline operation"
-version: "8.0.0-beta.1"
+version: "8.0.0-beta.2"
 build: .
 startup: services
 boot: auto

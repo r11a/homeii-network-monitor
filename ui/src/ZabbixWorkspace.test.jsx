@@ -36,6 +36,19 @@ it('offers manual entry with clear fields and submits the host', async () => {
   await waitFor(() => expect(api.mock.calls.some(([path, options]) => path === '/engine/hosts' && JSON.parse(options.body).name === 'New camera')).toBe(true));
 });
 
+it('shows identification details and labels device type as inferred', async () => {
+  const original = api.getMockImplementation();
+  api.mockImplementation(async (path, options) => path === '/engine/discovery'
+    ? { devices: [{ ip: '192.168.1.4', name: 'camera-front', mac: '00:40:8c:12:34:56', vendor: 'Axis', device_type: 'camera', last_seen: 10 }] }
+    : original(path, options));
+  render(<ZabbixWorkspace />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Setup' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Show discovered devices' }));
+  expect(await screen.findByText('MAC: 00:40:8c:12:34:56')).toBeTruthy();
+  expect(screen.getByText('Network adapter vendor: Axis')).toBeTruthy();
+  expect(screen.getByText('Type inferred from name: camera')).toBeTruthy();
+});
+
 it('marks lost monitoring explicitly instead of displaying a live success', async () => {
   stale = true; render(<ZabbixWorkspace />);
   expect((await screen.findByRole('alert')).textContent).toContain('Monitoring unavailable');

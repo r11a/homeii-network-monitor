@@ -1,5 +1,10 @@
 # Changelog
 
+## 8.0.0-beta.2 — Discovery identification
+
+- Discovery proposals show DNS name, local ARP MAC address, adapter vendor and last-seen time.
+- Device type is inferred from the hostname and explicitly labeled as an estimate. Missing identity fields remain unknown; MAC addresses beyond routers are not invented.
+
 ## 8.0.0-beta.1 — Local Zabbix preview
 
 - Separate beta add-on with bundled Zabbix 7.0 LTS and PostgreSQL; no separate server setup.

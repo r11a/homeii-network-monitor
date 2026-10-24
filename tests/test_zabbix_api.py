@@ -10,6 +10,25 @@ from app import api, core
 
 
 class ZabbixPermissionTests(unittest.TestCase):
+    def test_discovery_identity_uses_local_mac_and_marks_inferred_type(self):
+        from app.engine_routes import discovery_identity
+        proposals = {'devices': [{'ip': '192.168.1.4', 'name': 'camera-front', 'last_seen': 10}]}
+        with patch.object(core, 'read_proc_arp', return_value=[{'ip': '192.168.1.4', 'mac': '00:40:8c:12:34:56', 'vendor': 'Axis'}]):
+            device = discovery_identity(proposals, core)['devices'][0]
+        self.assertEqual(device['vendor'], 'Axis')
+        self.assertEqual(device['mac'], '00:40:8c:12:34:56')
+        self.assertEqual(device['device_type'], 'camera')
+        self.assertTrue(device['type_inferred'])
+
+    def test_discovery_identity_does_not_invent_missing_details(self):
+        from app.engine_routes import discovery_identity
+        with patch.object(core, 'read_proc_arp', return_value=[]):
+            device = discovery_identity({'devices': [{'ip': '192.168.1.5', 'name': '192.168.1.5'}]}, core)['devices'][0]
+        self.assertEqual(device['mac'], '')
+        self.assertEqual(device['vendor'], '')
+        self.assertEqual(device['device_type'], '')
+        self.assertFalse(device['type_inferred'])
+
     def test_lan_cannot_forge_ingress_identity(self):
         from starlette.requests import Request
         request = Request({'type': 'http', 'client': ('192.168.1.20', 1234),

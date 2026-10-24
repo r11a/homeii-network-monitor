@@ -15,6 +15,23 @@ from .zabbix import Engine, EngineError
 _engines = {}
 
 
+def discovery_identity(result, core):
+    """Enrich proposals using local observations without inventing identities."""
+    neighbors = {row['ip']: row for row in core.read_proc_arp()}
+    devices = []
+    for device in result['devices']:
+        neighbor = neighbors.get(device['ip'], {})
+        mac = neighbor.get('mac', '')
+        hostname = device['name'] if device.get('name') != device['ip'] else ''
+        category = core.auto_category(hostname, '') if hostname else ''
+        devices.append({**device, 'hostname': hostname, 'mac': mac,
+                        'vendor': neighbor.get('vendor', '') if mac else '',
+                        'device_type': category, 'type_inferred': bool(category),
+                        'identity': 'local_neighbor' if mac else 'address_only',
+                        'identity_sources': (['discovery_dns'] if hostname else []) + (['local_arp'] if mac else [])})
+    return {**result, 'devices': devices}
+
+
 def engine(directory):
     key = str(directory)
     if key not in _engines: _engines[key] = Engine(Path(directory))
@@ -32,7 +49,7 @@ def ha_dashboard(directory):
     snapshot = engine(directory).snapshot()
     if snapshot['stale']:
         return JSONResponse({'error': 'monitoring_unavailable'}, status_code=503)
-    return {'status': {**snapshot['counts'], 'version': '8.0.0-beta.1', 'monitoring_stale': False, 'engine': 'zabbix',
+    return {'status': {**snapshot['counts'], 'version': '8.0.0-beta.2', 'monitoring_stale': False, 'engine': 'zabbix',
                        'last_update': snapshot['updated_at'], 'open_alerts': len(snapshot['events'])},
             'devices': [{**d, 'device_id': 'zabbix-' + d['id'], 'display_name': d['name'],
                          'category': ', '.join(d['groups']), 'last_seen': d['last_check'], 'approved': True,
@@ -57,7 +74,7 @@ def register_engine_routes(app, core, require_role):
 
     @app.get('/api/engine/config')
     def config():
-        return {**current().public_config(), 'active': core.zabbix_enabled(), 'version_label': '8.0.0-beta.1'}
+        return {**current().public_config(), 'active': core.zabbix_enabled(), 'version_label': '8.0.0-beta.2'}
 
     @app.post('/api/engine/connect')
     async def connect(request: Request):
@@ -91,7 +108,7 @@ def register_engine_routes(app, core, require_role):
         return current().acknowledge(eventid, actor.get('username', 'operator'))
 
     @app.get('/api/engine/discovery')
-    def discoveries(): return current().discoveries()
+    def discoveries(): return discovery_identity(current().discoveries(), core)
 
     @app.post('/api/engine/discovery')
     async def discovery(request: Request):
