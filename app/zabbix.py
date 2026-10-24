@@ -200,6 +200,7 @@ class Engine:
                         'last_check': int(ping.get('lastclock') or 0), 'check_interval': interval_seconds(ping.get('delay', '60')),
                         'probe_ok': ping.get('state') == '0' and ping.get('status') == '0',
                         'probe_value': ping.get('lastvalue'), 'itemid': ping.get('itemid'),
+                        'metric_items': {key: probes.get(key, {}).get('itemid') for key in ('icmppingsec', 'icmppingloss')},
                         'latency_ms': self._metric(probes.get('icmppingsec'), now, 1000),
                         'loss_percent': self._metric(probes.get('icmppingloss'), now)})
                 events = [{'id': p['eventid'], 'name': p['name'], 'severity': int(p['severity']), 'since': int(p['clock']),
@@ -261,6 +262,20 @@ class Engine:
                     'sortfield': ['clock'], 'sortorder': 'DESC', 'limit': 20000})
             result = {**history_buckets(rows, now, host['check_interval']), 'hostid': hostid,
                       'truncated': len(rows) == 20000}
+            result['metrics'] = {}
+            for key, itemid in host.get('metric_items', {}).items():
+                if not itemid: continue
+                measurements = self.client().call('history.get', {'itemids': [itemid], 'history': 0,
+                    'output': ['clock', 'value'], 'time_from': now-86400, 'time_till': now,
+                    'sortfield': ['clock'], 'sortorder': 'DESC', 'limit': 20000})
+                bins = {}
+                for measurement in measurements:
+                    stamp = int(measurement['clock'])
+                    if now-86400 <= stamp <= now:
+                        index = min(95, (stamp-(now-86400))//900)
+                        bins.setdefault(index, []).append(float(measurement['value']) * (1000 if key == 'icmppingsec' else 1))
+                result['metrics'][key] = [{'start': bucket['start'], 'value': round(sum(bins[index])/len(bins[index]), 3) if index in bins else None} for index, bucket in enumerate(result['series'])]
+                result['truncated'] = result['truncated'] or len(measurements) == 20000
             if len(self.histories) > 200: self.histories.clear()
             self.histories[hostid] = result
             return result

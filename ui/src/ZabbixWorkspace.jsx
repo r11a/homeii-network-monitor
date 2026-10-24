@@ -1,3 +1,4 @@
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, ArrowLeft, Bell, Check, ChevronLeft, ChevronRight, CircleHelp, Home, LogOut, Monitor, Plus, Radar, RefreshCw, Search, Server, Settings, ShieldCheck, X } from 'lucide-react';
 import { api } from './api';
@@ -236,6 +237,10 @@ export default function ZabbixWorkspace() {
       <h3>{l('24 השעות האחרונות', 'Last 24 hours')}</h3>
       {history?.error ? <p role="alert">{explain(history.error)}</p> : !history ? <p>{l('טוען מדידות…', 'Loading measurements…')}</p> : <>
         <div className="z-history" aria-label={l('היסטוריית זמינות', 'Availability history')} dir="ltr">{history.series.map((bucket, index) => <span key={index} className={`z-bar-${bucket.status}`} title={`${time(bucket.start)} · ${stateName(bucket.status)} · ${bucket.samples}`}/>)}</div>
+        {[[null, 'Availability (%)', '%'], ['icmppingsec', 'Response time', 'ms'], ['icmppingloss', 'Packet loss', '%']].map(([key, title, unit]) => {
+          const points = key ? history.metrics?.[key] : history.series.map(b => ({ start: b.start, value: b.availability }));
+          return <section key={key || 'availability'}><h3>{title}</h3>{points?.some(p => p.value != null) ? <div style={{ width: '100%', height: 180 }} dir="ltr"><ResponsiveContainer width="100%" height="100%"><AreaChart data={points}><CartesianGrid stroke="#2a3136" vertical={false}/><XAxis dataKey="start" tickFormatter={v => new Date(v*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} minTickGap={45}/><YAxis unit={unit} width={60}/><Tooltip labelFormatter={time}/><Area dataKey="value" stroke="#72cda5" fill="#72cda5" fillOpacity={0.15} connectNulls={false} isAnimationActive={false}/></AreaChart></ResponsiveContainer></div> : <p className="z-muted">{l('אין מדידות', 'No measurements')}</p>}</section>;
+        })}
         <div className="z-history-axis"><span>{l('לפני 24 שעות', '24 hours ago')}</span><span>{l('עכשיו', 'Now')}</span></div>
         <div className="z-history-facts"><div><strong>{history.availability == null ? '—' : `${history.availability}%`}</strong><span>{l('בדיקות מוצלחות', 'Successful checks')}</span></div><div><strong>{history.coverage}%</strong><span>{l('כיסוי מדידות', 'Measurement coverage')}</span></div><div><strong>{history.samples}</strong><span>{l('בדיקות שנשמרו', 'Recorded checks')}</span></div></div>
         <p className="z-muted">{l('אפור = אין מדידות. אחוז ההצלחה מחושב רק מבדיקות שנשמרו; הוא אינו SLA.', 'Gray means missing measurements. Success rate uses recorded checks only; it is not an SLA.')}</p>
