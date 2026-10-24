@@ -1,0 +1,10 @@
+.git
+.repo-history
+.tmp-*
+ui/node_modules
+ui/dist
+**/__pycache__
+.pytest_cache
+*.db
+*.db-wal
+*.db-shm

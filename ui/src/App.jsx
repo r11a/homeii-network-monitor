@@ -2209,7 +2209,7 @@ function HistoryPage({ t, language }) {
   );
 }
 
-function Tools({ data, t, initialTarget = "" }) {
+export function Tools({ data, t, initialTarget = "" }) {
   const [target, setTarget] = useState(initialTarget);
   const [selected, setSelected] = useState("ping");
   const [ports, setPorts] = useState("80,443,554,8000,8080,22");
@@ -2571,7 +2571,7 @@ function Tools({ data, t, initialTarget = "" }) {
   );
 }
 
-function AuthScreen({ setupRequired, onAuthenticated }) {
+export function AuthScreen({ setupRequired, onAuthenticated }) {
   const [form, setForm] = useState({
     username: "",
     password: "",
@@ -2654,7 +2654,7 @@ function AuthScreen({ setupRequired, onAuthenticated }) {
   );
 }
 
-function UserManagement({ t, currentUser }) {
+export function UserManagement({ t, currentUser }) {
   const [users, setUsers] = useState([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [draft, setDraft] = useState({

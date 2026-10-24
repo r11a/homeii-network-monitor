@@ -38,7 +38,10 @@ async def async_setup_entry(
 ) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     client = hass.data[DOMAIN][entry.entry_id]["client"]
-    async_add_entities(HomeiiActionButton(coordinator, client, entry, spec) for spec in BUTTONS)
+    specs = BUTTONS
+    if coordinator.data.get('status', {}).get('engine') == 'zabbix':
+        specs = [spec for spec in BUTTONS if spec['key'] == 'refresh_data']
+    async_add_entities(HomeiiActionButton(coordinator, client, entry, spec) for spec in specs)
 
 
 class HomeiiActionButton(CoordinatorEntity, ButtonEntity):

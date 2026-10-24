@@ -6,7 +6,7 @@
         "description": "Connect Home Assistant to the HOMEii addon API.",
         "data": {
           "url": "Addon URL",
-          "scan_interval": "Refresh interval (seconds)"
+          "access_token": "HOMEii connection key (8.x)", "scan_interval": "Refresh interval (seconds)"
         }
       },
       "reconfigure": {
@@ -14,7 +14,7 @@
         "description": "Update the addon API address and refresh interval.",
         "data": {
           "url": "Addon URL",
-          "scan_interval": "Refresh interval (seconds)"
+          "access_token": "HOMEii connection key (8.x)", "scan_interval": "Refresh interval (seconds)"
         }
       },
       "devices": {

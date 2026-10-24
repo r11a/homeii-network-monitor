@@ -1,5 +1,18 @@
 # Changelog
 
+## 8.0.0-beta.2 — Discovery identification
+
+- Discovery proposals show DNS name, local ARP MAC address, adapter vendor and last-seen time.
+- Device type is inferred from the hostname and explicitly labeled as an estimate. Missing identity fields remain unknown; MAC addresses beyond routers are not invented.
+
+## 8.0.0-beta.1 — Local Zabbix preview
+
+- Separate beta add-on with bundled Zabbix 7.0 LTS and PostgreSQL; no separate server setup.
+- Local control-room UI, manual hosts, discovery approval, measured 24-hour history and incident acknowledgement.
+- Explicit unknown/stale states, authenticated integration data and stable Zabbix identities.
+- Separate port 8384 and data volume preserve the existing 7.x installation.
+- Preview scope and installation instructions are in DOCS.md. Not yet validated for thousands of devices or a production Home Assistant deployment.
+
 ## 7.5.4 — Vivid Contrast
 
 - Strengthened lime, yellow, orange, red and burgundy status accents against deeper neutral black.

@@ -1,0 +1,42 @@
+name: Beta container
+on:
+  push:
+    branches: [feature/zabbix-local-8]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build complete add-on
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: homeii-beta
+          cache-from: type=gha,scope=homeii-${{ matrix.runner }}
+          cache-to: type=gha,mode=max,scope=homeii-${{ matrix.runner }}
+      - name: Boot without external network
+        run: docker run -d --network none --name homeii-beta -v homeii-test:/data homeii-beta
+      - name: Exercise real API and measurements offline
+        run: docker exec -i homeii-beta /opt/venv/bin/python - < deploy/container_smoke.py
+      - name: Verify restart and persisted inventory
+        run: |
+          docker restart --time 120 homeii-beta
+          docker exec -i homeii-beta /opt/venv/bin/python - < deploy/container_smoke.py
+      - name: Service logs
+        if: always()
+        run: docker logs homeii-beta > container.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-${{ matrix.runner }}
+          path: container.log

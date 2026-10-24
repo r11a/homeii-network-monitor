@@ -16,7 +16,8 @@ VALID_USER_ROLES = frozenset({"admin", "user", "viewer", "control"})
 @asynccontextmanager
 async def app_lifespan(_: FastAPI):
     start_background_workers()
-    start_worker("startup_scan", run_full_scan, "startup")
+    if not zabbix_enabled():
+        start_worker("startup_scan", run_full_scan, "startup")
     try:
         yield
     finally:
@@ -71,6 +72,12 @@ def api_health_live():
 
 @app.get("/api/health/ready")
 def api_health_ready():
+    if zabbix_enabled():
+        from app.engine_routes import engine
+        snapshot = engine(BASE_DIR).snapshot()
+        ready = not snapshot['stale']
+        return JSONResponse({'status': 'ready' if ready else 'degraded', 'engine': 'zabbix',
+                             'version': APP_VERSION}, status_code=200 if ready else 503)
     database_ok = False
     database_error = ""
     try:
@@ -289,7 +296,8 @@ async def api_tools_run(request: Request):
 
 def ingress_request(request: Request) -> bool:
     return bool(
-        request.headers.get("x-ingress-path")
+        request.client and request.client.host == '172.30.32.2'
+        and request.headers.get("x-ingress-path")
         and (
             request.headers.get("x-remote-user-id")
             or request.headers.get("x-remote-user-name")
@@ -364,7 +372,7 @@ async def enforce_api_permissions(request: Request, call_next):
 
     public_auth = {"/api/auth/session", "/api/auth/setup", "/api/auth/login", "/api/auth/logout"}
     public_home_assistant = {"/api/ha/dashboard"}
-    if path in public_auth or (request.method == "GET" and path in public_home_assistant):
+    if path in public_auth or (request.method == "GET" and path in public_home_assistant and not zabbix_enabled()):
         return await call_next(request)
 
     def authorize(*roles: str) -> JSONResponse | None:
@@ -374,6 +382,20 @@ async def enforce_api_permissions(request: Request, call_next):
             code = 401 if str(exc) == "authentication_required" else 403
             return JSONResponse({"error": str(exc)}, status_code=code)
         return None
+
+    if path == '/api/ha/dashboard' and zabbix_enabled():
+        from app.engine_routes import valid_ha_token
+        if request.method == 'GET' and valid_ha_token(request.headers.get('authorization', ''), BASE_DIR):
+            return await call_next(request)
+        denied = authorize('admin', 'user', 'viewer', 'control')
+        return denied or await call_next(request)
+
+    if path.startswith('/api/engine/'):
+        roles = ('admin', 'user', 'viewer', 'control') if request.method == 'GET' else ('admin',)
+        if path.endswith('/acknowledge') or path.endswith('/check'):
+            roles = ('admin', 'user')
+        denied = authorize(*roles)
+        return denied or await call_next(request)
 
     if path == "/api/settings" and request.method == "GET":
         denied = authorize("admin", "user", "viewer", "control")
@@ -1010,6 +1032,9 @@ def api_ha_summary():
 @app.get("/api/ha/dashboard")
 def api_ha_dashboard():
     """Return one read-only, bounded snapshot for the native HA integration."""
+    if zabbix_enabled():
+        from app.engine_routes import ha_dashboard
+        return ha_dashboard(BASE_DIR)
     ensure_background_workers()
     status = status_payload()
     devices = get_devices(include_quarantined=True)
@@ -1869,5 +1894,10 @@ async def api_save_networks_post(request: Request):
         networks="\n".join(networks_raw) if isinstance(networks_raw, list) else str(networks_raw),
         network_names=json.dumps(network_names_raw, ensure_ascii=False),
     )
+
+
+import app.core as _engine_core
+from app.engine_routes import register_engine_routes
+register_engine_routes(app, _engine_core, require_role)
 
 

@@ -61,7 +61,7 @@ async def async_setup_entry(
     def async_sync_entities() -> None:
         new_entities = []
         for device in coordinator.data.get("devices", []):
-            ip = device.get("ip")
+            ip = device.get('device_id') or device.get("ip")
             if not ip or (selected_ips is not None and ip not in selected_ips):
                 continue
             for spec in DEVICE_BINARY_SENSORS:
@@ -91,9 +91,13 @@ class HomeiiDeviceBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     def _device(self) -> dict[str, Any]:
         for device in self.coordinator.data.get("devices", []):
-            if device.get("ip") == self._ip:
+            if (device.get('device_id') or device.get("ip")) == self._ip:
                 return device
         return {"ip": self._ip, "display_name": self._ip, "status": "unknown", "mac": ""}
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._device().get('status') not in ('unknown', 'paused', 'maintenance')
 
     @property
     def name(self) -> str:
@@ -119,7 +123,7 @@ class HomeiiDeviceBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         device = self._device()
-        identifiers = {(DOMAIN, device.get("mac") or self._ip)}
+        identifiers = {(DOMAIN, device.get('device_id') or device.get("mac") or self._ip)}
         connections = set()
         mac = device.get("mac")
         if mac:

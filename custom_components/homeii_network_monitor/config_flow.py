@@ -5,6 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_URL
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import HomeiiApiClient, HomeiiApiClientError
@@ -19,10 +20,11 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._pending_dashboard = None
 
     @staticmethod
-    def _schema(default_url: str, default_interval: int) -> vol.Schema:
+    def _schema(default_url: str, default_interval: int, token: str = '') -> vol.Schema:
         return vol.Schema(
             {
                 vol.Required(CONF_URL, default=default_url): str,
+                vol.Optional('access_token', default=token): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
                 vol.Required(
                     CONF_SCAN_INTERVAL,
                     default=default_interval,
@@ -34,6 +36,7 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         client = HomeiiApiClient(
             user_input[CONF_URL],
             async_get_clientsession(self.hass),
+            user_input.get('access_token', ''),
         )
         return await client.async_fetch_dashboard()
 
@@ -50,6 +53,7 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 self._pending_data = {
                     CONF_URL: user_input[CONF_URL].rstrip("/"),
+                    'access_token': user_input.get('access_token', ''),
                     CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
                 }
                 self._pending_dashboard = dashboard
@@ -63,7 +67,7 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_user()
         devices = self._pending_dashboard.get("devices", [])
         choices = {
-            str(device.get("ip")): (
+            str(device.get('device_id') or device.get("ip")): (
                 f"{device.get('display_name') or device.get('name') or device.get('hostname') or device.get('ip')}"
                 f" ({device.get('ip')})"
             )
@@ -97,6 +101,7 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     entry,
                     data_updates={
                         CONF_URL: user_input[CONF_URL].rstrip("/"),
+                        'access_token': user_input.get('access_token', ''),
                         CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
                     },
                 )
@@ -105,6 +110,7 @@ class HomeiiNetworkMonitorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=self._schema(
                 entry.data.get(CONF_URL, DEFAULT_URL),
                 int(entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)),
+                entry.data.get('access_token', ''),
             ),
             errors=errors,
         )
